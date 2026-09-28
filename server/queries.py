@@ -104,30 +104,29 @@ async def save_ai_cache(
 ) -> list[str]:
     """Cache the analysis and merge AI-found tickers (≤6 chars) into the event.
     Returns the merged ticker list (so the caller can broadcast the update)."""
-    async with pool.acquire() as conn:
-        async with conn.transaction():
+    async with pool.acquire() as conn, conn.transaction():
+        await conn.execute(
+            "INSERT INTO ai_analysis_cache (cache_key, event_id, result) "
+            "VALUES ($1, $2, $3) ON CONFLICT (cache_key) DO UPDATE SET result = EXCLUDED.result",
+            cache_key,
+            event_id,
+            result,
+        )
+        existing = await conn.fetchval(
+            "SELECT tickers FROM events WHERE id = $1", event_id
+        )
+        existing = existing or []
+        ai_tickers = [
+            ti["ticker"]
+            for ti in result.get("ticker_impacts", [])
+            if isinstance(ti, dict) and ti.get("ticker") and len(ti["ticker"]) <= 6
+        ]
+        merged = list(dict.fromkeys([*existing, *ai_tickers]))
+        if len(merged) > len(existing):
             await conn.execute(
-                "INSERT INTO ai_analysis_cache (cache_key, event_id, result) "
-                "VALUES ($1, $2, $3) ON CONFLICT (cache_key) DO UPDATE SET result = EXCLUDED.result",
-                cache_key,
-                event_id,
-                result,
+                "UPDATE events SET tickers = $1 WHERE id = $2", merged, event_id
             )
-            existing = await conn.fetchval(
-                "SELECT tickers FROM events WHERE id = $1", event_id
-            )
-            existing = existing or []
-            ai_tickers = [
-                ti["ticker"]
-                for ti in result.get("ticker_impacts", [])
-                if isinstance(ti, dict) and ti.get("ticker") and len(ti["ticker"]) <= 6
-            ]
-            merged = list(dict.fromkeys([*existing, *ai_tickers]))
-            if len(merged) > len(existing):
-                await conn.execute(
-                    "UPDATE events SET tickers = $1 WHERE id = $2", merged, event_id
-                )
-            return merged
+        return merged
 
 
 # --- AI-derived predictions (feeds correlate.detect_prediction_leads_news) ---

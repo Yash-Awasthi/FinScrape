@@ -7,19 +7,19 @@ rather than one replacing the other.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
 pytest.importorskip("fastapi")
 pytest.importorskip("asyncpg")
 
-from fastapi import FastAPI  # noqa: E402
-from fastapi.testclient import TestClient  # noqa: E402
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
-from server.routes import data as data_routes  # noqa: E402
+from server.routes import data as data_routes
 
-NOW = datetime(2026, 1, 2, tzinfo=timezone.utc)
+NOW = datetime(2026, 1, 2, tzinfo=UTC)
 
 
 class FakePool:

@@ -40,9 +40,11 @@ laya = [
 [dependency-groups]
 dev = [
     "pytest>=9.0.3",
+    # Starlette's TestClient deprecates plain httpx in favour of httpx2.
+    "httpx2>=2.13",
     # Pinned: uv.lock is not committed, so an open range let CI pick up new default
     # lint rules between runs. Upgrade deliberately and fix findings in the same change.
-    "ruff==0.15.20",
+    "ruff==0.16.9",
     "pyright==1.1.411",
 ]
 # WorldFin backend (server/). Kept out of core deps so the finscrape CLI install
@@ -73,6 +75,10 @@ reportMissingImports = true
 # reference material pending wiring — keep it out of lint gates.
 [tool.ruff]
 extend-exclude = ["finscrape/absorbed"]
+
+# FastAPI reads these defaults as parameter declarations; they are never shared state.
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Body", "fastapi.Depends", "fastapi.Query"]
 
 # Keep pytest scoped to the real suite; absorbed/ holds 31k vendored files.
 [tool.pytest.ini_options]

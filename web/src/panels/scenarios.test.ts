@@ -16,6 +16,7 @@ const scenario = (overrides: Partial<Scenario> = {}): Scenario => ({
   stance: "risk-off",
   tilt: -0.44,
   data_tier: "empirical",
+  sample_size: 13,
   divergent_members: 0,
   sectors: [{ name: "transport", direction: "down", strength: 1, tilt: -0.9 }],
   exposure: [
@@ -100,6 +101,11 @@ describe("ScenarioPanel", () => {
     // and would read "1 report" for a story five outlets carried.
     const panel = await mount([scenario({ size: 1, reports: 5 })]);
     expect(panel.el.querySelector(".sc-meta")!.textContent).toContain("5 reports");
+  });
+
+  it("shows how many outcomes back the tier", async () => {
+    const panel = await mount([scenario({ data_tier: "thin-data", sample_size: 13 })]);
+    expect(panel.el.querySelector(".sc-meta")!.textContent).toContain("thin-data · n=13");
   });
 
   it("does not say '1 reports'", async () => {

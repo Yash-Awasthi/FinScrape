@@ -39,7 +39,8 @@ async def publish(message: dict) -> bool:
         finally:
             await client.aclose()
         return True
-    except Exception as exc:  # pragma: no cover - network/dep flakiness
+    # Fan-out is optional; ingest goes on.
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         log.warning("pubsub publish failed: %s", exc)
         return False
 
@@ -62,7 +63,8 @@ async def _subscribe_once(handler: Callable[[dict], Awaitable[None]]) -> None:
                 continue
             try:
                 await handler(json.loads(raw["data"]))
-            except Exception as exc:  # pragma: no cover - bad payload / handler error
+            # One bad message keeps the stream.
+            except Exception as exc:  # noqa: BLE001  # pragma: no cover
                 log.warning("pubsub handler failed: %s", exc)
     finally:
         await pubsub.aclose()
@@ -83,6 +85,7 @@ async def subscribe_forever(handler: Callable[[dict], Awaitable[None]]) -> None:
             await _subscribe_once(handler)
         except asyncio.CancelledError:
             raise
-        except Exception as exc:  # pragma: no cover - network flakiness
+        # Reconnect on any drop.
+        except Exception as exc:  # noqa: BLE001  # pragma: no cover
             log.warning("pubsub subscribe failed (%s); retrying", exc)
         await asyncio.sleep(RECONNECT_DELAY_S)

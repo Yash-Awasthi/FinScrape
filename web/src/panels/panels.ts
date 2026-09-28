@@ -1017,7 +1017,7 @@ export class ScenarioPanel extends Panel {
       (chain ? `<ul class="sc-chain">${chain}</ul>` : "") +
       `<footer class="muted sc-meta">${plural(scenario.reports ?? scenario.size, "report")} · ` +
       `${escapeHtml(scenario.sources.slice(0, 3).join(", ") || "no sources")} · ` +
-      `${escapeHtml(scenario.data_tier)}${caveat}</footer></article>`
+      `${escapeHtml(scenario.data_tier)} · n=${scenario.sample_size ?? 0}${caveat}</footer></article>`
     );
   }
 }

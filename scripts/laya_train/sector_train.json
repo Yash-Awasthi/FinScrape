@@ -1,0 +1,1981 @@
+{
+ "_note": "Headlines from stored events and the world feeds (Sep 2026), labelled by hand; no subject overlaps tests/fixtures/sector_gold.json.",
+ "cases": [
+  {
+   "subject": "iran closes strait of hormuz oil tankers halt",
+   "sector": "energy"
+  },
+  {
+   "subject": "trump attends un meetings with iran and ukraine conflicts",
+   "sector": "other"
+  },
+  {
+   "subject": "supersized el niño set to hit global economy and markets",
+   "sector": "materials"
+  },
+  {
+   "subject": "christine lagarde hearing of the committee on economic and monetary affairs",
+   "sector": "financials"
+  },
+  {
+   "subject": "drydel adds kamsarmax tonnage",
+   "sector": "industrials"
+  },
+  {
+   "subject": "christy kinahan faces no criminal charges",
+   "sector": "other"
+  },
+  {
+   "subject": "sea level rise in tanzania",
+   "sector": "other"
+  },
+  {
+   "subject": "ap moller capital acquires euroports majority stake",
+   "sector": "industrials"
+  },
+  {
+   "subject": "iranian official compares us to hitler",
+   "sector": "other"
+  },
+  {
+   "subject": "us senator calls for sanctions against trump rubio",
+   "sector": "other"
+  },
+  {
+   "subject": "headofstate diplomacy improves chinaus ties",
+   "sector": "other"
+  },
+  {
+   "subject": "b2gold strikes new goose gold zone",
+   "sector": "materials"
+  },
+  {
+   "subject": "ethiopian rebel groups form new alliance",
+   "sector": "other"
+  },
+  {
+   "subject": "south korea lee wants stepbystep approach to north korea nuclear dismantlement",
+   "sector": "other"
+  },
+  {
+   "subject": "friedrich merz faces political pressure in germany",
+   "sector": "other"
+  },
+  {
+   "subject": "icelands no exposes eu complacency",
+   "sector": "other"
+  },
+  {
+   "subject": "typhoon dujuan hits japan",
+   "sector": "other"
+  },
+  {
+   "subject": "trump xi talks unlikely to meet",
+   "sector": "industrials"
+  },
+  {
+   "subject": "kathua truck driver sent sensitive tunnel bridge photos to pak handlers",
+   "sector": "other"
+  },
+  {
+   "subject": "us iran conflict concerns over drone warfare toll",
+   "sector": "other"
+  },
+  {
+   "subject": "colombia introduces fracking to boost oil and gas output",
+   "sector": "energy"
+  },
+  {
+   "subject": "epa repeals rule for coal gas power plants and methane emission",
+   "sector": "utilities"
+  },
+  {
+   "subject": "hezbollah nasrallah commemoration exposes lost standing in lebanon",
+   "sector": "other"
+  },
+  {
+   "subject": "us strategic petroleum reserve falls to lowest level since 1982",
+   "sector": "energy"
+  },
+  {
+   "subject": "panama canal increases transit capacity",
+   "sector": "industrials"
+  },
+  {
+   "subject": "fefac seeks eu feed supply contingency plan",
+   "sector": "materials"
+  },
+  {
+   "subject": "colombia discusses imf financing",
+   "sector": "financials"
+  },
+  {
+   "subject": "nvidia launches open agent safety platform",
+   "sector": "technology"
+  },
+  {
+   "subject": "arrests over alleged raf fairford terror plot",
+   "sector": "other"
+  },
+  {
+   "subject": "high concentration of sp 500 stocks with negative beta",
+   "sector": "financials"
+  },
+  {
+   "subject": "west bank tensions and gaza peace plan stall",
+   "sector": "other"
+  },
+  {
+   "subject": "record diesel costs",
+   "sector": "energy"
+  },
+  {
+   "subject": "zodiac maritime orders lng carriers",
+   "sector": "industrials"
+  },
+  {
+   "subject": "montage gold pours first gold at koné",
+   "sector": "materials"
+  },
+  {
+   "subject": "kernel deploys new modular grain storage",
+   "sector": "materials"
+  },
+  {
+   "subject": "south korea summons ukrainian envoy over north korean prisoner transfer",
+   "sector": "other"
+  },
+  {
+   "subject": "World News in Brief: Refugee funding, US migration policy triggers ‘cascade’ of rights violations, world forests report, restorative justice in Colombia",
+   "sector": "other"
+  },
+  {
+   "subject": "Commissioner Roswall gives an opening address at the 9th Water Festival",
+   "sector": "other"
+  },
+  {
+   "subject": "Christine Lagarde: Hearing of the Committee on Economic and Monetary Affairs of the European Parliament",
+   "sector": "financials"
+  },
+  {
+   "subject": "Federal Reserve Board announces approval of application by Peoples Bancorp Inc.",
+   "sector": "financials"
+  },
+  {
+   "subject": "Minutes of the Market Participants Group meeting – 24 September 2026",
+   "sector": "financials"
+  },
+  {
+   "subject": "Minutes of the Monetary Policy Meeting on July 30 and 31, 2026",
+   "sector": "financials"
+  },
+  {
+   "subject": "RBI to conduct Overnight Variable Rate Reverse Repo (VRRR) auction under LAF on September 29, 2026",
+   "sector": "financials"
+  },
+  {
+   "subject": "New Zealand advances safe and inclusive trade with new contribution to STDF",
+   "sector": "other"
+  },
+  {
+   "subject": "Henry Hub natural gas prices this summer were 6% lower than last summer",
+   "sector": "energy"
+  },
+  {
+   "subject": "Technical Cooperation Showcases Results at 70th IAEA General Conference",
+   "sector": "other"
+  },
+  {
+   "subject": "Europe’s Gas Forecasts Are Not an Energy Strategy",
+   "sector": "energy"
+  },
+  {
+   "subject": "Panama Canal Adds Transit Capacity as Rainfall Brings Relief",
+   "sector": "industrials"
+  },
+  {
+   "subject": "DryDel piles on kamsarmax tonnage at Tsuneishi",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Polish defense official says US has decided to establish a base in Poland",
+   "sector": "other"
+  },
+  {
+   "subject": "Collective Defense in an Era of Tokens and Data Links",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Inside Yemen's front-line city as Houthis battle for control",
+   "sector": "other"
+  },
+  {
+   "subject": "DRC politician beaten to death after radio appearance about Ebola outbreak",
+   "sector": "other"
+  },
+  {
+   "subject": "Flights between Iraq’s Najaf and Iran resumed as Tehran protests US curbs",
+   "sector": "other"
+  },
+  {
+   "subject": "What we know about the suspected U.K. terror plot. And, why the Gulf remains in limbo",
+   "sector": "other"
+  },
+  {
+   "subject": "Iranian human rights lawyer Nasrin Sotoudeh wins the 2026 Vaclav Havel Human Rights Prize",
+   "sector": "other"
+  },
+  {
+   "subject": "Saudis 'furious': Trump ‘flips & flops’ between deals with Iran and ‘attacks in devastating fashion’",
+   "sector": "other"
+  },
+  {
+   "subject": "Colombia has held discussions with IMF, including on securing financing: sources - Reuters",
+   "sector": "financials"
+  },
+  {
+   "subject": "More than 211,000 Haitian migrants crossed the southern border from 2018 to 2025. Here’s where they went - haitiantimes.com",
+   "sector": "other"
+  },
+  {
+   "subject": "Nvidia releases software platform to stop AI agents from misbehaving",
+   "sector": "technology"
+  },
+  {
+   "subject": "Five men arrested over alleged RAF Fairford terror plot released on bail",
+   "sector": "other"
+  },
+  {
+   "subject": "How the Fed should measure inflation",
+   "sector": "financials"
+  },
+  {
+   "subject": "Dolly Parton planned for her estate. The fight with her nephew shows why that matters.",
+   "sector": "other"
+  },
+  {
+   "subject": "Nearly half the stocks in the S&P 500 are at cross purposes with the rest of the market",
+   "sector": "financials"
+  },
+  {
+   "subject": "Putin signs decree adding 15,500 troops to Russian army",
+   "sector": "other"
+  },
+  {
+   "subject": "Florida beauty store owner who wanted to behead Jews charged with funding Hamas",
+   "sector": "other"
+  },
+  {
+   "subject": "Security Council LIVE: Ambassadors meet as West Bank tensions rise, Gaza plan stalls",
+   "sector": "other"
+  },
+  {
+   "subject": "Commissioner Roswall's opening remarks, 2nd Union for the Mediterranean (UfM) Ministerial Meeting on Water",
+   "sector": "other"
+  },
+  {
+   "subject": "ECB Executive Board member Isabel Schnabel to resign to take senior role at IMF",
+   "sector": "financials"
+  },
+  {
+   "subject": "Federal Reserve Board requests public comment on two proposals related to establishing a regulatory framework for Board-supervised payment stablecoin issuers under the GENIUS Act",
+   "sector": "financials"
+  },
+  {
+   "subject": "Foreign Currency Reserves 2026 – Market Notice 22 September 2026",
+   "sector": "financials"
+  },
+  {
+   "subject": "Services Producer Price Index (Aug.)",
+   "sector": "financials"
+  },
+  {
+   "subject": "Auction of Government of India Dated Securities",
+   "sector": "financials"
+  },
+  {
+   "subject": "Panel to review EU carbon border adjustment mechanism and emissions trading scheme",
+   "sector": "materials"
+  },
+  {
+   "subject": "Public companies produce most U.S. crude oil and natural gas",
+   "sector": "energy"
+  },
+  {
+   "subject": "IAEA and Inter-American Development Bank Sign Partnership Agreement on Nuclear Energy for Development",
+   "sector": "utilities"
+  },
+  {
+   "subject": "EU’s Kallas Says Two Countries May Send Ships to Counter Houthis",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Zodiac opens LNG chapter with $500m Hanwha order",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Montage pours first gold at Koné ahead of schedule",
+   "sector": "materials"
+  },
+  {
+   "subject": "Anthropic loses legal fight to shed DOD's designation as a 'supply-chain risk'",
+   "sector": "technology"
+  },
+  {
+   "subject": "Speed to Fielding Is Not Speed to Combat Power",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Seoul summons Ukraine envoy over North Korean prisoner-of-war row",
+   "sector": "other"
+  },
+  {
+   "subject": "At least 27 dead after two mass shootings in South Africa, police say",
+   "sector": "other"
+  },
+  {
+   "subject": "Spain vs Croatia: UEFA Nations League – Yamal, Modric, teams, form",
+   "sector": "other"
+  },
+  {
+   "subject": "U.K. examines if Iran or Russia are involved in foiled attack near base used by U.S.",
+   "sector": "other"
+  },
+  {
+   "subject": "Sicily: Mount Etna ash disrupts Catania flights again",
+   "sector": "industrials"
+  },
+  {
+   "subject": "US deportations are triggering a 'cascade' of rights abuses, UN experts warn",
+   "sector": "other"
+  },
+  {
+   "subject": "EXCLUSIVE: US to grant sanctions waiver for flights between Iran and Iraq's Najaf, source says - Reuters",
+   "sector": "other"
+  },
+  {
+   "subject": "Rebranding nations is harder than renaming products - 1News",
+   "sector": "other"
+  },
+  {
+   "subject": "SpaceX launches its massive Starship rocket into orbit for the first time",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Shares in UK housebuilders surge on new Help to Buy scheme",
+   "sector": "real_estate"
+  },
+  {
+   "subject": "Israel’s war economy is thriving",
+   "sector": "other"
+  },
+  {
+   "subject": "Spending $800 to see my family this Thanksgiving is a financial burden. How can I push for a cheaper flight?",
+   "sector": "consumer"
+  },
+  {
+   "subject": "US to grant sanctions waiver for flights between Iran and Iraq’s Najaf, source says",
+   "sector": "other"
+  },
+  {
+   "subject": "Attorney general eases stance on E1 settlement plan, allowing submissions for tenders",
+   "sector": "other"
+  },
+  {
+   "subject": "LIVE: World leaders take stock of global fight against racism",
+   "sector": "other"
+  },
+  {
+   "subject": "Remarks by Commissioner McGrath at the General Assembly of the United Nations' Side-Event on Shaping Democratic Agency over the course of AI Development",
+   "sector": "other"
+  },
+  {
+   "subject": "Philip R. Lane: The outlook for the euro area economy",
+   "sector": "financials"
+  },
+  {
+   "subject": "Federal Reserve Board issues enforcement action with former employee of Sandy Spring Bank",
+   "sector": "financials"
+  },
+  {
+   "subject": "Bank of England announces new office space in Leeds",
+   "sector": "financials"
+  },
+  {
+   "subject": "Conduct of Funds-Supplying Operations against Pooled Collateral",
+   "sector": "financials"
+  },
+  {
+   "subject": "Detailed Result: OMO Sale Auction held on Sep 28, 2026 and Settlement on Sep 29, 2026",
+   "sector": "financials"
+  },
+  {
+   "subject": "Members review farm policies in first meeting under new Chair",
+   "sector": "materials"
+  },
+  {
+   "subject": "What goes into diesel prices?",
+   "sector": "energy"
+  },
+  {
+   "subject": "Türkiye Protects its Citrus Harvests with Nuclear Science",
+   "sector": "materials"
+  },
+  {
+   "subject": "Record Diesel Costs Add Fresh Pressure on UK Economy",
+   "sector": "energy"
+  },
+  {
+   "subject": "U.S. and Iran Set to Hold Separate Talks With Mediators on Monday or Tuesday",
+   "sector": "other"
+  },
+  {
+   "subject": "Pan Ocean lands $110m Trafigura VLCC charter",
+   "sector": "industrials"
+  },
+  {
+   "subject": "US warms to building Brazil critical minerals chain",
+   "sector": "materials"
+  },
+  {
+   "subject": "Competition drives need for efficiency in flour mill design",
+   "sector": "materials"
+  },
+  {
+   "subject": "The Navy’s public shipyards will take more decades to repair, GAO says",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Tracing the Future Soldier’s Tech Stack",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Twelve women have been killed in one part of South Africa since July. Here's what we know so far",
+   "sector": "other"
+  },
+  {
+   "subject": "‘It’s hard to sell a house when it’s covered in baboon faeces’: Cape Town divided over plan to remove its monkeys",
+   "sector": "other"
+  },
+  {
+   "subject": "Trump made the right decision to reject Iran’s offer",
+   "sector": "other"
+  },
+  {
+   "subject": "Eviction of 87-year-old sparks protests in Madrid over housing crisis",
+   "sector": "real_estate"
+  },
+  {
+   "subject": "Turkey: Comedian convicted for 'insulting' Erdogan in show",
+   "sector": "other"
+  },
+  {
+   "subject": "🔴 Pope Leo leaves France after ending four-day visit with plea for Europe to foster global dialogue",
+   "sector": "other"
+  },
+  {
+   "subject": "Bridgepoint, Astorg consider £2 billion-plus Fenergo sale, sources say - Reuters",
+   "sector": "technology"
+  },
+  {
+   "subject": "China and US agree on AI safety channel, continue trade talks - 1News",
+   "sector": "technology"
+  },
+  {
+   "subject": "Watch: Trump announces plan for $15 billion steel plant, would be largest in U.S. history",
+   "sector": "materials"
+  },
+  {
+   "subject": "BASF should take another crack at chemicals M&A",
+   "sector": "materials"
+  },
+  {
+   "subject": "The battle between India’s stock exchanges is heating up again",
+   "sector": "financials"
+  },
+  {
+   "subject": "The U.S. and China agree to $60 billion in tariff cuts on products like dolls and fireworks. Rare earths remain a sticking point.",
+   "sector": "industrials"
+  },
+  {
+   "subject": "U.S., China to lower tariffs on $60 billion of goods. Here's what qualifies",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Trump announcing new Iowa steel plant the White House says will be biggest in US",
+   "sector": "materials"
+  },
+  {
+   "subject": "Rome convicts 3 Egyptian security officers for 2016 murder of Italian student",
+   "sector": "other"
+  },
+  {
+   "subject": "DR Congo Ebola emergency: Calls grow for urgent humanitarian access",
+   "sector": "healthcare"
+  },
+  {
+   "subject": "Federal Reserve Board announces approval of application by BancFirst Corporation",
+   "sector": "financials"
+  },
+  {
+   "subject": "Foreign Currency Reserves 2026 – Market Notice 21 September 2026",
+   "sector": "financials"
+  },
+  {
+   "subject": "Japanese Government Bonds Held by the Bank of Japan",
+   "sector": "financials"
+  },
+  {
+   "subject": "Open Market Operation (OMO) – Sale of Government of India Securities held on Sep 28, 2026: Cut-Offs",
+   "sector": "financials"
+  },
+  {
+   "subject": "WTO members review agriculture negotiation history, discuss ways forward",
+   "sector": "materials"
+  },
+  {
+   "subject": "Corpus Christi LNG expansion makes facility the second-largest in the United States",
+   "sector": "energy"
+  },
+  {
+   "subject": "Update 368 – IAEA Director General Statement on Situation in Ukraine",
+   "sector": "other"
+  },
+  {
+   "subject": "Russia Tightens Secrecy On Energy Exports",
+   "sector": "energy"
+  },
+  {
+   "subject": "Europe Draws More LNG as Hormuz Crisis Tightens Global Market",
+   "sector": "energy"
+  },
+  {
+   "subject": "A.P. Moller Capital strikes deal for Euroports majority",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Northern Star rejects ‘opportunistic’ Gold Fields’ $27B takeover bid",
+   "sector": "materials"
+  },
+  {
+   "subject": "Fertilizer costs, El Niño lower rice production in Philippines",
+   "sector": "materials"
+  },
+  {
+   "subject": "Defense Business Brief: Here comes the quantum boom; GDIT’s perspective; and Sec. 889",
+   "sector": "industrials"
+  },
+  {
+   "subject": "North Korea’s Irregular Warfare After Ukraine",
+   "sector": "other"
+  },
+  {
+   "subject": "Iran court upholds lashes sentence for singer who performed without hijab",
+   "sector": "other"
+  },
+  {
+   "subject": "Rebel offensive against Ethiopian army stokes fears of return to civil war",
+   "sector": "other"
+  },
+  {
+   "subject": "Somali army clashes with local forces for control of Baidoa",
+   "sector": "other"
+  },
+  {
+   "subject": "Five arrested near UK air base used by U.S. bombers in Iran war",
+   "sector": "other"
+  },
+  {
+   "subject": "Why the latest action from India's youth-led 'cockroach' movement is targeting the election chief",
+   "sector": "other"
+  },
+  {
+   "subject": "France puts out massive fire that torched 42,000 hectares and smouldered for 69 days",
+   "sector": "other"
+  },
+  {
+   "subject": "Breakingviews - COMMENTARY: Ballroom donors will dance like someone's watching - Reuters",
+   "sector": "other"
+  },
+  {
+   "subject": "Suspects in alleged UK air base terror plot bailed as police probe Iran link - 1News",
+   "sector": "other"
+  },
+  {
+   "subject": "Trump ‘very seriously’ considering diesel export ban as global supply crunch worsens",
+   "sector": "energy"
+  },
+  {
+   "subject": "Fed’s watchdog warns of security ‘deficiencies’ at central bank",
+   "sector": "financials"
+  },
+  {
+   "subject": "Turkey’s investment-fund fiasco",
+   "sector": "financials"
+  },
+  {
+   "subject": "‘I’m never selling’: I’m 47 and buy bitcoin with every dollar I earn. Am I crazy?",
+   "sector": "financials"
+  },
+  {
+   "subject": "Trump-Xi summit analysis: 'Tangible outcomes' needed for U.S.-China truce to hold",
+   "sector": "industrials"
+  },
+  {
+   "subject": "FBI deputy chief Andrew Bailey to resign after a little more than a year with agency",
+   "sector": "other"
+  },
+  {
+   "subject": "Likud candidate says he wishes he could ‘return’ ex-hostage Yocheved Lifshitz to Hamas",
+   "sector": "other"
+  },
+  {
+   "subject": "The Takeaway: UN General Assembly debate Day 5",
+   "sector": "other"
+  },
+  {
+   "subject": "EU provides €61 million in humanitarian aid amidst rapidly deteriorating situation in Ethiopia",
+   "sector": "other"
+  },
+  {
+   "subject": "The digitalisation of money, payments and finance",
+   "sector": "financials"
+  },
+  {
+   "subject": "Federal Reserve Board issues enforcement actions with former employee of Northstar Bank, former employee of American Express Travel Related Services Company, Inc., and former employee of Regions Bank",
+   "sector": "financials"
+  },
+  {
+   "subject": "Minutes of the Transaction and Post-trade Reporting Harmonisation Taskforce - July 2026",
+   "sector": "financials"
+  },
+  {
+   "subject": "(BOJ Review)The Expansion and Diversification of Private Credit Funds",
+   "sector": "financials"
+  },
+  {
+   "subject": "Money Market Operations as on September 27, 2026",
+   "sector": "financials"
+  },
+  {
+   "subject": "A critical juncture for the world trading system: what the evidence tells us",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Week in Review: IAEA 70th General Conference",
+   "sector": "other"
+  },
+  {
+   "subject": "Can Fracking Reverse Colombia’s Oil and Gas Decline?",
+   "sector": "energy"
+  },
+  {
+   "subject": "A.P. Moller Capital Takes Majority Stake in Euroports",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Tullow books Noble drillship for Ghana campaign",
+   "sector": "energy"
+  },
+  {
+   "subject": "Hudbay lifts Snow Lake gold output estimate by 60%",
+   "sector": "materials"
+  },
+  {
+   "subject": "Scoular promotes six within its Grain Division",
+   "sector": "materials"
+  },
+  {
+   "subject": "Stolen FBI data reveals employees’ roles in intelligence and surveillance",
+   "sector": "other"
+  },
+  {
+   "subject": "Power, Prudence, and Restraint in Fénelon’s Telemachus",
+   "sector": "other"
+  },
+  {
+   "subject": "Nigerian attempts to break world record by dancing non-stop for seven days",
+   "sector": "other"
+  },
+  {
+   "subject": "Indian billionaire’s payments firm plots biggest London flotation in years",
+   "sector": "financials"
+  },
+  {
+   "subject": "Iran touts Hormuz attacks as oil flows increase despite tensions",
+   "sector": "energy"
+  },
+  {
+   "subject": "After more than two decades, U.S. forces prepare to leave Iraq",
+   "sector": "other"
+  },
+  {
+   "subject": "US sanctions on Iran's aviation industry make travel less predictable as countries cancel flights",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Israel's opposition bloc, Netanyahu’s coalition in dead heat, election poll finds",
+   "sector": "other"
+  },
+  {
+   "subject": "Ethiopian pro-government forces claim capture of strategic Tigray town - Reuters",
+   "sector": "other"
+  },
+  {
+   "subject": "Ryan Fox and Min Woo Lee help extend International's lead in Presidents Cup - 1News",
+   "sector": "other"
+  },
+  {
+   "subject": "Treasury Secretary Scott Bessent hires Wall Street economist David Zervos",
+   "sector": "financials"
+  },
+  {
+   "subject": "Tata family scion hits back with plan to keep holding company private",
+   "sector": "financials"
+  },
+  {
+   "subject": "SpaceX sends its Starship rocket to orbit for the first time — but not without some hiccups",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Debt-hungry AI companies face increased risk as bond yields spike",
+   "sector": "technology"
+  },
+  {
+   "subject": "Mexico could see life-threatening floods due to Hurricane Polo",
+   "sector": "other"
+  },
+  {
+   "subject": "Two new West Bank settlements inaugurated with cabinet ministers on hand",
+   "sector": "other"
+  },
+  {
+   "subject": "Canada urges stronger partnerships as global order faces ‘rupture’",
+   "sector": "other"
+  },
+  {
+   "subject": "Commission welcomes Member States' endorsement of five joint European defence projects",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Almost ten million people took part in ECB survey on new euro banknotes",
+   "sector": "financials"
+  },
+  {
+   "subject": "Federal Reserve Board announces termination of enforcement action with SNB Bancshares and Bank of Eufaula",
+   "sector": "financials"
+  },
+  {
+   "subject": "Transcript of the Governor's pooled broadcast interview given on 17 September 2026",
+   "sector": "financials"
+  },
+  {
+   "subject": "(BOJ Review) Granular Insights into Depositor Dynamics and Deposit Spreads in Japanese G-SIBs' Foreign Currency Deposits",
+   "sector": "financials"
+  },
+  {
+   "subject": "Money Market Operations as on September 26, 2026",
+   "sector": "financials"
+  },
+  {
+   "subject": "Tariffs applied by WTO members have decreased by a third since 1996",
+   "sector": "industrials"
+  },
+  {
+   "subject": "New Members Elected to the IAEA Board of Governors",
+   "sector": "other"
+  },
+  {
+   "subject": "SpaceX Sends Starship to Orbit and Deploys 26 Starlink V3 Satellites",
+   "sector": "communications"
+  },
+  {
+   "subject": "NBC News: Eight Marines Injured in Previously Undisclosed Iranian Attack in Hormuz",
+   "sector": "energy"
+  },
+  {
+   "subject": "Fugro survey supports Petronas fields off Malaysia",
+   "sector": "energy"
+  },
+  {
+   "subject": "NGOs warn Donlin mine spill could devastate region",
+   "sector": "materials"
+  },
+  {
+   "subject": "IFEEDER looks to expand partnerships, feed research",
+   "sector": "materials"
+  },
+  {
+   "subject": "GenAI.mil saw more than 2 million users in one week, top DOD official says",
+   "sector": "technology"
+  },
+  {
+   "subject": "The New Signature Wounds: How Drone Warfare Is Reshaping the Injuries Veterans Bring Home",
+   "sector": "other"
+  },
+  {
+   "subject": "Stand-up comic set for release after being convicted of insulting Erdoğan",
+   "sector": "other"
+  },
+  {
+   "subject": "Mighty Sparrow, the Trinidad and Tobago singer known as the ‘calypso king of the world’, dies aged 91",
+   "sector": "other"
+  },
+  {
+   "subject": "Photos: Russian drone strikes pound civilian targets across Kyiv",
+   "sector": "other"
+  },
+  {
+   "subject": "South Africa reels from spate of mass shootings that killed 38 people in a week",
+   "sector": "other"
+  },
+  {
+   "subject": "Avalanche in Nepal leaves 2 dead, several missing",
+   "sector": "other"
+  },
+  {
+   "subject": "Tigray TV station hit by drone as rebels advance in north Ethiopia",
+   "sector": "other"
+  },
+  {
+   "subject": "More than 50 members of Niger's security forces killed in attacks, sources say - Reuters",
+   "sector": "other"
+  },
+  {
+   "subject": "How South Africa's mass shootings differ from lone gunman attacks - 1News",
+   "sector": "other"
+  },
+  {
+   "subject": "Five arrested over alleged bomb plot at UK air base used by U.S.; Iran denies link",
+   "sector": "other"
+  },
+  {
+   "subject": "Russia’s escalating hybrid campaign against Europe",
+   "sector": "other"
+  },
+  {
+   "subject": "Data centres are straining the insurance market",
+   "sector": "financials"
+  },
+  {
+   "subject": "This may be the ‘missing piece’ for investors looking to boost AI exposure",
+   "sector": "technology"
+  },
+  {
+   "subject": "US police report raises more questions about Chinese researcher Wang Danhao’s death",
+   "sector": "other"
+  },
+  {
+   "subject": "Hungarian parliament suspends immunity for PM Magyar, two Orban-era ministers",
+   "sector": "other"
+  },
+  {
+   "subject": "Countries far from conflict paying the price for wars not their own, India tells UN",
+   "sector": "other"
+  },
+  {
+   "subject": "Questions and answers on the proposed Recommendation on cardiovascular health checks",
+   "sector": "healthcare"
+  },
+  {
+   "subject": "Philip R. Lane: Interview with Le Temps",
+   "sector": "financials"
+  },
+  {
+   "subject": "Federal Reserve issues FOMC statement",
+   "sector": "financials"
+  },
+  {
+   "subject": "Monetary Policy Committee dates for 2027",
+   "sector": "financials"
+  },
+  {
+   "subject": "Indicators for Core CPI",
+   "sector": "financials"
+  },
+  {
+   "subject": "Result of the Overnight Variable Rate Reverse Repo (VRRR) auction held on September 28, 2026",
+   "sector": "financials"
+  },
+  {
+   "subject": "Report spotlights role of services export promotion strategies as catalyst for development",
+   "sector": "other"
+  },
+  {
+   "subject": "Update 367 – IAEA Director General Statement on Situation in Ukraine",
+   "sector": "other"
+  },
+  {
+   "subject": "What’s Putin’s Secret Post-Election Strategy To Test NATO?",
+   "sector": "other"
+  },
+  {
+   "subject": "Philippines Accuses Chinese Vessel of Spoofing Location in Northern Waters",
+   "sector": "other"
+  },
+  {
+   "subject": "Uni-Tankers lines up eight stainless newbuilds",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Gold draws investors seeking a ‘trustless’ asset: Phair",
+   "sector": "materials"
+  },
+  {
+   "subject": "'Super Intelligence': the president’s new term for AI, explained",
+   "sector": "technology"
+  },
+  {
+   "subject": "South Korea’s Deliberate Strategic Ambiguity on Taiwan",
+   "sector": "other"
+  },
+  {
+   "subject": "Four bodies found after avalanche hits Himalayan climbing group",
+   "sector": "other"
+  },
+  {
+   "subject": "Hurricane Nolo still threatens Hawaii as Mexico’s Baja braces for Hurricane Polo",
+   "sector": "other"
+  },
+  {
+   "subject": "UK police release suspects on bail after RAF arrests, investigation ongoing",
+   "sector": "other"
+  },
+  {
+   "subject": "Amid changing dynamics in the Middle East, Turkey seeks to emerge as a leader",
+   "sector": "other"
+  },
+  {
+   "subject": "European cities seek ways of boosting affordable housing",
+   "sector": "real_estate"
+  },
+  {
+   "subject": "As midterms approach, does GOP have a Trump problem?",
+   "sector": "other"
+  },
+  {
+   "subject": "Germany's Evonik rejects BASF's $11.7 billion bid, sources say - Reuters",
+   "sector": "materials"
+  },
+  {
+   "subject": "At least 27 killed in two mass shootings in South Africa within hours - 1News",
+   "sector": "other"
+  },
+  {
+   "subject": "Oil prices off highs after reports Saudi pipeline ramping back up",
+   "sector": "energy"
+  },
+  {
+   "subject": "UK to restart resettlement scheme, Mahmood tells Labour conference",
+   "sector": "other"
+  },
+  {
+   "subject": "House prices survived the last rise in interest rates. Will they this time?",
+   "sector": "real_estate"
+  },
+  {
+   "subject": "MongoDB’s stock is down nearly 20% as CEO decamps to Meta",
+   "sector": "technology"
+  },
+  {
+   "subject": "The 10-year Treasury yield is at its highest in nearly two decades. How we got here",
+   "sector": "financials"
+  },
+  {
+   "subject": "SpaceX’s Starship rocket reaches orbit for first time",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Court-jesting comedian convicted for Erdogan ‘insult,’ but freed pending appeal",
+   "sector": "other"
+  },
+  {
+   "subject": "Saudi Arabia warns Gulf security inseparable from global stability amid regional tensions",
+   "sector": "other"
+  },
+  {
+   "subject": "Commission launches EU Screening Week with new recommendations on cardiovascular health checks",
+   "sector": "healthcare"
+  },
+  {
+   "subject": "ECB to invest part of own funds in tokenised securities, with settlement via Pontes",
+   "sector": "financials"
+  },
+  {
+   "subject": "Federal Reserve Board and Federal Open Market Committee release economic projections from the September 15-16 FOMC meeting",
+   "sector": "financials"
+  },
+  {
+   "subject": "Bank rate maintained at 3.75% - September 2026 Monetary Policy Summary and Minutes",
+   "sector": "financials"
+  },
+  {
+   "subject": "Bank of Japan Accounts (September 20)",
+   "sector": "financials"
+  },
+  {
+   "subject": "Money Market Operations as on September 25, 2026",
+   "sector": "financials"
+  },
+  {
+   "subject": "Young Trade Leaders meet with DG; discuss AI, environment, needs of developing economies",
+   "sector": "other"
+  },
+  {
+   "subject": "Scientific Forum Highlights Progress in Expanding Access to Cancer Care",
+   "sector": "healthcare"
+  },
+  {
+   "subject": "High Freight Costs Push More U.S. LNG Toward Europe",
+   "sector": "energy"
+  },
+  {
+   "subject": "Rhine Drops Below Shipping Threshold as Freight Costs Rise",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Siemens Gamesa taps Purus for offshore wind vessel support",
+   "sector": "utilities"
+  },
+  {
+   "subject": "North America is building rare earth plants faster than it is building rare earth engineers",
+   "sector": "materials"
+  },
+  {
+   "subject": "Lindberg to lead UN World Food Programme",
+   "sector": "other"
+  },
+  {
+   "subject": "Trump's FBI shut down investigation into defense contractor's alleged bribes",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Winning by the Rules: Optimizing Weapons Reviews in the Age of Technological Innovation",
+   "sector": "other"
+  },
+  {
+   "subject": "Plan for controversial Sydney data centre scrapped after push-back",
+   "sector": "technology"
+  },
+  {
+   "subject": "US strikes on Ecuadorian fishing boats raise humanitarian concerns but Trump admin not wavering",
+   "sector": "other"
+  },
+  {
+   "subject": "Paris court finds Swiftair guilty over 2014 Mali crash that killed 116",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Playing 'La Bamba' for an hour? Must be a Mexican fandango!",
+   "sector": "other"
+  },
+  {
+   "subject": "Iran sticks to Hormuz plan after Trump rejects it",
+   "sector": "energy"
+  },
+  {
+   "subject": "French hotels, souvenir shops benefit from pope business boost",
+   "sector": "consumer"
+  },
+  {
+   "subject": "US, Iran set to hold separate talks with mediators on Monday or Tuesday, official says - Reuters",
+   "sector": "other"
+  },
+  {
+   "subject": "Ireland wear black armbands, skip handshakes in Israel clash - 1News",
+   "sector": "other"
+  },
+  {
+   "subject": "'Funflation' is on the rise as hobbies get pricier, but consumers keep spending anyway",
+   "sector": "consumer"
+  },
+  {
+   "subject": "Bond sell-off deepens as oil prices rise",
+   "sector": "financials"
+  },
+  {
+   "subject": "The GDP-per-person slowdown threatens global living standards",
+   "sector": "financials"
+  },
+  {
+   "subject": "Micron has a chance to set the record straight with its earnings report",
+   "sector": "technology"
+  },
+  {
+   "subject": "Why Xi believes the U.S. and China can overcome the 'Thucydides Trap'",
+   "sector": "other"
+  },
+  {
+   "subject": "Hero’s burial for late Hong Kong constable paralysed for 21 years after attack",
+   "sector": "other"
+  },
+  {
+   "subject": "5 British suspects in air base attack plot released on bail; Iran denies involvement",
+   "sector": "other"
+  },
+  {
+   "subject": "Cuba warns against ‘law of the jungle’ as Foreign Minister denounces US pressure",
+   "sector": "other"
+  },
+  {
+   "subject": "EU trade agreements continue to benefit European businesses",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Eurosystem brings central bank money to tokenised finance",
+   "sector": "financials"
+  },
+  {
+   "subject": "Exchange of letters between the Governor and the Chancellor regarding CPI Inflation - September 2026",
+   "sector": "financials"
+  },
+  {
+   "subject": "Results of BIS International Locational Banking Statistics and International Consolidated Banking Statistics in Japan",
+   "sector": "financials"
+  },
+  {
+   "subject": "RBI Bulletin – September 2026",
+   "sector": "financials"
+  },
+  {
+   "subject": "WTO Public Forum 2026 spotlights role of services in driving world trade",
+   "sector": "other"
+  },
+  {
+   "subject": "IAEA Visitor Centre Celebrates Its First Anniversary",
+   "sector": "other"
+  },
+  {
+   "subject": "Two-Month Trade Truce Extension Leaves Markets Cold After Trump-Xi Summit",
+   "sector": "industrials"
+  },
+  {
+   "subject": "The Great Lakes Towing Company Orders Two New Damen Tugs from Great Lakes Shipyard",
+   "sector": "industrials"
+  },
+  {
+   "subject": "RCL signs third Huangpu Wenchong boxship series",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Op-Ed: Understanding LCT pegmatites – why context can make or break a lithium project",
+   "sector": "materials"
+  },
+  {
+   "subject": "Mexico’s grain production lags demand",
+   "sector": "materials"
+  },
+  {
+   "subject": "Time, not capital, is the constraint on the defense industrial base",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Seoul Needs a Playbook for Hormuz, Ukraine, and What Comes Next",
+   "sector": "other"
+  },
+  {
+   "subject": "US prosecutors reopen case of alleged gang rape at Cornell University",
+   "sector": "other"
+  },
+  {
+   "subject": "Lula bans fixed-odds sports betting a week before Brazilian elections",
+   "sector": "consumer"
+  },
+  {
+   "subject": "Russia strike sets National Academy of Sciences of Ukraine ablaze",
+   "sector": "other"
+  },
+  {
+   "subject": "Photos: This may be the most inspirational night school on Earth",
+   "sector": "other"
+  },
+  {
+   "subject": "No public mentions of Taiwan at official Xi and Trump meeting",
+   "sector": "other"
+  },
+  {
+   "subject": "Five suspects arrested in explosives case near UK airbase were British nationals",
+   "sector": "other"
+  },
+  {
+   "subject": "Airbus faces dip in September deliveries after quality snag, sources say - Reuters",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Man City chair asserts club's innocence over Premier League charges - 1News",
+   "sector": "other"
+  },
+  {
+   "subject": "Gold and silver prices fall sharply as higher bond yields weigh on metals",
+   "sector": "materials"
+  },
+  {
+   "subject": "Erdoğan holds rare meeting with Germany’s potential next leader",
+   "sector": "other"
+  },
+  {
+   "subject": "The trickle-down economics of the AI boom",
+   "sector": "technology"
+  },
+  {
+   "subject": "Nvidia is right: Its stock is a bargain by this measure",
+   "sector": "technology"
+  },
+  {
+   "subject": "Appeals court rules that states can regulate Kalshi’s sports prediction markets, dealing another legal blow to platforms",
+   "sector": "financials"
+  },
+  {
+   "subject": "VW, Gotion ramp up battery production in Europe, Morocco amid rising EV demand",
+   "sector": "consumer"
+  },
+  {
+   "subject": "Board of Peace official: Extremist views in Israel impeding effort to deradicalize Gaza",
+   "sector": "other"
+  },
+  {
+   "subject": "Lavrov issues call for new Eurasian ‘security architecture’",
+   "sector": "other"
+  },
+  {
+   "subject": "ECB Consumer Expectations Survey results – August 2026",
+   "sector": "financials"
+  },
+  {
+   "subject": "Exchange of letters between the Governor and the Chancellor regarding QT and the APF - September 2026",
+   "sector": "financials"
+  },
+  {
+   "subject": "Statistics on Securities Financing Transactions in Japan",
+   "sector": "financials"
+  },
+  {
+   "subject": "RBI to conduct Overnight Variable Rate Reverse Repo (VRRR) auction under LAF on September 28, 2026",
+   "sector": "financials"
+  },
+  {
+   "subject": "World Trade Report: Trade reform to boost growth; inaction can cost 10% global GDP",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Scientific Forum Opening 2026: Delivering on the Promise of Cancer Care",
+   "sector": "healthcare"
+  },
+  {
+   "subject": "Qatar Extends LNG Force Majeure as Hormuz Crisis Drags On",
+   "sector": "energy"
+  },
+  {
+   "subject": "At Sea, Confined Spaces Leave No Room for Error",
+   "sector": "other"
+  },
+  {
+   "subject": "Marinakis pays up for prompt Exmar suezmax",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Critical minerals boom risks second funding gap as governance support shrinks",
+   "sector": "materials"
+  },
+  {
+   "subject": "Cargill honored for farmer, food system efforts",
+   "sector": "materials"
+  },
+  {
+   "subject": "NATO’s thumbs-up for AWS shows Europe still needs America",
+   "sector": "technology"
+  },
+  {
+   "subject": "What the End of Operation Inherent Resolve Means for Iraq and Syria",
+   "sector": "other"
+  },
+  {
+   "subject": "Remains of dozens of suspected kidnap victims found in Nigerian forests",
+   "sector": "other"
+  },
+  {
+   "subject": "Michigan CEO loses job after posting AI-made image of her family in ‘Lake America’ sweaters",
+   "sector": "other"
+  },
+  {
+   "subject": "168 hours on the dance floor: Nigerian dancer chases Guinness World Record",
+   "sector": "other"
+  },
+  {
+   "subject": "5 arrested near a U.K. air base used by U.S. on suspicion of preparing a terrorist act",
+   "sector": "other"
+  },
+  {
+   "subject": "Powerful storm batters northeast US, hundreds of flights canceled",
+   "sector": "industrials"
+  },
+  {
+   "subject": "For a 'measured diplomatic figure', Pope Leo's visit to France has been 'deeply political'",
+   "sector": "other"
+  },
+  {
+   "subject": "UK examines foreign state involvement in suspected airbase plot, releases suspects - Reuters",
+   "sector": "other"
+  },
+  {
+   "subject": "Eleven-man Wallabies upset South Africa 42-38 in Perth - 1News",
+   "sector": "other"
+  },
+  {
+   "subject": "These Gen Z-ers are choosing ETFs over sports bets. How younger investors told us they’re building wealth.",
+   "sector": "financials"
+  },
+  {
+   "subject": "Congo politician beaten to death after urging Ebola prevention on radio, his party says",
+   "sector": "other"
+  },
+  {
+   "subject": "UK’s FM Miliband boasts that sanctions on settlers have spurred global action",
+   "sector": "other"
+  },
+  {
+   "subject": "‘Safeguard the postwar order,’ China tells UN General Assembly",
+   "sector": "other"
+  },
+  {
+   "subject": "Boris Vujčić: Interview with Reuters",
+   "sector": "financials"
+  },
+  {
+   "subject": "Asset Purchase Facility: Gilt Sales – Market Notice 17 September 2026",
+   "sector": "financials"
+  },
+  {
+   "subject": "Amendment to \"Principal Terms and Conditions of Complementary Deposit Facility\"",
+   "sector": "financials"
+  },
+  {
+   "subject": "Bridging the Global Gap in Cancer Care",
+   "sector": "healthcare"
+  },
+  {
+   "subject": "Zelenskyy Warns Russia Wants to Widen War Beyond Ukraine",
+   "sector": "other"
+  },
+  {
+   "subject": "Iran Says Won’t Soften Demands As Trump Rejects Hormuz Offer",
+   "sector": "energy"
+  },
+  {
+   "subject": "AI boom fails to lift gold demand, WGC says",
+   "sector": "materials"
+  },
+  {
+   "subject": "SWISCA offering full-scope milling solutions",
+   "sector": "materials"
+  },
+  {
+   "subject": "Trump floats ‘AI Force’ to boost industry",
+   "sector": "technology"
+  },
+  {
+   "subject": "Missed the Marque: Cyber Privateers Wanted, Compensation to Be Determined",
+   "sector": "technology"
+  },
+  {
+   "subject": "Mexico's Pacific coast braces for Hurricane Polo",
+   "sector": "other"
+  },
+  {
+   "subject": "Trump asked Xi Jinping if China would like to buy US weapons, American ambassador says",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Arming an adversary: Why Trump’s offer to sell China weapons belies US policy",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Backlash over data centers tests Europe's AI ambitions",
+   "sector": "technology"
+  },
+  {
+   "subject": "Hybrid warfare: The threat of Russia looms over the Mediterranean",
+   "sector": "other"
+  },
+  {
+   "subject": "Trump and Xi's 'stalemate' summit was a glitzy gift to China - Reuters",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Treasury yields rise as march to multiyear highs continues",
+   "sector": "financials"
+  },
+  {
+   "subject": "La Vestale should be a revelation. The Berlin Staatsoper’s season-opener fails to convince",
+   "sector": "other"
+  },
+  {
+   "subject": "Soaring bond yields, gaping deficits and towering debts: what could go wrong?",
+   "sector": "financials"
+  },
+  {
+   "subject": "China targets AI and frontier tech in newly unveiled innovation blueprint",
+   "sector": "technology"
+  },
+  {
+   "subject": "Netanyahu flew to UAE to ask MBZ to deny giving him pre-Oct. 7 warning of Hamas attack – sources",
+   "sector": "other"
+  },
+  {
+   "subject": "Countries adopt global blueprint to tackle fast-evolving crime in digital age",
+   "sector": "other"
+  },
+  {
+   "subject": "ECB wage tracker at 2.7% in H1 2027, pointing to a modest uptick in negotiated wage growth",
+   "sector": "financials"
+  },
+  {
+   "subject": "Chancellor announces Bank of England appointments",
+   "sector": "financials"
+  },
+  {
+   "subject": "Amendment to \"Principal Terms and Conditions of the Funds-Supplying Operations to Support Financing for Climate Change Responses\"",
+   "sector": "financials"
+  },
+  {
+   "subject": "Indonesia's Coal Exports Sink 23% as Global Demand Heads for a Record",
+   "sector": "energy"
+  },
+  {
+   "subject": "Russia Says It Struck Vessels In Ukraine",
+   "sector": "other"
+  },
+  {
+   "subject": "Metals are stock puppets, Bloomberg strategist says",
+   "sector": "materials"
+  },
+  {
+   "subject": "CN ships first grain unit train from expanded TGM site",
+   "sector": "materials"
+  },
+  {
+   "subject": "Will airmen trust AI? The Air Force’s future plans depend on it",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Zelensky’s Perception Problem: Are New Partnerships a Solution?",
+   "sector": "other"
+  },
+  {
+   "subject": "Trump-Xi summit: What wasn't said might matter the most",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Bangkok declared a ‘disaster zone’ after flooding, as rainstorms shift direction",
+   "sector": "other"
+  },
+  {
+   "subject": "South Korea suspects North Korean mines behind DMZ blast",
+   "sector": "other"
+  },
+  {
+   "subject": "Russia expected to intensify hybrid war on Europe",
+   "sector": "other"
+  },
+  {
+   "subject": "🔴 Five men arrested over suspected bomb plot at UK air base to be released on bail",
+   "sector": "other"
+  },
+  {
+   "subject": "Breakingviews - COMMENTARY: Jensen Huang's invisible hand is tied on AI safety - Reuters",
+   "sector": "technology"
+  },
+  {
+   "subject": "Meta launches enterprise AI business seeking to cash in on vast spending",
+   "sector": "technology"
+  },
+  {
+   "subject": "What Africa’s biggest IPO can do for its stock markets",
+   "sector": "financials"
+  },
+  {
+   "subject": "Crypto platform Bitget suspects North Korea is responsible for $352 million hack",
+   "sector": "financials"
+  },
+  {
+   "subject": "Child and 2 women ‘crushed to death’ during France to UK sea crossing",
+   "sector": "other"
+  },
+  {
+   "subject": "Homecoming procession held in Bnei Brak for 160 draft dodgers released from prison",
+   "sector": "other"
+  },
+  {
+   "subject": "The Takeaway: UN General Assembly debate Day 4",
+   "sector": "other"
+  },
+  {
+   "subject": "Statistical Notice 2026/08 - Changes to the criteria for monthly form BT reporting",
+   "sector": "financials"
+  },
+  {
+   "subject": "(Reference) Change in the Guideline for Money Market Operations (September 2026 MPM)",
+   "sector": "financials"
+  },
+  {
+   "subject": "UK Grid Operator Warns of Tight Power Margins",
+   "sector": "utilities"
+  },
+  {
+   "subject": "Lundin Gold hits record 1035g in Ecuador",
+   "sector": "materials"
+  },
+  {
+   "subject": "SIMEZA Silos working on storage projects across the globe",
+   "sector": "materials"
+  },
+  {
+   "subject": "Cape Canaveral is building up its counter-drone defenses, Space Force says",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Washington’s Foreign Equity Bets Need Better Governance",
+   "sector": "financials"
+  },
+  {
+   "subject": "Embattled Serbian president resigns, paving way for early elections",
+   "sector": "other"
+  },
+  {
+   "subject": "Two giant pandas arrive in Atlanta from China after Xi-Trump summit",
+   "sector": "other"
+  },
+  {
+   "subject": "Migrant children protest after police clear beach camp in Ceuta",
+   "sector": "other"
+  },
+  {
+   "subject": "Pakistan: Suicide attack at police stop kills at least 11",
+   "sector": "other"
+  },
+  {
+   "subject": "COMMENTARY: Cash-rich oil majors face post-Iran strategy rethink - Reuters",
+   "sector": "energy"
+  },
+  {
+   "subject": "Shein’s profits fall by two-thirds in first earnings report as a public company",
+   "sector": "consumer"
+  },
+  {
+   "subject": "Scott Bessent should stop blaming the bond market",
+   "sector": "financials"
+  },
+  {
+   "subject": "China's Xi urges U.S. to cooperate on AI",
+   "sector": "technology"
+  },
+  {
+   "subject": "Xi Jinping demands ‘safer’ China as Communist Party prepares for leadership reshuffle",
+   "sector": "other"
+  },
+  {
+   "subject": "By refusing to name a leader, the anti-Netanyahu ‘change bloc’ is making a fatal mistake",
+   "sector": "other"
+  },
+  {
+   "subject": "Haiti at ‘watershed moment’, Prime Minister tells UN, urging full backing for security force",
+   "sector": "other"
+  },
+  {
+   "subject": "Minutes of the Securities Lending Committee meeting – March 2026",
+   "sector": "financials"
+  },
+  {
+   "subject": "Developments in Real Exports and Real Imports",
+   "sector": "financials"
+  },
+  {
+   "subject": "European Gas Prices Rally on U.S.-Iran Stalemate",
+   "sector": "energy"
+  },
+  {
+   "subject": "TD sees rhodium surplus ending four-year squeeze",
+   "sector": "materials"
+  },
+  {
+   "subject": "Port of Vancouver moves record amounts of grain",
+   "sector": "materials"
+  },
+  {
+   "subject": "Pete Hegseth is rebuilding the military's ‘brass ceiling’",
+   "sector": "other"
+  },
+  {
+   "subject": "Only America Could Have Designed the Field Jacket",
+   "sector": "other"
+  },
+  {
+   "subject": "One dead as nor'easter storm pummels New York and New Jersey",
+   "sector": "other"
+  },
+  {
+   "subject": "Pomp over progress in Xi’s US summit with Trump is a win for China",
+   "sector": "other"
+  },
+  {
+   "subject": "French police fire tear gas at migrants on beach",
+   "sector": "other"
+  },
+  {
+   "subject": "French far right's Jordan Bardella denies media report he made anti-Semitic comments",
+   "sector": "other"
+  },
+  {
+   "subject": "Broadening inflation, robust growth, global hikes build case for India RBI tightening - Reuters",
+   "sector": "financials"
+  },
+  {
+   "subject": "Northern Star shares pop as Australia's largest gold miner rejects $27 billion takeover proposal",
+   "sector": "materials"
+  },
+  {
+   "subject": "Without a resilient economy, central banks have limited choices",
+   "sector": "financials"
+  },
+  {
+   "subject": "Here's who attended the Trump-Xi state dinner",
+   "sector": "other"
+  },
+  {
+   "subject": "Strong AI demand prompts Hong Kong trade body to raise export growth forecast",
+   "sector": "technology"
+  },
+  {
+   "subject": "US, Iran expected to hold separate talks with mediators as pressure ramps on Tehran",
+   "sector": "other"
+  },
+  {
+   "subject": "Pakistan’s Sharif warns any diversion of Indus waters will be ‘treated as an act of war’",
+   "sector": "other"
+  },
+  {
+   "subject": "Flow of Funds Accounts (2nd Quarter 2026, Preliminary Figures)",
+   "sector": "financials"
+  },
+  {
+   "subject": "TotalEnergies Targets 3% Annual Oil and Gas Growth Through 2030",
+   "sector": "energy"
+  },
+  {
+   "subject": "BHP’s Escondida restart eases tight copper market",
+   "sector": "materials"
+  },
+  {
+   "subject": "US durum market tightens after smaller harvest",
+   "sector": "materials"
+  },
+  {
+   "subject": "Space Force braces for stalled progress amid lack of full funding",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Venezuela releases dozens of political prisoners as election calls grow",
+   "sector": "other"
+  },
+  {
+   "subject": "At Trump meeting, Xi Jinping lays out terms to avoid US-China military conflict",
+   "sector": "other"
+  },
+  {
+   "subject": "Ebola cases surpass 8,000 as DRC struggles to control outbreak",
+   "sector": "healthcare"
+  },
+  {
+   "subject": "'Fascinating success': Pope Leo’s appeal in France transcends faith and politics",
+   "sector": "other"
+  },
+  {
+   "subject": "India's SP Group eyes dollar-rupee debt route for fresh funding, sources say - Reuters",
+   "sector": "financials"
+  },
+  {
+   "subject": "China posts weakest industrial profit growth this year, expanding 4.2% in August",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Russian drones hit Kyiv science academy and hospital",
+   "sector": "other"
+  },
+  {
+   "subject": "Philadelphia Fed's Anna Paulson says 'modest' rate moves likely ahead to tame inflation",
+   "sector": "financials"
+  },
+  {
+   "subject": "Hong Kong checkpoints to handle 7.44 million passenger trips for National Day break",
+   "sector": "consumer"
+  },
+  {
+   "subject": "Less broad than first reported, Dutch luggage checks for settlement goods spark Israeli warning",
+   "sector": "other"
+  },
+  {
+   "subject": "UN voices grave concern as fighting spreads across northern Ethiopia",
+   "sector": "other"
+  },
+  {
+   "subject": "BOJ Current Account Balances by Sector (Aug.)",
+   "sector": "financials"
+  },
+  {
+   "subject": "Gemfields takes $125M hit as Montepuez grades disappoint",
+   "sector": "materials"
+  },
+  {
+   "subject": "Bunge to process BASF hybrid canola",
+   "sector": "materials"
+  },
+  {
+   "subject": "Air Force contemplates unmanned tankers",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Why Eurasia, Not the Indo-Pacific, Matters Most in Next Phase of Taiwan Deterrence",
+   "sector": "other"
+  },
+  {
+   "subject": "Four killed in helicopter crash near Montreal",
+   "sector": "other"
+  },
+  {
+   "subject": "Queensland anti-corruption commission investigated just 20 of more than 6,000 complaints in a year",
+   "sector": "other"
+  },
+  {
+   "subject": "Jerusalem Daily: Israeli incursions at Al-Aqsa Mosque",
+   "sector": "other"
+  },
+  {
+   "subject": "A Green pope? Vatican describes environmental destruction as an 'ecological sin'",
+   "sector": "other"
+  },
+  {
+   "subject": "South African rand slips as US-Iran stalemate pushes oil prices higher - Reuters",
+   "sector": "financials"
+  },
+  {
+   "subject": "Iran's foreign minister says Tehran ready for 'doomsday' war with U.S., but leaves diplomacy on the table",
+   "sector": "other"
+  },
+  {
+   "subject": "Post-Covid economic inactivity in UK was much lower than thought, says ONS",
+   "sector": "financials"
+  },
+  {
+   "subject": "Hong Kong wage index rises 3.4% in June, with government expecting further gains",
+   "sector": "financials"
+  },
+  {
+   "subject": "Tuvalu urges decisive global action as rising seas threaten its future",
+   "sector": "other"
+  },
+  {
+   "subject": "Signing of the Third Bilateral Swap Arrangement between Japan and Malaysia",
+   "sector": "financials"
+  },
+  {
+   "subject": "Gold price slides as oil, Fed rate concerns lift dollar",
+   "sector": "materials"
+  },
+  {
+   "subject": "COCERAL lowers EU grain output forecast",
+   "sector": "materials"
+  },
+  {
+   "subject": "Defense Business Brief: Dispatch from AFA’s Air, Space, & Cyber 2026",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Latin America’s Balancing Act: Washington, Beijing, and the Post-Maduro Environment",
+   "sector": "other"
+  },
+  {
+   "subject": "Pope says 'scourge' of abuse must be rooted out as he visits Lourdes",
+   "sector": "other"
+  },
+  {
+   "subject": "Further interest rate hikes could ‘devastate’ property market without easing unaffordability",
+   "sector": "real_estate"
+  },
+  {
+   "subject": "Florida authorities ask court to block OpenAI’s ChatGPT over safety issues",
+   "sector": "technology"
+  },
+  {
+   "subject": "French Senate elections: What next after far right surge?",
+   "sector": "other"
+  },
+  {
+   "subject": "Saudi foreign minister arrives in Washington for talks with Rubio - Reuters",
+   "sector": "other"
+  },
+  {
+   "subject": "Meta's Muse agent is attacking one of the economy's most profitable weak spots",
+   "sector": "technology"
+  },
+  {
+   "subject": "A TV series shows Britain is woefully unprepared for war",
+   "sector": "other"
+  },
+  {
+   "subject": "China confirms first AI talks with U.S. have taken place, hints at trade truce extension",
+   "sector": "technology"
+  },
+  {
+   "subject": "At least 21 Hong Kong-Bangkok flights delayed amid flooding in Thai capital",
+   "sector": "industrials"
+  },
+  {
+   "subject": "OceanaGold’s 97-gram hit backs Waihi expansion",
+   "sector": "materials"
+  },
+  {
+   "subject": "New process aims to improve whole grain flour",
+   "sector": "materials"
+  },
+  {
+   "subject": "The Pentagon must prepare for battles around the moon: Joint Chiefs chair",
+   "sector": "industrials"
+  },
+  {
+   "subject": "A Body Blow? The War on Iran and U.S. Military Readiness",
+   "sector": "other"
+  },
+  {
+   "subject": "Switzerland rejects stricter interpretation of its neutrality",
+   "sector": "other"
+  },
+  {
+   "subject": "Larissa Waters steps down as Greens leader due to ill health",
+   "sector": "other"
+  },
+  {
+   "subject": "LIVE: Belgium vs France – Nations League",
+   "sector": "other"
+  },
+  {
+   "subject": "Breakingviews - COMMENTARY: Eastern Europe's miracle can survive protectionism - Reuters",
+   "sector": "industrials"
+  },
+  {
+   "subject": "CEO who posted 'Lake America' sweatshirt photos is no longer with the company",
+   "sector": "other"
+  },
+  {
+   "subject": "SpaceX’s Starship rocket reaches orbit for the first time despite engine failure",
+   "sector": "industrials"
+  },
+  {
+   "subject": "U.S.-China trade truce extended for two months, Bessent says, as Xi begins state visit",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Chinese commercial reactor achieves nuclear fusion with clean hydrogen-boron fuel",
+   "sector": "utilities"
+  },
+  {
+   "subject": "‘No one speaks on behalf of Lebanon’: PM Salam asserts State authority at UN",
+   "sector": "other"
+  },
+  {
+   "subject": "Kinross Gold cuts output, boosts shareholder payout",
+   "sector": "materials"
+  },
+  {
+   "subject": "Italian soft wheat flour exports rising",
+   "sector": "materials"
+  },
+  {
+   "subject": "How a MAGA influencer with ties to Russia became Trump’s Arctic adviser",
+   "sector": "other"
+  },
+  {
+   "subject": "An Army General Talks Fusing Sensors and Shooters on the Eastern Flank",
+   "sector": "industrials"
+  },
+  {
+   "subject": "Iranian minister says only negotiation can end conflict after Trump rejects Hormuz deal",
+   "sector": "energy"
+  },
+  {
+   "subject": "Plan for controversial $1.2bn datacentre in Sydney scrapped due to ‘emerging’ regulations",
+   "sector": "technology"
+  },
+  {
+   "subject": "At least 33 killed after Myanmar military air strike hits market",
+   "sector": "other"
+  },
+  {
+   "subject": "Heavy rain and flooding kills dozens northern India",
+   "sector": "other"
+  },
+  {
+   "subject": "Lebanon hopes for new staff-level agreement with IMF - Reuters",
+   "sector": "financials"
+  },
+  {
+   "subject": "Pass the popcorn: New York’s film-goers are on the warpath",
+   "sector": "communications"
+  },
+  {
+   "subject": "Hong Kong launches 1-month consultation on arbitration law reforms",
+   "sector": "other"
+  },
+  {
+   "subject": "‘Invest with Iraq’: PM sets out vision for new economic future",
+   "sector": "other"
+  },
+  {
+   "subject": "Rainbow Rare Earths deal with Neo clears path for Phalaborwa study",
+   "sector": "materials"
+  },
+  {
+   "subject": "Why are soybean oil futures stuck in neutral?",
+   "sector": "materials"
+  },
+  {
+   "subject": "Agencies spent nearly $10 billion for feds not to work in 2025",
+   "sector": "other"
+  },
+  {
+   "subject": "The Real U.S.-Saudi Nuclear Deal Is Better Than We Thought",
+   "sector": "utilities"
+  },
+  {
+   "subject": "Killer Christa Pike to be executed within days - but her defence say she's a victim too",
+   "sector": "other"
+  },
+  {
+   "subject": "After a dead whale washed up at a Perth beach, some took selfies. Others held their nose from the stench",
+   "sector": "other"
+  },
+  {
+   "subject": "UK pledges tougher stance on Israeli actions in Gaza, West Bank",
+   "sector": "other"
+  },
+  {
+   "subject": "Trump heads to GOP strongholds Alabama and Oklahoma to campaign for midterms",
+   "sector": "other"
+  },
+  {
+   "subject": "Man City CEO tells EFC board club will clear their name - Reuters",
+   "sector": "other"
+  },
+  {
+   "subject": "Taxpayer-funded Trump ads draw bipartisan scrutiny ahead of midterms",
+   "sector": "other"
+  },
+  {
+   "subject": "The money vs message election",
+   "sector": "other"
+  },
+  {
+   "subject": "China is no longer just the world’s factory. It’s the HQ",
+   "sector": "industrials"
+  }
+ ]
+}

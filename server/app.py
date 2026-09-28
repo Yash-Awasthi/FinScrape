@@ -24,6 +24,7 @@ from server.obs import install_observability
 from server.routes import accuracy as accuracy_routes
 from server.routes import agents as agents_routes
 from server.routes import ai as ai_routes
+from server.routes import alerts as alerts_routes
 from server.routes import correlations as correlations_routes
 from server.routes import data as data_routes
 from server.routes import events as events_routes
@@ -68,17 +69,20 @@ async def _warm_scenarios(s) -> None:
     try:
         from server.routes.insight import scenarios
 
-        await scenarios()
+        # The dashboard's own request; called directly, Query() defaults are not ints.
+        await scenarios(limit=6, window=200)
         log.info("scenario cache warmed")
     except asyncio.CancelledError:
         raise
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - best effort; the first request pays instead
         log.warning("scenario warm-up skipped: %s", exc)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     s = get_settings()
+    if problems := s.production_problems():
+        raise RuntimeError("refusing to start in production: " + "; ".join(problems))
     if s.uses_default_api_key:
         log.warning(
             "FINSCRAPE_API_KEY is unset, so every mutating route accepts the key "
@@ -131,7 +135,8 @@ def create_app() -> FastAPI:
         db_ok = True
         try:
             await db.pool().fetchval("SELECT 1")
-        except Exception as exc:  # pragma: no cover - exercised only on a broken DB
+        # Broken DB reads as degraded.
+        except Exception as exc:  # noqa: BLE001  # pragma: no cover
             log.warning("health: db check failed: %s", exc)
             db_ok = False
         return HealthResponse(
@@ -147,7 +152,8 @@ def create_app() -> FastAPI:
         orchestrator (compose healthcheck / k8s) stops routing to a half-open replica."""
         try:
             await db.pool().fetchval("SELECT 1")
-        except Exception as exc:  # pragma: no cover - exercised only on a broken DB
+        # Broken DB reads as not ready.
+        except Exception as exc:  # noqa: BLE001  # pragma: no cover
             log.warning("ready: db check failed: %s", exc)
             response.status_code = 503
             return {"ready": False}
@@ -164,6 +170,7 @@ def create_app() -> FastAPI:
     app.include_router(accuracy_routes.router)
     app.include_router(sentiment_routes.router)
     app.include_router(portfolio_routes.router)
+    app.include_router(alerts_routes.router)
     app.include_router(telegram_routes.router)
     _guard_mutating_routes(geopolitical_router)
     app.include_router(

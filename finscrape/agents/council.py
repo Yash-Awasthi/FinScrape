@@ -110,7 +110,7 @@ class AgentCouncil:
             text: Article body text.
             metadata: Optional dict of extra context (source, age, etc.).
             market_facts: Optional {ticker: {indicator: value}} GROUND TRUTH facts.
-            lessons: Optional AccuracyTracker.get_lessons() output, folded into
+            lessons: Optional grounded past-call stats, folded into
                 the judge's prompt only — debators never see it.
 
         Returns:

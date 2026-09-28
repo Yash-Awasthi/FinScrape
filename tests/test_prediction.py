@@ -52,7 +52,7 @@ def test_predict_blends_and_reports():
     )
     # INVEST on cnbc/earnings went 2-for-2 → empirical layer lifts p above prior
     assert result["p_verdict_correct"] > 0.5
-    assert result["data_tier"] == "empirical"
+    assert result["data_tier"] == "thin-data"  # 3 outcomes are no track record
     assert result["factors"]["verdict"] == 1.0
     # PULL_OUT flips the axis: same market direction, opposite verdict framing
     bear = predict(
@@ -69,6 +69,32 @@ def test_predict_without_outcomes_uses_structural():
     assert result["empirical_share"] == 0.0
 
 
+def test_reliable_pull_out_points_down():
+    """Hit rates say whether a verdict landed, not which way prices went: a PULL_OUT
+    that is always right must read as a likely fall."""
+    now_iso = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime())
+    record = [
+        {"verdict": "PULL_OUT", "outcome": "correct", "confidence": 0.7, "source": "rss",
+         "event_type": "geopolitical", "checked_at": now_iso}
+    ] * 5
+    bear = predict("Strait closed to tankers", "PULL_OUT", 0.7, "rss", "geopolitical", record)
+    assert bear["p_positive_move"] < 0.5
+    assert bear["p_verdict_correct"] > 0.5
+    # Non-directional verdicts were never scored, so the record says nothing about them.
+    watch = predict("Strait closed to tankers", "CAUTIOUS", 0.7, "rss", "geopolitical", record)
+    assert watch["p_positive_move"] == watch["structural_prior"]
+
+
 def test_brier_summary():
     b = brier_summary(outcomes())
     assert b["n"] == 3 and 0 <= b["brier"] <= 1
+
+
+def test_empirical_tier_needs_a_real_sample():
+    many = outcomes() * 10
+    assert predict("Revenue surged", "INVEST", 0.8, "cnbc", "earnings", many)[
+        "data_tier"
+    ] == "empirical"
+    assert predict("Revenue surged", "INVEST", 0.8, "cnbc", "earnings", many[:13])[
+        "data_tier"
+    ] == "thin-data"

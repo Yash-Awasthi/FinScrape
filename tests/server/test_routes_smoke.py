@@ -18,7 +18,7 @@ from fastapi.testclient import TestClient
 
 pytest.importorskip("asyncpg")
 
-from tests.server import PG_DSN, pg_reachable  # noqa: E402
+from tests.server import PG_DSN, pg_reachable
 
 pytestmark = pytest.mark.skipif(
     not pg_reachable(), reason="no Postgres at WORLDFIN_TEST_DATABASE_URL"

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Optional
 
@@ -101,7 +101,7 @@ class Mandate:
     excluded_sectors: list[str] = field(default_factory=list)
     excluded_tickers: list[str] = field(default_factory=list)
     status: MandateStatus = MandateStatus.ACTIVE
-    created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     def to_dict(self) -> dict:
         return {

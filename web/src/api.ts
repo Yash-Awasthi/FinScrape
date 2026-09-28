@@ -86,6 +86,8 @@ export interface Scenario {
   stance: "risk-on" | "risk-off" | "mixed";
   tilt: number;
   data_tier: string;
+  /** Scored outcomes behind `data_tier`. */
+  sample_size: number;
   divergent_members: number;
   sectors: ScenarioLeg[];
   exposure: ScenarioLeg[];

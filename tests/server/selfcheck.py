@@ -13,6 +13,7 @@ the `server` dep group (pydantic); they're skipped with a notice if it's missing
 from __future__ import annotations
 
 import sys
+from datetime import UTC
 from pathlib import Path
 
 MIGRATIONS_DIR = Path(__file__).resolve().parents[2] / "server" / "migrations"
@@ -121,7 +122,7 @@ def check_settings() -> bool:
 
 
 def check_schemas() -> None:
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from finscrape.models import FinEvent
     from server.schemas import EventIn, EventOut, IngestResponse
@@ -139,7 +140,7 @@ def check_schemas() -> None:
     assert ev.tickers == ["XOM", "CVX"]
     assert ev.event_type == "geopolitical_event"
 
-    out = EventOut(id=1, created_at=datetime.now(timezone.utc), **ev.model_dump())
+    out = EventOut(id=1, created_at=datetime.now(UTC), **ev.model_dump())
     assert out.id == 1
 
     resp = IngestResponse(inserted=1, duplicates=0, inserted_ids=[1])

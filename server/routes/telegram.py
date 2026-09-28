@@ -5,21 +5,19 @@ and processes the command off the request path. Outbound INVEST/PULL_OUT alerts 
 finscrape alert message format and fan out to subscribers. Everything no-ops gracefully
 when no `TELEGRAM_BOT_TOKEN` is set, so the rest of the app is unaffected.
 
-Subscribers (chat_ids) persist to `<data_dir>/telegram_subs.json` — no schema, no DB.
+Subscribers (chat_ids) live in the Postgres `telegram_subscribers` table.
 """
 
 from __future__ import annotations
 
+import asyncio
 import hmac
-import json
 import logging
-from pathlib import Path
 
 import requests
 from fastapi import APIRouter, BackgroundTasks, Body, Header
 
-from server import queries
-from server import db
+from server import db, queries
 from server.settings import get_settings
 
 log = logging.getLogger("worldfin.telegram")
@@ -34,24 +32,9 @@ _HELP = (
 )
 
 
-def _subs_path() -> Path:
-    d = Path(get_settings().data_dir)
-    d.mkdir(parents=True, exist_ok=True)
-    return d / "telegram_subs.json"
-
-
-def _load_subs() -> set[str]:
-    try:
-        return set(json.loads(_subs_path().read_text()))
-    except (OSError, ValueError):
-        return set()
-
-
-def _save_subs(subs: set[str]) -> None:
-    try:
-        _subs_path().write_text(json.dumps(sorted(subs)))
-    except OSError as exc:  # pragma: no cover - disk full / read-only
-        log.warning("telegram subs save failed: %s", exc)
+async def _load_subs() -> set[str]:
+    rows = await db.pool().fetch("SELECT chat_id FROM telegram_subscribers")
+    return {r["chat_id"] for r in rows}
 
 
 def send_message(chat_id: str | int, text: str) -> bool:
@@ -85,11 +68,11 @@ def format_alert(event: dict) -> str:
     return text + (f"\n_{reasoning}_" if reasoning else "")
 
 
-def notify_new_events(events: list[dict]) -> int:
+async def notify_new_events(events: list[dict]) -> int:
     """Send directional (INVEST/PULL_OUT) events to all subscribers. Returns sends made."""
     if not get_settings().telegram_bot_token:
         return 0
-    subs = _load_subs()
+    subs = await _load_subs()
     if not subs:
         return 0
     sent = 0
@@ -98,7 +81,7 @@ def notify_new_events(events: list[dict]) -> int:
             continue
         msg = format_alert(ev)
         for chat_id in subs:
-            if send_message(chat_id, msg):
+            if await asyncio.to_thread(send_message, chat_id, msg):
                 sent += 1
     return sent
 
@@ -112,17 +95,18 @@ async def _handle_command(chat_id: str, text: str) -> None:
     if cmd in ("start", "help"):
         send_message(chat_id, _HELP)
     elif cmd == "subscribe":
-        subs = _load_subs()
-        subs.add(str(chat_id))
-        _save_subs(subs)
+        await db.pool().execute(
+            "INSERT INTO telegram_subscribers (chat_id) VALUES ($1) ON CONFLICT DO NOTHING",
+            str(chat_id),
+        )
         send_message(chat_id, "✅ Subscribed to INVEST/PULL_OUT alerts.")
     elif cmd == "unsubscribe":
-        subs = _load_subs()
-        subs.discard(str(chat_id))
-        _save_subs(subs)
+        await db.pool().execute(
+            "DELETE FROM telegram_subscribers WHERE chat_id = $1", str(chat_id)
+        )
         send_message(chat_id, "Unsubscribed.")
     elif cmd == "status":
-        subbed = str(chat_id) in _load_subs()
+        subbed = str(chat_id) in await _load_subs()
         send_message(chat_id, f"Alerts: {'on' if subbed else 'off'}.")
     elif cmd == "latest":
         rows = await queries.get_events(db.pool(), limit=5)
@@ -135,7 +119,7 @@ async def _handle_command(chat_id: str, text: str) -> None:
 def _webhook_authentic(supplied: str | None) -> bool:
     """True only when Telegram's secret header matches the configured secret.
 
-    Commands write the subscriber file and make the bot send messages to whatever
+    Commands write the subscriber table and make the bot send messages to whatever
     chat id the body names, so an unauthenticated webhook is a spam relay. No secret
     configured means no request can be authenticated — the endpoint stays inert.
     """

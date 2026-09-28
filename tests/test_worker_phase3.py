@@ -67,7 +67,7 @@ def _fake_worker():
     from worker.runner import Worker
 
     w = Worker.__new__(Worker)
-    w.sources = {"world_rss": lambda: [], "gdelt": lambda: []}
+    w.sources = {"world_rss": list, "gdelt": list}
     return w
 
 
@@ -98,3 +98,66 @@ def test_backtest_failure_does_not_take_the_worker_down():
 
     worker.run_backtest = boom
     assert asyncio.run(_score_outcomes(worker)) == 0
+
+
+def test_world_rss_reports_each_feed(monkeypatch):
+    """A dead feed must be visible on its own, not folded into one world_rss row."""
+    from finscrape.scrapers import rss
+    from worker.sources import _WorldRSS
+
+    xml = (
+        b"<rss><channel><item><title>Ceasefire talks resume</title>"
+        b"<link>https://example.org/a</link></item></channel></rss>"
+    )
+    monkeypatch.setattr(rss, "fast_get", lambda url: None if "dead" in url else xml)
+    monkeypatch.setattr(
+        "finscrape.scrapers.world.feed_urls",
+        lambda: {
+            "bbc_world": "https://ok.example/rss",
+            "gone": "https://dead.example/rss",
+        },
+    )
+    produce = _WorldRSS(max_articles=5)
+    items = produce()
+    assert len(items) == 1
+    assert produce.feed_health["bbc_world"] == (1, None)
+    count, error = produce.feed_health["gone"]
+    assert count == 0 and error
+
+
+def test_gdelt_runs_on_its_own_interval(monkeypatch):
+    """GDELT keeps its own interval so a deployment can slow it independently."""
+    pytest.importorskip("apscheduler")
+    from datetime import timedelta
+
+    from server.settings import Settings
+    from worker.main import _schedule
+
+    monkeypatch.setenv("WORLDFIN_GDELT_INTERVAL_MIN", "45")
+    jobs = {
+        j.id: j for j in _schedule(_fake_worker(), Settings(_env_file=None)).get_jobs()
+    }
+    assert jobs["gdelt"].trigger.interval == timedelta(minutes=45)
+    assert jobs["world_rss"].trigger.interval == timedelta(minutes=15)
+
+    monkeypatch.delenv("WORLDFIN_GDELT_INTERVAL_MIN")
+    jobs = {
+        j.id: j for j in _schedule(_fake_worker(), Settings(_env_file=None)).get_jobs()
+    }
+    assert jobs["gdelt"].trigger.interval == timedelta(minutes=15)
+
+
+def test_one_dead_feed_does_not_degrade_the_service():
+    from server.routes.health import sources_healthy
+    from server.schemas import SourceHealth
+
+    def rows(dead: int, total: int = 32) -> list[SourceHealth]:
+        feeds = [
+            SourceHealth(source=f"world/f{i}", status="WARN" if i < dead else "OK")
+            for i in range(total)
+        ]
+        return [SourceHealth(source="gdelt", status="OK"), *feeds]
+
+    assert sources_healthy(rows(1))
+    assert not sources_healthy(rows(16))
+    assert not sources_healthy([SourceHealth(source="gdelt", status="WARN")])

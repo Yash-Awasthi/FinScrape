@@ -9,15 +9,12 @@ from finscrape.alerts import AlertEngine, AlertRule, Condition, Action
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def db_path(tmp_path):
-    return tmp_path / "test_alerts.db"
+def engine():
+    return AlertEngine()
 
 
-@pytest.fixture
-def engine(db_path):
-    eng = AlertEngine(db_path=db_path)
-    yield eng
-    eng.close()
+def _rule(name: str, *conditions: Condition, enabled: bool = True) -> AlertRule:
+    return AlertRule(name=name, conditions=list(conditions), enabled=enabled)
 
 
 def _sample_event(**overrides) -> dict:
@@ -213,92 +210,34 @@ class TestPresets:
 
 
 # ---------------------------------------------------------------------------
-# Engine CRUD & persistence
-# ---------------------------------------------------------------------------
-
-class TestEnginePersistence:
-
-    def test_add_and_get_rules(self, engine):
-        conds = [Condition(field="verdict", operator="eq", value="INVEST")]
-        rule_id = engine.add_rule("Test Rule", conds)
-        rules = engine.get_rules()
-        assert len(rules) == 1
-        assert rules[0].id == rule_id
-        assert rules[0].name == "Test Rule"
-        assert rules[0].enabled is True
-
-    def test_remove_rule(self, engine):
-        conds = [Condition(field="verdict", operator="eq", value="INVEST")]
-        rule_id = engine.add_rule("To Remove", conds)
-        assert engine.remove_rule(rule_id) is True
-        assert engine.get_rules() == []
-        # removing again returns False
-        assert engine.remove_rule(rule_id) is False
-
-    def test_enable_disable(self, engine):
-        conds = [Condition(field="verdict", operator="eq", value="INVEST")]
-        rule_id = engine.add_rule("Toggle", conds)
-
-        engine.disable_rule(rule_id)
-        rule = engine.get_rule(rule_id)
-        assert rule is not None
-        assert rule.enabled is False
-
-        engine.enable_rule(rule_id)
-        rule = engine.get_rule(rule_id)
-        assert rule is not None
-        assert rule.enabled is True
-
-    def test_disabled_rules_skipped_in_evaluate(self, engine):
-        conds = [Condition(field="verdict", operator="eq", value="INVEST")]
-        rule_id = engine.add_rule("Disabled", conds)
-        engine.disable_rule(rule_id)
-
-        matches = engine.evaluate(_sample_event(verdict="INVEST"))
-        assert len(matches) == 0
-
-    def test_persistence_across_instances(self, db_path):
-        """Rules survive closing and reopening the engine."""
-        eng1 = AlertEngine(db_path=db_path)
-        conds = [Condition(field="verdict", operator="eq", value="INVEST")]
-        rule_id = eng1.add_rule("Persistent", conds)
-        eng1.close()
-
-        eng2 = AlertEngine(db_path=db_path)
-        rules = eng2.get_rules()
-        assert len(rules) == 1
-        assert rules[0].id == rule_id
-        assert rules[0].name == "Persistent"
-        eng2.close()
-
-    def test_get_rule_not_found(self, engine):
-        assert engine.get_rule("nonexistent") is None
-
-
-# ---------------------------------------------------------------------------
 # Engine evaluate & execute
 # ---------------------------------------------------------------------------
 
 class TestEngineEvaluate:
 
-    def test_evaluate_returns_matching_rules(self, engine):
-        c1 = [Condition(field="verdict", operator="eq", value="INVEST")]
-        c2 = [Condition(field="verdict", operator="eq", value="PULL_OUT")]
-        engine.add_rule("Invest Alert", c1)
-        engine.add_rule("PullOut Alert", c2)
+    def test_evaluate_returns_matching_rules(self):
+        engine = AlertEngine([
+            _rule("Invest Alert", Condition(field="verdict", operator="eq", value="INVEST")),
+            _rule("PullOut Alert", Condition(field="verdict", operator="eq", value="PULL_OUT")),
+        ])
 
         matches = engine.evaluate(_sample_event(verdict="INVEST"))
         assert len(matches) == 1
         assert matches[0][0].name == "Invest Alert"
 
-    def test_evaluate_multiple_matches(self, engine):
-        c1 = [Condition(field="verdict", operator="eq", value="INVEST")]
-        c2 = [Condition(field="confidence", operator="gte", value=0.8)]
-        engine.add_rule("Invest", c1)
-        engine.add_rule("High Conf", c2)
+    def test_evaluate_multiple_matches(self):
+        engine = AlertEngine([
+            _rule("Invest", Condition(field="verdict", operator="eq", value="INVEST")),
+            _rule("High Conf", Condition(field="confidence", operator="gte", value=0.8)),
+        ])
 
         matches = engine.evaluate(_sample_event(verdict="INVEST", confidence=0.9))
         assert len(matches) == 2
+
+    def test_disabled_rules_skipped_in_evaluate(self):
+        condition = Condition(field="verdict", operator="eq", value="INVEST")
+        engine = AlertEngine([_rule("Disabled", condition, enabled=False)])
+        assert engine.evaluate(_sample_event(verdict="INVEST")) == []
 
     def test_execute_actions_log(self, engine, caplog):
         """Log action writes to logger."""
@@ -330,12 +269,3 @@ class TestEngineEvaluate:
         # Dashboard skips if not configured
         assert results[2]["action_type"] == "dashboard_push"
         assert results[2]["status"] == "skipped"
-
-    def test_add_rule_default_log_action(self, engine):
-        """add_rule without explicit actions defaults to log."""
-        conds = [Condition(field="verdict", operator="eq", value="INVEST")]
-        rule_id = engine.add_rule("Default Action", conds)
-        rule = engine.get_rule(rule_id)
-        assert rule is not None
-        assert len(rule.actions) == 1
-        assert rule.actions[0].action_type == "log"

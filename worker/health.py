@@ -26,6 +26,20 @@ async def record_source_health(
     )
 
 
+async def record_feed_health(
+    pool: asyncpg.Pool, feeds: dict[str, tuple[int, str | None]]
+) -> None:
+    """One `world/<key>` row per feed; rows for feeds no longer listed are dropped."""
+    for key, (count, error) in feeds.items():
+        await record_source_health(
+            pool, f"world/{key}", count, "WARN" if error else "OK", error
+        )
+    await pool.execute(
+        "DELETE FROM source_health WHERE source LIKE 'world/%' AND NOT (source = ANY($1::text[]))",
+        [f"world/{k}" for k in feeds],
+    )
+
+
 async def start_scrape_run(pool: asyncpg.Pool, source: str) -> int:
     return await pool.fetchval(
         "INSERT INTO scrape_runs (status, details) VALUES ('running', $1) RETURNING id",

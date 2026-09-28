@@ -29,7 +29,7 @@ class USGSQuakesIngestor(BaseIngestor):
             lon, lat = coords[0], coords[1]
             ts = props.get("time")
             published = (
-                _dt.datetime.fromtimestamp(ts / 1000, tz=_dt.timezone.utc).isoformat()
+                _dt.datetime.fromtimestamp(ts / 1000, tz=_dt.UTC).isoformat()
                 if isinstance(ts, (int, float))
                 else None
             )

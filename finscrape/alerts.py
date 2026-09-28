@@ -4,18 +4,16 @@ Alert rules engine for FinScrape.
 Lets users define conditions like "notify me when any FAANG stock gets
 PULL_OUT verdict" or "alert on any INVEST signal with confidence > 80%".
 
-Rules are persisted in SQLite alongside the main finscrape.db data.
+Rules and their firing history live in Postgres (server.alert_rules); this module
+only matches events against rules and sends the actions.
 """
 
 from __future__ import annotations
 
-import json
 import logging
-import sqlite3
 import uuid
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
 
 import requests
@@ -167,127 +165,10 @@ class AlertRule:
 # ---------------------------------------------------------------------------
 
 class AlertEngine:
-    """Evaluate events against user-defined alert rules.
+    """Evaluate events against a set of alert rules and fire their actions."""
 
-    Rules are persisted in the ``alert_rules`` SQLite table.
-    """
-
-    def __init__(self, db_path: str | Path | None = None):
-        if db_path is None:
-            project_root = Path(__file__).resolve().parent.parent
-            db_path = project_root / "data" / "finscrape.db"
-        self.db_path = Path(db_path)
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
-        self._conn.execute("PRAGMA journal_mode=WAL")
-        self._init_table()
-        self._rules_cache: list[AlertRule] | None = None
-
-    # -- schema --------------------------------------------------------------
-
-    def _init_table(self) -> None:
-        self._conn.execute("""
-            CREATE TABLE IF NOT EXISTS alert_rules (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                conditions TEXT NOT NULL DEFAULT '[]',
-                actions TEXT NOT NULL DEFAULT '[]',
-                enabled INTEGER NOT NULL DEFAULT 1,
-                created_at TEXT NOT NULL DEFAULT (datetime('now'))
-            )
-        """)
-        self._conn.commit()
-
-    # -- CRUD ----------------------------------------------------------------
-
-    def add_rule(
-        self,
-        name: str,
-        conditions: list[Condition],
-        actions: list[Action] | None = None,
-    ) -> str:
-        """Create a new alert rule and return its ID."""
-        if actions is None:
-            actions = [Action(action_type="log")]
-        rule = AlertRule(
-            name=name,
-            conditions=conditions,
-            actions=actions,
-        )
-        self._conn.execute(
-            "INSERT INTO alert_rules (id, name, conditions, actions, enabled, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            (
-                rule.id,
-                rule.name,
-                json.dumps([c.to_dict() for c in rule.conditions]),
-                json.dumps([a.to_dict() for a in rule.actions]),
-                1 if rule.enabled else 0,
-                rule.created_at,
-            ),
-        )
-        self._conn.commit()
-        logger.info("Added alert rule %s: %s", rule.id, rule.name)
-        self._rules_cache = None  # invalidate cache
-        return rule.id
-
-    def remove_rule(self, rule_id: str) -> bool:
-        """Delete a rule. Returns True if a row was removed."""
-        cur = self._conn.execute("DELETE FROM alert_rules WHERE id = ?", (rule_id,))
-        self._conn.commit()
-        self._rules_cache = None  # invalidate cache
-        removed = cur.rowcount > 0
-        if removed:
-            logger.info("Removed alert rule %s", rule_id)
-        return removed
-
-    def enable_rule(self, rule_id: str) -> None:
-        self._conn.execute("UPDATE alert_rules SET enabled = 1 WHERE id = ?", (rule_id,))
-        self._conn.commit()
-        self._rules_cache = None
-
-    def disable_rule(self, rule_id: str) -> None:
-        self._conn.execute("UPDATE alert_rules SET enabled = 0 WHERE id = ?", (rule_id,))
-        self._conn.commit()
-        self._rules_cache = None
-
-    def get_rules(self) -> list[AlertRule]:
-        """Return all rules (enabled and disabled). Cached until mutation."""
-        if self._rules_cache is not None:
-            return self._rules_cache
-        rows = self._conn.execute(
-            "SELECT id, name, conditions, actions, enabled, created_at FROM alert_rules"
-        ).fetchall()
-        rules: list[AlertRule] = []
-        for row in rows:
-            rules.append(AlertRule(
-                id=row[0],
-                name=row[1],
-                conditions=[Condition.from_dict(c) for c in json.loads(row[2])],
-                actions=[Action.from_dict(a) for a in json.loads(row[3])],
-                enabled=bool(row[4]),
-                created_at=row[5],
-            ))
-        self._rules_cache = rules
-        return rules
-
-    def get_rule(self, rule_id: str) -> AlertRule | None:
-        """Return a single rule by ID, or None."""
-        row = self._conn.execute(
-            "SELECT id, name, conditions, actions, enabled, created_at "
-            "FROM alert_rules WHERE id = ?",
-            (rule_id,),
-        ).fetchone()
-        if row is None:
-            return None
-        return AlertRule(
-            id=row[0],
-            name=row[1],
-            conditions=[Condition.from_dict(c) for c in json.loads(row[2])],
-            actions=[Action.from_dict(a) for a in json.loads(row[3])],
-            enabled=bool(row[4]),
-            created_at=row[5],
-        )
+    def __init__(self, rules: list[AlertRule] | None = None):
+        self.rules = list(rules or [])
 
     # -- evaluation ----------------------------------------------------------
 
@@ -297,7 +178,7 @@ class AlertEngine:
         Returns a list of (rule, actions) for every rule that matches.
         """
         matches: list[tuple[AlertRule, list[Action]]] = []
-        for rule in self.get_rules():
+        for rule in self.rules:
             if not rule.enabled:
                 continue
             if rule.matches(event):
@@ -317,9 +198,6 @@ class AlertEngine:
             except Exception as e:
                 logger.error("Action %s failed: %s", action.action_type, e)
                 results.append({"action_type": action.action_type, "status": "error", "error": str(e)})
-
-            # Record in alert history
-            self._record_alert_fired(event, action)
 
         return results
 
@@ -444,29 +322,6 @@ class AlertEngine:
         result = client.push_events([alert_event])
         return {"action_type": "dashboard_push", "status": "ok", "result": result}
 
-    def _record_alert_fired(self, event: dict, action: Action) -> None:
-        """Record that an alert was fired for deduplication tracking."""
-        try:
-            self._conn.execute(
-                """CREATE TABLE IF NOT EXISTS alert_history (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    rule_id TEXT,
-                    action_type TEXT NOT NULL,
-                    event_subject TEXT,
-                    event_tickers TEXT,
-                    fired_at TEXT NOT NULL DEFAULT (datetime('now'))
-                )"""
-            )
-            self._conn.execute(
-                "INSERT INTO alert_history (action_type, event_subject, event_tickers, fired_at) "
-                "VALUES (?, ?, ?, datetime('now'))",
-                (action.action_type, event.get("subject", "")[:200],
-                 json.dumps(event.get("tickers", []))),
-            )
-            self._conn.commit()
-        except Exception as e:
-            logger.debug("Could not record alert history: %s", e)
-
     # -- presets (class methods) ---------------------------------------------
 
     @classmethod
@@ -550,11 +405,6 @@ class AlertEngine:
         return conditions, actions
 
     # -- lifecycle -----------------------------------------------------------
-
-    def close(self) -> None:
-        self._conn.close()
-
-    # -- Discord / Slack alert senders --------------------------------------
 
     def _build_alert_summary(self, event: dict) -> dict:
         """Build a common summary dict used by Discord and Slack payloads."""

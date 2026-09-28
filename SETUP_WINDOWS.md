@@ -208,8 +208,8 @@ Every day you use FinScrape:
 4. Run a scrape whenever you want fresh data:
      python push_to_dashboard.py --limit 20 --age-hours 2
 
-Or run once via the pipeline (saves to local SQLite too):
-     python main.py scrape --ollama --sources yahoo cnbc
+Or run one ingest cycle into Postgres:
+     python -m worker.main --once
 
 ===========================================================================
 COMMAND REFERENCE
@@ -227,11 +227,9 @@ Examples:
   python push_to_dashboard.py --limit 20 --concurrency 3
   python push_to_dashboard.py --sources yahoo cnbc --limit 10
 
---- main.py flags ---
-  python main.py scrape --ollama                          # Yahoo only
-  python main.py scrape --ollama --sources yahoo cnbc reuters
-  python main.py scrape --ollama --smoke-test             # one article, print JSON, exit
-  python main.py monitor --ollama --interval 300          # run every 5 min
+--- worker ---
+  python -m worker.main --once                            # one ingest cycle, then exit
+  python -m worker.main                                   # every source on its interval
 
 --- Ollama model management ---
   ollama list                    # see downloaded models
@@ -289,7 +287,7 @@ Problem: push_to_dashboard.py shows "AI unavailable" in reasoning
 WHAT EACH FILE DOES
 ===========================================================================
 
-  main.py                   Full pipeline — scrapes + AI scores + saves to SQLite
+  worker/main.py            Ingest worker — scrapes + AI scores + saves to Postgres
   push_to_dashboard.py      Scrapes + AI scores + pushes to dashboard API
   scrape_server.py          Flask server — lets dashboard trigger scrapes via button
   scripts/smoke_test_ollama.py   Verify Ollama + AI pipeline is working

@@ -6,7 +6,7 @@ execution path (ingest_events / ON CONFLICT) is exercised by the docker integrat
 verify, not here.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from server.ingest import (
     canonical_url,
@@ -72,8 +72,8 @@ def test_content_hash_no_articles_uses_subject_and_day():
 
 def test_day_bounds_half_open():
     start, end = day_bounds("2026-05-03")
-    assert start == datetime(2026, 5, 3, tzinfo=timezone.utc)
-    assert end == datetime(2026, 5, 4, tzinfo=timezone.utc)
+    assert start == datetime(2026, 5, 3, tzinfo=UTC)
+    assert end == datetime(2026, 5, 4, tzinfo=UTC)
     # a 23:59:59Z event is inside [start, end); midnight next day is excluded
     assert start <= parse_timestamp("2026-05-03T23:59:59Z") < end
     assert not (parse_timestamp("2026-05-04T00:00:00Z") < end)

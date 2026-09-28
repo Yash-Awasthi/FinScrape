@@ -6,19 +6,20 @@ behaviour without the DB lifespan; network + Telegram sends are monkeypatched/no
 
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
 pytest.importorskip("fastapi")
 
-from fastapi import FastAPI  # noqa: E402
-from fastapi.testclient import TestClient  # noqa: E402
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
-from finscrape.analysis import prompt_registry as pr  # noqa: E402
-from server import cache  # noqa: E402
-from server.routes import portfolio as portfolio_routes  # noqa: E402
-from server.routes import sentiment as sentiment_routes  # noqa: E402
-from server.routes import telegram as tg  # noqa: E402
-from server.settings import get_settings  # noqa: E402
+from finscrape.analysis import prompt_registry as pr
+from server import cache
+from server.routes import sentiment as sentiment_routes
+from server.routes import telegram as tg
+from server.settings import get_settings
 
 AUTH = {"X-API-Key": "local-dev-key"}
 
@@ -68,75 +69,41 @@ def test_sentiment_returns_fetch_result(monkeypatch):
     assert r.json()["total_posts"] == 5 and r.json()["ticker"] == "TSLA"
 
 
-# --- portfolio routes -------------------------------------------------------
-def test_portfolio_crud(tmp_path):
-    from finscrape.portfolio import PortfolioManager
-
-    portfolio_routes._pm = PortfolioManager(db_path=tmp_path / "p.db")
-    try:
-        app = FastAPI()
-        app.include_router(portfolio_routes.router)
-        c = TestClient(app)
-
-        assert c.post(
-            "/api/portfolio/position",
-            json={"ticker": "aapl", "shares": 10, "avg_cost": 150},
-            headers=AUTH,
-        ).json()["ok"]
-        got = c.get("/api/portfolio").json()
-        assert any(p["ticker"] == "AAPL" for p in got["positions"])
-
-        assert c.post(
-            "/api/portfolio/watchlist",
-            json={"name": "tech", "tickers": ["msft"]},
-            headers=AUTH,
-        ).json()["ok"]
-        assert any(
-            w["name"] == "tech" for w in c.get("/api/portfolio").json()["watchlists"]
-        )
-
-        assert c.delete("/api/portfolio/position?ticker=AAPL", headers=AUTH).json()[
-            "ok"
-        ]
-        # auth required on mutations
-        assert (
-            c.post("/api/portfolio/position", json={"ticker": "x"}).status_code == 401
-        )
-    finally:
-        portfolio_routes._pm = None
-
-
 # --- telegram webhook -------------------------------------------------------
 WEBHOOK_SECRET = "s3cr3t-webhook-token"
 
 
 @pytest.fixture()
-def telegram_client(tmp_path, monkeypatch):
-    """Webhook router with a configured secret and a throwaway subscriber file."""
-    monkeypatch.setattr(tg, "_subs_path", lambda: tmp_path / "subs.json")
+def telegram_client(monkeypatch):
+    """Webhook router with a configured secret; commands are recorded, not run."""
+    handled: list[tuple[str, str]] = []
+
+    async def record(chat_id: str, text: str) -> None:
+        handled.append((chat_id, text))
+
+    monkeypatch.setattr(tg, "_handle_command", record)
     monkeypatch.setenv("TELEGRAM_WEBHOOK_SECRET", WEBHOOK_SECRET)
     get_settings.cache_clear()
     app = FastAPI()
     app.include_router(tg.router)
-    yield TestClient(app), tmp_path / "subs.json"
+    yield TestClient(app), handled
     get_settings.cache_clear()
 
 
-def test_telegram_webhook_subscribes_with_the_secret_header(telegram_client):
-    c, subs = telegram_client
+def test_telegram_webhook_runs_commands_with_the_secret_header(telegram_client):
+    c, handled = telegram_client
     r = c.post(
         "/api/telegram/webhook",
         json={"message": {"chat": {"id": 42}, "text": "/subscribe"}},
         headers={"X-Telegram-Bot-Api-Secret-Token": WEBHOOK_SECRET},
     )
     assert r.status_code == 200 and r.json() == {"ok": True}
-    # background task ran during the client call → chat id recorded
-    assert "42" in subs.read_text()
+    assert handled == [("42", "/subscribe")]
 
 
 def test_telegram_webhook_ignores_updates_without_the_secret(telegram_client):
     """The URL is public and the body is attacker-written: no header, no command."""
-    c, subs = telegram_client
+    c, handled = telegram_client
     for headers in ({}, {"X-Telegram-Bot-Api-Secret-Token": "wrong"}):
         r = c.post(
             "/api/telegram/webhook",
@@ -144,28 +111,34 @@ def test_telegram_webhook_ignores_updates_without_the_secret(telegram_client):
             headers=headers,
         )
         assert r.status_code == 200 and r.json() == {"ok": True}  # never leaks
-        assert not subs.exists()
+    assert handled == []
 
 
-def test_telegram_webhook_inert_when_no_secret_configured(tmp_path, monkeypatch):
-    monkeypatch.setattr(tg, "_subs_path", lambda: tmp_path / "subs.json")
+def test_telegram_webhook_inert_when_no_secret_configured(telegram_client, monkeypatch):
+    c, handled = telegram_client
     monkeypatch.delenv("TELEGRAM_WEBHOOK_SECRET", raising=False)
     get_settings.cache_clear()
-    app = FastAPI()
-    app.include_router(tg.router)
-    r = TestClient(app).post(
+    r = c.post(
         "/api/telegram/webhook",
         json={"message": {"chat": {"id": 42}, "text": "/subscribe"}},
     )
-    get_settings.cache_clear()
     assert r.status_code == 200
-    assert not (tmp_path / "subs.json").exists()
+    assert handled == []
 
 
 def test_telegram_notify_noop_without_token():
     # default settings carry no bot token → no sends, returns 0 (never raises)
-    n = tg.notify_new_events(
-        [{"verdict": "INVEST", "subject": "x", "tickers": ["AAPL"], "signal_score": 3}]
+    n = asyncio.run(
+        tg.notify_new_events(
+            [
+                {
+                    "verdict": "INVEST",
+                    "subject": "x",
+                    "tickers": ["AAPL"],
+                    "signal_score": 3,
+                }
+            ]
+        )
     )
     assert n == 0
 

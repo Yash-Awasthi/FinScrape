@@ -15,16 +15,16 @@ import pytest
 pytest.importorskip("fastapi")
 pytest.importorskip("prometheus_client")
 
-from fastapi import FastAPI  # noqa: E402
-from fastapi.testclient import TestClient  # noqa: E402
-from prometheus_client import REGISTRY  # noqa: E402
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+from prometheus_client import REGISTRY
 
-from finscrape.logging_config import (  # noqa: E402
+from finscrape.logging_config import (
     JsonFormatter,
     correlation_id,
     setup_logging,
 )
-from server import obs  # noqa: E402
+from server import obs
 
 
 def _record(msg: str = "hello %s", args=("world",), **extra) -> logging.LogRecord:
@@ -113,9 +113,8 @@ def test_time_llm_records_ok_and_error_outcomes():
         )
         == 1
     )
-    with pytest.raises(ValueError):
-        with obs.time_llm("backendX"):
-            raise ValueError("nope")
+    with pytest.raises(ValueError), obs.time_llm("backendX"):
+        raise ValueError("nope")
     assert (
         REGISTRY.get_sample_value(
             "worldfin_llm_request_seconds_count",

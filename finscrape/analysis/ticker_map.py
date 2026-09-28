@@ -236,3 +236,44 @@ def resolve_company_tickers(text: str) -> list[str]:
         if _matches(name, text_lower)
     }
     return sorted(found)
+
+
+# Sector of every ticker above, in the `sectors.TAXONOMY` names. Internet
+# platforms (AMZN, GOOGL, META) are technology, as the Laya criteria define it.
+_SECTOR_MEMBERS: dict[str, tuple[str, ...]] = {
+    "technology": (
+        "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "AVGO", "TSM", "ADBE", "CRM",
+        "AMD", "INTC", "QCOM", "CSCO", "ORCL", "IBM", "TXN", "NET", "NOW", "INTU",
+        "PLTR", "SNOW", "CRWD", "PANW", "DDOG", "SHOP", "TWLO", "MU", "ARM", "ASML",
+        "MRVL", "AMAT", "LRCX", "SNPS", "CDNS", "DELL", "HPE", "HPQ", "ACN", "ADP",
+        "BABA", "BIDU", "TCEHY", "JD", "PDD",
+    ),
+    "communications": ("NFLX", "SPOT", "SNAP", "PINS", "ROKU", "DIS", "CMCSA", "TMUS", "VZ", "T"),
+    "financials": (
+        "COIN", "HOOD", "SQ", "PYPL", "SOFI", "JPM", "BAC", "WFC", "GS", "MS", "C",
+        "SCHW", "BLK", "BX", "KKR", "APO", "AXP", "V", "MA", "BRK.B", "MSTR", "MARA",
+        "RIOT",
+    ),
+    "healthcare": (
+        "UNH", "JNJ", "LLY", "NVO", "ABBV", "MRK", "PFE", "AMGN", "GILD", "MRNA",
+        "REGN", "VRTX", "BIIB", "BMY", "AZN", "NVS", "RHHBY", "TMO", "DHR", "ABT",
+        "MDT", "ISRG", "SYK", "EW", "HUM", "CI", "CVS",
+    ),
+    "energy": (
+        "XOM", "CVX", "COP", "SLB", "MPC", "VLO", "PSX", "PXD", "OXY", "DVN", "BKR",
+        "HAL", "ENB",
+    ),
+    "consumer": (
+        "WMT", "COST", "HD", "LOW", "TGT", "PG", "KO", "PEP", "MCD", "SBUX", "NKE",
+        "BKNG", "ABNB", "CMG", "TSLA", "F", "GM", "RIVN", "LCID", "NIO", "TM", "BYDDY", "LI",
+        "XPEV",
+    ),
+    "industrials": (
+        "BA", "LMT", "RTX", "NOC", "GD", "GE", "HON", "CAT", "DE", "MMM", "UNP", "UPS",
+        "FDX", "UBER",
+    ),
+    "real_estate": ("PLD", "AMT", "CCI", "EQIX", "DLR"),
+    "utilities": ("CEG", "DUK", "NEE", "SO", "D"),
+    "materials": ("LIN", "APD", "FCX", "NEM", "MOS", "X", "NUE", "CLF"),
+}
+TICKER_SECTOR: dict[str, str] = {t: s for s, members in _SECTOR_MEMBERS.items() for t in members}

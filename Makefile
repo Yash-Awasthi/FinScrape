@@ -12,7 +12,7 @@ NEW_DIRS := server worker finscrape/scrapers/world finscrape/ingestors \
 	tests/server tests/test_world_phase2.py tests/test_worker_phase3.py \
 	tests/test_correlate_phase4.py tests/test_scenarios.py
 
-.PHONY: help up down logs seed backup restore demo test lint fmt fmt-check typecheck selfcheck ci web-ci e2e
+.PHONY: help up down logs seed backup restore demo test lint fmt fmt-check typecheck selfcheck ci web-ci e2e e2e-live
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | sort | \
@@ -64,5 +64,8 @@ web-ci: ## Web gates: typecheck + Vitest + build
 
 e2e: ## Playwright E2E against the built SPA (REST + WS mocked)
 	cd web && npm ci && npx playwright install chromium && npx playwright test
+
+e2e-live: ## Playwright against the real API + seeded Postgres (needs WORLDFIN_TEST_DATABASE_URL)
+	cd web && npm run e2e:live
 
 ci: lint fmt-check typecheck selfcheck test web-ci e2e ## Reproduce the CI pipeline locally

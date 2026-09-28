@@ -45,7 +45,8 @@ async def _score_outcomes(worker: Worker) -> int:
         wrote = await worker.run_backtest()
         log.info("backtest scored %d outcomes", wrote)
         return wrote
-    except Exception as exc:  # pragma: no cover - market data flaky
+    # Scoring resumes next hour.
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         log.warning("backtest skipped: %s", exc)
         return 0
 
@@ -54,7 +55,8 @@ async def _prune(worker: Worker, days: int) -> None:
     """Retention sweep; logged and skipped on failure like the backtest."""
     try:
         await prune_old_rows(worker.pool, days)
-    except Exception as exc:  # pragma: no cover - DB hiccup
+    # The sweep reruns tomorrow.
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         log.warning("retention skipped: %s", exc)
 
 
@@ -64,7 +66,9 @@ def _schedule(worker: Worker, s: Settings) -> AsyncIOScheduler:
         scheduler.add_job(
             worker.run_source,
             "interval",
-            minutes=s.worker_interval_minutes,
+            minutes=s.gdelt_interval_minutes
+            if name == "gdelt"
+            else s.worker_interval_minutes,
             args=[name],
             id=name,
             jitter=60,
@@ -116,9 +120,10 @@ async def main() -> None:
     scheduler = _schedule(worker, s)
     scheduler.start()
     log.info(
-        "worker started: %d sources every %d min",
+        "worker started: %d sources every %d min, gdelt every %d min",
         len(worker.sources),
         s.worker_interval_minutes,
+        s.gdelt_interval_minutes,
     )
     await worker.run_all_once()  # warm-up so the dashboard fills immediately
 

@@ -4,6 +4,7 @@ Market data fetching via yfinance.
 
 from __future__ import annotations
 
+import datetime as dt
 import logging
 import math
 import os
@@ -234,3 +235,52 @@ def calculate_market_boost(market_data: list[dict]) -> int:
     if magnitude >= 5:
         return 1 if biggest > 0 else -1
     return 0
+
+
+def window_move(closes: pd.Series, at: dt.datetime, hours_after: float) -> float | None:
+    """% move from the last close before the event's day to the Nth trading-day close
+    after it (N = days in `hours_after`, min 1). None until that close exists."""
+    closes = closes.dropna()
+    day = _event_day(at)
+    n = max(1, math.ceil(hours_after / 24))
+    before = closes[closes.index < day]
+    after = closes[closes.index > day]
+    if before.empty or len(after) < n or before.iloc[-1] == 0:
+        return None
+    return float((after.iloc[n - 1] - before.iloc[-1]) / before.iloc[-1] * 100)
+
+
+def _event_day(at: dt.datetime) -> pd.Timestamp:
+    ts = pd.Timestamp(at)
+    return (ts.tz_convert("UTC").tz_localize(None) if ts.tzinfo else ts).normalize()
+
+
+def event_move(tickers: list[str], at: dt.datetime, hours_after: float) -> float | None:
+    """Mean `window_move` across `tickers` from one yfinance download around `at`."""
+    tickers = [t for t in dict.fromkeys(tickers) if isinstance(t, str) and t]
+    if not tickers:
+        return None
+    day = _event_day(at)
+    try:
+        df = yf.download(
+            tickers=tickers,
+            start=(day - pd.Timedelta(days=7)).date().isoformat(),
+            end=(day + pd.Timedelta(hours=hours_after, days=6)).date().isoformat(),
+            interval="1d",
+            progress=False,
+            auto_adjust=True,
+        )
+    except Exception as e:  # noqa: BLE001 - a dead yfinance leaves the event unscored
+        logger.warning("Window fetch error: %s", e)
+        return None
+    if df is None or df.empty or "Close" not in df.columns:
+        return None
+    close = df["Close"]
+    series = [close] if isinstance(close, pd.Series) else [close[t] for t in close]
+    moves = []
+    for s in series:
+        s.index = pd.to_datetime(s.index).tz_localize(None)
+        move = window_move(s, at, hours_after)
+        if move is not None:
+            moves.append(move)
+    return sum(moves) / len(moves) if moves else None

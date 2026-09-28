@@ -14,14 +14,19 @@ import pytest
 pytest.importorskip("fastapi")
 pytest.importorskip("pydantic_settings")
 
-from fastapi import FastAPI, HTTPException  # noqa: E402
-from fastapi.testclient import TestClient  # noqa: E402
+from fastapi import FastAPI, HTTPException
+from fastapi.testclient import TestClient
 
-from server import cache  # noqa: E402
-from server.circuit import CircuitBreaker, CircuitOpen  # noqa: E402
-from server.rate_limit import Limiter, client_key  # noqa: E402
-from server.settings import DEFAULT_API_KEY, get_settings  # noqa: E402
-from server.ssrf import SSRFError, assert_public_host, assert_public_url, is_public_ip  # noqa: E402
+from server import cache
+from server.circuit import CircuitBreaker, CircuitOpen
+from server.rate_limit import Limiter, client_key
+from server.settings import DEFAULT_API_KEY, get_settings
+from server.ssrf import (
+    SSRFError,
+    assert_public_host,
+    assert_public_url,
+    is_public_ip,
+)
 
 
 def _request(peer: str, xff: str | None = None) -> object:
@@ -196,6 +201,25 @@ def test_default_api_key_is_detectable(monkeypatch):
     assert get_settings().api_key != DEFAULT_API_KEY
 
 
+def test_production_refuses_default_key_and_open_cors(monkeypatch):
+    monkeypatch.delenv("FINSCRAPE_API_KEY", raising=False)
+    monkeypatch.setenv("WORLDFIN_CORS_ORIGINS", "*")
+    monkeypatch.setenv("WORLDFIN_ENV", "production")
+    get_settings.cache_clear()
+    assert len(get_settings().production_problems()) == 2
+
+    monkeypatch.setenv("FINSCRAPE_API_KEY", "operator-chosen")
+    monkeypatch.setenv("WORLDFIN_CORS_ORIGINS", "https://worldfin.vercel.app")
+    get_settings.cache_clear()
+    assert get_settings().production_problems() == []
+
+    monkeypatch.setenv("WORLDFIN_ENV", "development")
+    monkeypatch.delenv("FINSCRAPE_API_KEY")
+    get_settings.cache_clear()
+    assert get_settings().production_problems() == []
+    get_settings.cache_clear()
+
+
 def test_require_api_key_accepts_only_the_configured_key(monkeypatch):
     from fastapi import Depends
 
@@ -270,6 +294,16 @@ def test_etag_then_304(monkeypatch):
     assert r2.status_code == 304
     # security headers still ride along on the 304
     assert r2.headers["x-content-type-options"] == "nosniff"
+
+
+def test_etag_list_and_star_return_304(monkeypatch):
+    client = TestClient(_app(monkeypatch, WORLDFIN_RATE_LIMIT_PER_MIN="0"))
+    etag = client.get("/ping").headers["etag"]
+    for header in (f'W/"stale", {etag}', "*", etag.removeprefix("W/")):
+        assert client.get("/ping", headers={"If-None-Match": header}).status_code == 304
+    assert (
+        client.get("/ping", headers={"If-None-Match": 'W/"stale"'}).status_code == 200
+    )
 
 
 def test_rate_limit_returns_429_with_retry_after(monkeypatch):

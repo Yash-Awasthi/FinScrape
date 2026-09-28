@@ -1,0 +1,285 @@
+{
+ "_note": "Provisional labels written from the headline alone; the owner has not reviewed them yet.",
+ "cases": [
+  {
+   "subject": "iran closes strait of hormuz",
+   "sector": "energy",
+   "reason": "Hormuz is the main crude and LNG shipping lane"
+  },
+  {
+   "subject": "taiwan chip supply at risk amid tensions",
+   "sector": "technology",
+   "reason": "semiconductor supply"
+  },
+  {
+   "subject": "crowdstrike crwd stock faces high expectations after strong gains da davidson stays bullish",
+   "sector": "technology",
+   "reason": "cyber security company"
+  },
+  {
+   "subject": "nvidia barely moved these 2 ai connectivity stocks jumped more than 7",
+   "sector": "technology",
+   "reason": "AI chip and networking stocks"
+  },
+  {
+   "subject": "from trumps takeover threats to a northern neighborhood why the eu chief is going to greenland",
+   "sector": "other",
+   "reason": "diplomatic visit, no sector named"
+  },
+  {
+   "subject": "trump turns up the heat on warsh as fed rate hike looms",
+   "sector": "financials",
+   "reason": "Fed rate policy"
+  },
+  {
+   "subject": "why walmart is moving in on doordash uber eats delivery action starting with donuts coffee and sandwiches",
+   "sector": "consumer",
+   "reason": "retail and food delivery"
+  },
+  {
+   "subject": "sandisk and micron outperform",
+   "sector": "technology",
+   "reason": "memory chip makers"
+  },
+  {
+   "subject": "ai storage stocks outperform sp 500",
+   "sector": "technology",
+   "reason": "AI storage hardware"
+  },
+  {
+   "subject": "white house vetting cftc candidates",
+   "sector": "financials",
+   "reason": "derivatives regulator appointments"
+  },
+  {
+   "subject": "bitcoins third consecutive weekly gain",
+   "sector": "financials",
+   "reason": "crypto aliases to financials"
+  },
+  {
+   "subject": "china criticizes g20 nations for protectionism",
+   "sector": "industrials",
+   "reason": "tariffs and trade"
+  },
+  {
+   "subject": "strong jobs report reignites rate hike fears",
+   "sector": "financials",
+   "reason": "rate expectations"
+  },
+  {
+   "subject": "putin suggests peace with ukraine nato warns of russian recklessness",
+   "sector": "other",
+   "reason": "diplomatic statements, no direct sector"
+  },
+  {
+   "subject": "dutch central bank moves gold out of us and canada",
+   "sector": "financials",
+   "reason": "central bank reserves"
+  },
+  {
+   "subject": "supersized el nino set to hit global economy and markets",
+   "sector": "materials",
+   "reason": "grain and crop supply"
+  },
+  {
+   "subject": "shein reports revenue growth and net loss",
+   "sector": "consumer",
+   "reason": "fast-fashion retailer results"
+  },
+  {
+   "subject": "italys meloni government achieves political stability",
+   "sector": "other",
+   "reason": "domestic politics"
+  },
+  {
+   "subject": "lebron james teases partnership with polymarket",
+   "sector": "other",
+   "reason": "celebrity promotion"
+  },
+  {
+   "subject": "fed to hike rates",
+   "sector": "financials",
+   "reason": "rate decision"
+  },
+  {
+   "subject": "hpe ceo discusses ai demand and supply constraints",
+   "sector": "technology",
+   "reason": "server hardware maker"
+  },
+  {
+   "subject": "cathie woods ark innovation etf underperformance",
+   "sector": "financials",
+   "reason": "fund performance"
+  },
+  {
+   "subject": "donald trumps tariff policy",
+   "sector": "industrials",
+   "reason": "tariffs"
+  },
+  {
+   "subject": "realty income o dividend recommendation",
+   "sector": "real_estate",
+   "reason": "REIT"
+  },
+  {
+   "subject": "buy recommendation for procter gamble pg",
+   "sector": "consumer",
+   "reason": "household goods"
+  },
+  {
+   "subject": "warren buffett advises on market crash preparedness",
+   "sector": "financials",
+   "reason": "investor commentary"
+  },
+  {
+   "subject": "amazon amzn to join 4 trillion club",
+   "sector": "technology",
+   "reason": "internet platform market cap"
+  },
+  {
+   "subject": "russian gold sanctions circumvention via hong kong",
+   "sector": "financials",
+   "reason": "sanctions enforcement through finance"
+  },
+  {
+   "subject": "trumps approval rating falls to alltime low",
+   "sector": "other",
+   "reason": "polling"
+  },
+  {
+   "subject": "lvmh share price decline due to luxury sector downturn",
+   "sector": "consumer",
+   "reason": "luxury retail"
+  },
+  {
+   "subject": "insurers cut prices due to low payouts",
+   "sector": "financials",
+   "reason": "insurers"
+  },
+  {
+   "subject": "ubs demands ai proficiency for junior bankers",
+   "sector": "financials",
+   "reason": "bank staffing"
+  },
+  {
+   "subject": "ebola vaccine trial begins in dr congo",
+   "sector": "healthcare",
+   "reason": "disease outbreak and vaccine"
+  },
+  {
+   "subject": "nigeria begins production of ah1z viper",
+   "sector": "industrials",
+   "reason": "defense aerospace"
+  },
+  {
+   "subject": "un panel calls for stronger ai safeguards",
+   "sector": "technology",
+   "reason": "AI regulation"
+  },
+  {
+   "subject": "philip r lane discusses energy price increases and economic outlook",
+   "sector": "financials",
+   "reason": "ECB economist on the rate outlook"
+  },
+  {
+   "subject": "ecb invests in tokenised securities",
+   "sector": "financials",
+   "reason": "central bank and securities"
+  },
+  {
+   "subject": "us media boycott trump coverage",
+   "sector": "other",
+   "reason": "press politics"
+  },
+  {
+   "subject": "infantino open to talks over fifa reform",
+   "sector": "other",
+   "reason": "sports governance"
+  },
+  {
+   "subject": "pakistan airstrikes in afghanistan",
+   "sector": "other",
+   "reason": "military strike, no market sector"
+  },
+  {
+   "subject": "air traffic control glitch disrupts uk flights",
+   "sector": "industrials",
+   "reason": "airlines alias to industrials"
+  },
+  {
+   "subject": "qatar propaganda machine facing collapse due to lng market",
+   "sector": "energy",
+   "reason": "LNG market"
+  },
+  {
+   "subject": "continued energy price increases due to geopolitical tensions",
+   "sector": "energy",
+   "reason": "energy prices"
+  },
+  {
+   "subject": "uk and us make history with firing from undersea drone",
+   "sector": "industrials",
+   "reason": "defense"
+  },
+  {
+   "subject": "amd joins 1 trillion club",
+   "sector": "technology",
+   "reason": "chipmaker market cap"
+  },
+  {
+   "subject": "israeli fire kills three including child in gaza",
+   "sector": "other",
+   "reason": "conflict casualties"
+  },
+  {
+   "subject": "israeli forces raid town",
+   "sector": "other",
+   "reason": "military raid"
+  },
+  {
+   "subject": "ukraine strikes refineries in samara and bashkortostan",
+   "sector": "energy",
+   "reason": "refining capacity"
+  },
+  {
+   "subject": "jpmorgan and qatar qia target 20bn investment partnership",
+   "sector": "financials",
+   "reason": "bank and sovereign fund"
+  },
+  {
+   "subject": "rbi conducts vrrr auction",
+   "sector": "financials",
+   "reason": "central bank liquidity operation"
+  },
+  {
+   "subject": "high freight costs redirect us lng to europe",
+   "sector": "energy",
+   "reason": "LNG shipping"
+  },
+  {
+   "subject": "chinese vessel accused of spoofing location in philippine waters",
+   "sector": "other",
+   "reason": "maritime dispute"
+  },
+  {
+   "subject": "us signals willingness to help develop brazils critical minerals processing industry",
+   "sector": "materials",
+   "reason": "critical minerals"
+  },
+  {
+   "subject": "graham act sanctions on russia",
+   "sector": "energy",
+   "reason": "secondary tariffs aimed at buyers of Russian oil"
+  },
+  {
+   "subject": "houthi strike on riyadh and yemen displacement surge",
+   "sector": "energy",
+   "reason": "attack on the largest oil exporter"
+  },
+  {
+   "subject": "us strikes on alleged drug boats",
+   "sector": "other",
+   "reason": "military action, no market sector"
+  }
+ ]
+}

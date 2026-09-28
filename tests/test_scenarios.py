@@ -307,3 +307,16 @@ def test_cancelled_exposure_is_not_reported_as_no_exposure() -> None:
     assert out is not None
     assert out["sectors"] == [] and out["exposure"] == []
     assert out["advice"] == "Mixed signal: exposure nets flat - monitor."
+
+
+def test_scenario_reports_the_outcome_sample_behind_its_tier():
+    def predict(**_kwargs: Any) -> dict[str, Any]:
+        return {
+            "p_positive_move": 0.3,
+            "data_tier": "thin-data",
+            "reliability_tables": {"sample_size": 13},
+        }
+
+    scenario = score_scenario({"members": [event()]}, [], predict)
+    assert scenario is not None
+    assert scenario["sample_size"] == 13

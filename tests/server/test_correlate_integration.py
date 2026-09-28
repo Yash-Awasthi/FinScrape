@@ -12,8 +12,8 @@ import pytest
 
 asyncpg = pytest.importorskip("asyncpg")
 
-from server.correlate import NewsItem, analyze_correlations  # noqa: E402
-from tests.server import fresh_pool, pg_reachable  # noqa: E402
+from server.correlate import NewsItem, analyze_correlations
+from tests.server import fresh_pool, pg_reachable
 
 pytestmark = pytest.mark.skipif(
     not pg_reachable(), reason="no Postgres at WORLDFIN_TEST_DATABASE_URL"

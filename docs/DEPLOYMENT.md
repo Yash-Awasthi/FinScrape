@@ -1,19 +1,20 @@
 # WorldFin — Deployment & API
 
-The same codebase runs three ways. All expose the identical REST contract
-(`/api/*`), so the SPA never changes between them.
+The API (`server/`) and the ingest worker (`worker/`) share one Postgres database;
+the SPA (`web/`) talks only to the API.
 
-## 1. Local (this machine) — SQLite + Ollama
+## 1. Local (this machine) — Postgres + Ollama
 
 ```bash
-npm --prefix web run build
-.venv/Scripts/python.exe main.py serve --port 8080
+python -m server.main              # API on :8010
+python -m worker.main --once       # one ingest cycle
+npm --prefix web run dev           # dashboard on :8080
 ```
 
 AI runs on local Ollama (`qwen2.5:7b` analysis, `nomic-embed-text` dedup):
 `ollama serve`, then dev mode on (`main.py devtools on`). $0/month.
 
-## 2. Cloud AI, same local server
+## 2. Cloud AI
 
 Any OpenAI-compatible provider. Two ways:
 
@@ -21,28 +22,14 @@ Any OpenAI-compatible provider. Two ways:
   (or provider `openai`, base_url `https://api.openai.com/v1`, model `gpt-4o-mini`)
 - **Env**: `OPENAI_BASE_URL` + `OPENAI_API_KEY` + `FINSCRAPE_MODEL`
 
-## 3. Deployed API (Render / Railway / any container host)
+## 3. Deployed
 
-`Dockerfile.serve` builds the API + prebuilt SPA in one image:
-
-```bash
-docker build -f Dockerfile.serve -t worldfin .
-docker run -p 8080:8080 \
-  -e OPENROUTER_API_KEY=sk-or-... \
-  -e FINSCRAPE_MODEL=deepseek/deepseek-chat \
-  -v worldfin-data:/app/data \
-  worldfin
-```
-
-- SQLite persists in the mounted volume (`/app/data`).
-- The AI provider is whatever the env says — cloud keys, never in the image.
-- For multi-user/production scale, the Postgres-backed `server/` (docker-compose)
-  remains the reference deployment.
+`Dockerfile.api` and `Dockerfile.worker` build the two processes; the scheduled
+`ingest` workflow runs one worker cycle against the hosted database without an
+always-on worker. Set `WORLDFIN_ENV=production`, a real `FINSCRAPE_API_KEY` and
+`WORLDFIN_CORS_ORIGINS`, or the API refuses to start.
 
 ## API surface (view-only — the platform renders intelligence, it never trades)
-
-**Feature parity between local (`main.py serve`) and production (`server/`) —
-the SPA is one build for both.**
 
 | Endpoint | Purpose | Local | Production |
 |---|---|---|---|
@@ -57,7 +44,7 @@ the SPA is one build for both.**
 | `GET /api/feeds` · `/api/rss-proxy` | world news feeds | ✅ | ✅ |
 | `GET /api/accuracy` · `/api/sentiment` · `/api/portfolio` | tracking panels | ✅ | ✅ |
 | `GET /api/correlations` | cross-source signals | ✅ (local heuristic) | ✅ (pipeline tables) |
-| `GET /api/alerts` | fired pipeline alerts | ✅ | via worker tables |
+| `GET/POST /api/alerts/rules` | alert rules, fired by the worker on new events | ✅ | ✅ `routes/alerts.py` |
 | `WS /ws` | realtime event push | ✅ | ✅ |
 
 Production deploy = Render (API from `server/`) + Cloudflare Pages (`web/dist`)

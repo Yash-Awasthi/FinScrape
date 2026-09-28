@@ -22,6 +22,7 @@ import threading
 import time
 
 import curl_cffi.requests as curl_requests
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +100,8 @@ def fast_get(
             )
             # Client block (403/429): rotate fingerprint before retrying.
             if status not in (403, 429, 500, 502, 503, 504):
+                if isinstance(e, curl_requests.exceptions.ConnectionError):
+                    return _plain_get(url, timeout)
                 logger.warning("[fastfetch] %s failed permanently: %s", url, e)
                 return None
             if attempt < retries:
@@ -106,3 +109,15 @@ def fast_get(
 
     logger.warning("[fastfetch] %s failed after %d attempts: %s", url, retries + 1, last_error)
     return None
+
+
+def _plain_get(url: str, timeout: float) -> bytes | None:
+    """Some hosts (ec.europa.eu) drop every curl_cffi TLS handshake, impersonated or
+    not, yet answer a stock client."""
+    try:
+        resp = requests.get(url, timeout=timeout)
+        resp.raise_for_status()
+        return resp.content
+    except requests.RequestException as e:
+        logger.warning("[fastfetch] %s failed permanently: %s", url, e)
+        return None

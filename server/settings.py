@@ -34,6 +34,9 @@ class Settings(BaseSettings):
         default=True, validation_alias="WORLDFIN_RUN_MIGRATIONS"
     )
 
+    # "production" turns the warnings below into refusals to start.
+    env: str = Field(default="development", validation_alias="WORLDFIN_ENV")
+
     # --- Ingest auth (every mutating route: POST /api/events, the portfolio
     # routes, and the vendored /api/v1 signal-ingest routes) ---
     api_key: str = Field(default=DEFAULT_API_KEY, validation_alias="FINSCRAPE_API_KEY")
@@ -71,6 +74,11 @@ class Settings(BaseSettings):
     # --- Worker (Phase 3) ---
     worker_interval_minutes: int = Field(
         default=15, validation_alias="WORLDFIN_WORKER_INTERVAL_MIN"
+    )
+    # GDELT publishes its events export every 15 minutes; its own knob stays so a
+    # deployment can slow it independently of the feeds.
+    gdelt_interval_minutes: int = Field(
+        default=15, validation_alias="WORLDFIN_GDELT_INTERVAL_MIN"
     )
     worker_max_articles: int = Field(
         default=20, validation_alias="WORLDFIN_WORKER_MAX_ARTICLES"
@@ -117,6 +125,17 @@ class Settings(BaseSettings):
     def uses_default_api_key(self) -> bool:
         """True while the mutating routes still accept the published default key."""
         return self.api_key == DEFAULT_API_KEY
+
+    def production_problems(self) -> list[str]:
+        """Settings the API refuses to start with under WORLDFIN_ENV=production."""
+        if self.env.lower() != "production":
+            return []
+        problems = []
+        if self.uses_default_api_key:
+            problems.append("FINSCRAPE_API_KEY is the published default")
+        if not self.cors_origins or "*" in self.cors_origins:
+            problems.append("WORLDFIN_CORS_ORIGINS must list the dashboard origin(s)")
+        return problems
 
     @property
     def llm_model_unset(self) -> bool:

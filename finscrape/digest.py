@@ -17,7 +17,6 @@ from typing import Optional
 
 import requests
 
-from finscrape.storage import StateManager
 
 logger = logging.getLogger(__name__)
 
@@ -227,48 +226,31 @@ class EmailDigest:
         proxy_url: str | None = None,
         to_email: str | None = None,
         from_email: str | None = None,
-        data_dir: str | None = None,
     ):
         self.proxy_url = (proxy_url or os.getenv("RESEND_PROXY_URL", "")).rstrip("/")
         self.to_email = to_email or os.getenv("FINSCRAPE_DIGEST_TO", "")
         self.from_email = from_email or os.getenv("FINSCRAPE_DIGEST_FROM", "finscrape@notifications.camelai.app")
-        self.state = StateManager(data_dir=data_dir)
         self.builder = DigestBuilder()
 
     @property
     def is_configured(self) -> bool:
         return bool(self.proxy_url and self.to_email)
 
-    def send_daily(self) -> dict:
-        """Send daily digest email with last 24h signals."""
+    def send_daily(self, events: list[dict]) -> dict:
+        """Send the daily digest for `events` (the caller picks the last 24h)."""
         if not self.is_configured:
             return {"skipped": True, "reason": "not configured"}
 
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
-        events = self._get_recent_events(cutoff)
         subject, html = self.builder.build_daily(events)
         return self._send(subject, html)
 
-    def send_weekly(self) -> dict:
-        """Send weekly digest email with last 7 days signals."""
+    def send_weekly(self, events: list[dict]) -> dict:
+        """Send the weekly digest for `events` (the caller picks the last 7 days)."""
         if not self.is_configured:
             return {"skipped": True, "reason": "not configured"}
 
-        cutoff = datetime.now(timezone.utc) - timedelta(days=7)
-        events = self._get_recent_events(cutoff)
         subject, html = self.builder.build_weekly(events)
         return self._send(subject, html)
-
-    def _get_recent_events(self, since: datetime) -> list[dict]:
-        """Get events from StateManager since the given time."""
-        all_events = self.state.events
-        cutoff_str = since.isoformat()
-        recent = []
-        for e in all_events:
-            ts = e.get("timestamp", "")
-            if ts >= cutoff_str:
-                recent.append(e)
-        return recent
 
     def _send(self, subject: str, html: str) -> dict:
         """Send email via Resend proxy."""

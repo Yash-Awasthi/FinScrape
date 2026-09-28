@@ -580,3 +580,26 @@ def clean_tickers(tickers: list[str], text: str = "") -> list[str]:
         if not t.startswith("^")
         and (t.upper() in protected or t.upper() not in TICKER_STOPWORDS)
     ]
+
+
+_COMPANY_SUFFIX = re.compile(
+    r"[,.]?\s+(inc|corp|corporation|co|company|ltd|plc|group|holdings|sa|ag|nv)\.?$",
+    re.IGNORECASE,
+)
+
+
+def grounded_tickers(
+    llm: list[str], entities: list[dict], from_text: list[str], text: str
+) -> list[str]:
+    """LLM tickers the article backs, by a text-derived source or by the company name
+    the LLM gave. A small model free-associates megacaps (NVDA on a Gaza shooting)."""
+    text_lower = text.lower()
+    named: set[str] = set()
+    for e in entities:
+        name = str(e.get("name") or "").strip()
+        while (core := _COMPANY_SUFFIX.sub("", name)) != name:
+            name = core
+        if len(name) >= 3 and re.search(rf"\b{re.escape(name.lower())}\b", text_lower):
+            named.add(e.get("ticker"))
+    backed = set(from_text) | named
+    return [t for t in dict.fromkeys(llm) if t in backed]

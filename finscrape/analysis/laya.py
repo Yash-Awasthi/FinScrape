@@ -20,14 +20,19 @@ import os
 import platform
 import sys
 import threading
+from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
 from finscrape.analysis.sectors import TAXONOMY, normalize
+from finscrape.analysis.ticker_map import TICKER_SECTOR
 
 logger = logging.getLogger(__name__)
 
 _MLX_REPO = os.environ.get("FINSCRAPE_LAYA_MLX_MODEL", "aac6fef/laya-mlx")
+# A local fine-tuned checkpoint (scripts/laya_train); unset uses the router's default.
+_MODEL = os.environ.get("FINSCRAPE_LAYA_MODEL", "")
 _MAX_CHARS = 2000  # headline + lede carry the decision; bodies only add latency
 
 # Below this, Laya is no more sure than the LLM it would overrule.
@@ -95,6 +100,10 @@ def _load() -> Any:
             import laya_mlx
 
             _predict = laya_mlx.load(_MLX_REPO, dtype="float16").predict
+        elif _MODEL:
+            from laya import Agent
+
+            _predict = Agent(_MODEL).predict
         else:
             from laya import Router
 
@@ -148,21 +157,30 @@ def classify(title: str, text: str) -> LayaView | None:
     return LayaView(sector, sector_p, direction, direction_p)
 
 
-def choose_sector(llm_sector: str, view: LayaView | None, keyword_sector: str) -> str:
-    """Confident Laya label, then the LLM's, then keywords, then a plausible Laya
-    pick, else "other".
+def choose_sector(
+    llm_sector: str,
+    view: LayaView | None,
+    keyword_sector: str,
+    tickers: Iterable[str] = (),
+) -> str:
+    """Confident Laya label, then the LLM's, then keywords, then the sector of the
+    companies named, then a plausible Laya pick, else "other".
 
-    The LLM's "technology" counts only with keyword support: it is the label the LLM
-    stamps on purely political stories, the defect this chain exists to fix.
+    The LLM's "technology" counts only with keyword or company support: it is the
+    label the LLM stamps on purely political stories, the defect this chain exists to fix.
     """
     laya_p = view.sector_p if view and view.sector in TAXONOMY else 0.0
     if laya_p >= CONFIDENT:
         return view.sector  # type: ignore[union-attr]
+    company = Counter(TICKER_SECTOR[t] for t in tickers if t in TICKER_SECTOR)
     llm = next((s for s in normalize(llm_sector) if s in TAXONOMY and s != "other"), "")
-    if llm == "technology" and keyword_sector != "technology":
+    if llm == "technology" and keyword_sector != "technology" and "technology" not in company:
         llm = ""
+    top = company.most_common(2)
+    # A tie (Walmart vs Uber) says nothing about which sector the story is about.
+    company_sector = top[0][0] if top and (len(top) == 1 or top[0][1] > top[1][1]) else ""
     fallback = view.sector if view and laya_p >= _FLOOR else "other"
-    return llm or keyword_sector or fallback
+    return llm or keyword_sector or company_sector or fallback
 
 
 def disagrees(llm_direction: str, view: LayaView | None) -> bool:

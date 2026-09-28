@@ -15,7 +15,11 @@ export default defineConfig({
   server: {
     port: 8080,
     proxy: {
-      "/api": { target: "http://localhost:8010", changeOrigin: true, ws: true },
+      "/api": {
+        target: process.env.WORLDFIN_API_URL ?? "http://localhost:8010",
+        changeOrigin: true,
+        ws: true,
+      },
     },
   },
   test: {
@@ -23,6 +27,6 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
     // Playwright owns e2e/ — keep vitest from picking up its specs.
-    exclude: ["node_modules/**", "e2e/**"],
+    exclude: ["node_modules/**", "e2e/**", "e2e-live/**"],
   },
 });

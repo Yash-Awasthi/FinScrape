@@ -1,0 +1,16 @@
+# The vendored reference tree is ~31k files; the images need only the SEC company list.
+finscrape/absorbed/**
+!finscrape/absorbed/market_data/company_name_to_ticker/company_tickers.json
+
+.git
+.venv
+**/__pycache__
+**/node_modules
+web/dist
+data
+backups
+secrets
+reference
+docs
+.env
+*.log

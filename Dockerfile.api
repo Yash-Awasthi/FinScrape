@@ -14,7 +14,11 @@ RUN pip install --no-cache-dir \
     "prometheus-client>=0.20" \
     "requests>=2.31" \
     "python-dateutil>=2.9" \
-    "feedparser>=6.0"
+    "feedparser>=6.0" \
+    "curl-cffi>=0.7" \
+    "python-dotenv>=1.0" \
+    "orjson>=3.9" \
+    "yfinance>=0.2.30"
 
 FROM python:3.13-slim
 ENV PATH="/opt/venv/bin:$PATH" \

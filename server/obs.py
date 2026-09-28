@@ -80,7 +80,7 @@ def record_ingest(source: str, inserted: int, duplicates: int, status: str) -> N
     SOURCE_CYCLES.labels(source=source, status=status).inc()
 
 
-def install_observability(app: "FastAPI", stale_after_min: int = 60) -> None:
+def install_observability(app: FastAPI, stale_after_min: int = 60) -> None:
     """Mount /metrics and the outermost request-id + latency middleware.
 
     fastapi/prometheus serialization imports are local so the worker (which imports
@@ -128,6 +128,7 @@ def install_observability(app: "FastAPI", stale_after_min: int = 60) -> None:
                 SOURCE_AGE.labels(source=r["source"]).set(age)
                 fresh = r["status"] == "OK" and age <= stale_after_min * 60
                 SOURCE_UP.labels(source=r["source"]).set(1 if fresh else 0)
-        except Exception as exc:  # pragma: no cover - only on a broken DB
+        # Metrics still serve on a broken DB.
+        except Exception as exc:  # noqa: BLE001  # pragma: no cover
             log.warning("metrics: source freshness query failed: %s", exc)
         return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)

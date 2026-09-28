@@ -1,6 +1,11 @@
 """Shared test fixtures for scraper tests — resets circuit breakers."""
+import os
+
 import dotenv
 import pytest
+
+# Laya is an optional ~800MB model; tests must see the same chain CI does, without it.
+os.environ["FINSCRAPE_LAYA"] = "0"
 
 # A developer's .env must not decide what the tests see: finscrape.config calls
 # load_dotenv() on import and server.settings reads .env directly.

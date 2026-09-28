@@ -1,7 +1,6 @@
 """
-Tests for grounded lessons read-back: AccuracyTracker.get_lessons() and the
-judge's LESSONS block. Debators never see lessons — only the judge prompt
-does, and only when the accuracy DB actually has scored history.
+Tests for the judge's LESSONS block. Debators never see lessons — only the judge
+prompt does, and only when lessons are supplied.
 
 All AI calls are mocked — no network, no real LLM.
 """
@@ -10,12 +9,10 @@ from __future__ import annotations
 
 import sys
 import types
-from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from finscrape.accuracy import AccuracyTracker
 
 # Same ai_client stubbing trick as tests/test_judge.py and tests/test_agents.py:
 # fake out finscrape.analysis.ai_client before importing finscrape.agents.judge
@@ -31,31 +28,19 @@ from finscrape.agents.judge import format_lessons_block, judge_debate
 del sys.modules["finscrape.analysis.ai_client"]
 
 
-@pytest.fixture()
-def tracker(tmp_path):
-    """AccuracyTracker backed by a temporary directory, matching tests/test_accuracy.py."""
-    t = AccuracyTracker(data_dir=str(tmp_path))
-    yield t
-    t.close()
-
-
-def _seed_aapl_invest_calls(tracker, n_incorrect: int = 4, n_correct: int = 1, source: str = "yahoo"):
-    """Seed n_incorrect + n_correct scored INVEST rows on AAPL, already checked."""
-    now = datetime.now(UTC)
-    outcomes = ["incorrect"] * n_incorrect + ["correct"] * n_correct
-    for i, outcome in enumerate(outcomes):
-        verdict_at = (now - timedelta(hours=30 + i)).isoformat()
-        pct = -3.5 if outcome == "incorrect" else 4.0
-        price_at_check = 150.0 * (1 + pct / 100)
-        tracker._conn.execute(
-            """INSERT INTO signal_outcomes
-               (event_id, ticker, verdict_at, signal_score, confidence, verdict,
-                price_at_signal, price_at_check, price_change_pct, outcome,
-                checked_at, source, event_type)
-               VALUES (?, 'AAPL', ?, 3, 0.8, 'INVEST', 150.0, ?, ?, ?, ?, ?, 'earnings')""",
-            (i, verdict_at, price_at_check, pct, outcome, now.isoformat(), source),
-        )
-    tracker._conn.commit()
+LESSONS = {
+    "tickers": {"AAPL": {"total": 5, "correct": 1, "hit_rate_pct": 20.0}},
+    "sources": {"yahoo": {"total": 5, "correct": 1, "hit_rate_pct": 20.0}},
+    "wrong_calls": [
+        {
+            "ticker": "AAPL",
+            "verdict": "INVEST",
+            "price_change_pct": -3.5,
+            "source": "yahoo",
+            "event_type": "earnings",
+        }
+    ],
+}
 
 
 def _dummy_verdicts() -> list[AgentVerdict]:
@@ -72,46 +57,12 @@ def _dummy_stats() -> dict:
 
 
 # ---------------------------------------------------------------------------
-# AccuracyTracker.get_lessons()
-# ---------------------------------------------------------------------------
-
-class TestGetLessons:
-    def test_reports_hit_rate_and_wrong_calls(self, tracker):
-        _seed_aapl_invest_calls(tracker)
-        lessons = tracker.get_lessons(["AAPL"])
-
-        aapl = lessons["tickers"]["AAPL"]
-        assert aapl["total"] == 5
-        assert aapl["correct"] == 1
-        assert aapl["hit_rate_pct"] == 20.0
-
-        wrong = lessons["wrong_calls"]
-        assert len(wrong) == 4
-        assert all(w["ticker"] == "AAPL" and w["verdict"] == "INVEST" for w in wrong)
-        assert all(w["price_change_pct"] < 0 for w in wrong)
-
-    def test_source_hit_rate_reported(self, tracker):
-        _seed_aapl_invest_calls(tracker, source="yahoo")
-        lessons = tracker.get_lessons(["AAPL"])
-        assert lessons["sources"]["yahoo"]["total"] == 5
-
-    def test_empty_db_returns_empty(self, tracker):
-        assert tracker.get_lessons(["AAPL"]) == {}
-
-    def test_wrong_calls_capped_at_limit(self, tracker):
-        _seed_aapl_invest_calls(tracker, n_incorrect=7, n_correct=1)
-        lessons = tracker.get_lessons(["AAPL"], limit=3)
-        assert len(lessons["wrong_calls"]) == 3
-
-
-# ---------------------------------------------------------------------------
 # LESSONS block in the judge prompt only
 # ---------------------------------------------------------------------------
 
 class TestJudgeLessonsBlock:
-    def test_lessons_injected_into_judge_prompt(self, tracker):
-        _seed_aapl_invest_calls(tracker)
-        lessons = tracker.get_lessons(["AAPL"])
+    def test_lessons_injected_into_judge_prompt(self):
+        lessons = LESSONS
 
         mock_call = MagicMock(return_value={
             "verdict": "CAUTIOUS", "signal_score": 0, "confidence": 0.5, "rationale": "r",
@@ -124,11 +75,9 @@ class TestJudgeLessonsBlock:
         assert "AAPL" in prompt
         assert "20" in prompt  # 20.0% hit rate
 
-    def test_empty_db_no_lessons_block_in_judge_prompt(self, tracker):
-        """Fresh empty DB -> get_lessons() returns empty and the judge prompt
-        carries no LESSONS block at all — cold start is not a behavior change."""
-        lessons = tracker.get_lessons(["AAPL"])
-        assert lessons == {}
+    def test_empty_lessons_leave_no_block_in_judge_prompt(self):
+        """No lessons -> the judge prompt carries no LESSONS block at all."""
+        lessons: dict = {}
         assert format_lessons_block(lessons) == ""
 
         mock_call = MagicMock(return_value={
@@ -140,7 +89,7 @@ class TestJudgeLessonsBlock:
         prompt = mock_call.call_args[0][0]
         assert "LESSONS" not in prompt
 
-    def test_no_lessons_arg_is_byte_identical_to_empty_lessons(self, tracker):
+    def test_no_lessons_arg_is_byte_identical_to_empty_lessons(self):
         """Old call sites that never pass `lessons` must see the exact same prompt
         as one passed an explicitly empty dict — zero regression for existing callers."""
         mock_call = MagicMock(return_value={

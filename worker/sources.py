@@ -20,12 +20,18 @@ Item = tuple[ScrapedArticle, tuple[float | None, float | None]]
 Producer = Callable[[], list[Item]]
 
 
-def _world_rss_producer(max_articles: int) -> Producer:
-    def produce() -> list[Item]:
-        articles = WorldRSSScraper(max_articles=max_articles).collect()
-        return [(a, (None, None)) for a in articles]
+class _WorldRSS:
+    """World RSS producer that keeps the last cycle's per-feed outcome."""
 
-    return produce
+    def __init__(self, max_articles: int) -> None:
+        self.max_articles = max_articles
+        self.feed_health: dict[str, tuple[int, str | None]] = {}
+
+    def __call__(self) -> list[Item]:
+        scraper = WorldRSSScraper(max_articles=self.max_articles)
+        articles = scraper.collect()
+        self.feed_health = scraper.feed_health
+        return [(a, (None, None)) for a in articles]
 
 
 def _ingestor_producer(cls) -> Producer:
@@ -47,7 +53,7 @@ def build_enrichers() -> dict[str, Callable[[ScrapedArticle], ScrapedArticle]]:
 
 
 def build_sources(max_articles: int = 20) -> dict[str, Producer]:
-    sources: dict[str, Producer] = {"world_rss": _world_rss_producer(max_articles)}
+    sources: dict[str, Producer] = {"world_rss": _WorldRSS(max_articles)}
     for cls in EVENT_INGESTORS:
         if getattr(cls, "enabled", lambda: True)():
             sources[cls.name] = _ingestor_producer(cls)

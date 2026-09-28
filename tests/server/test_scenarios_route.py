@@ -9,21 +9,21 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
 pytest.importorskip("fastapi")
 pytest.importorskip("asyncpg")
 
-from fastapi import FastAPI  # noqa: E402
-from fastapi.testclient import TestClient  # noqa: E402
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
-from finscrape.analysis import clusters as clusters_mod  # noqa: E402
-from server import cache  # noqa: E402
-from server.routes import insight  # noqa: E402
+from finscrape.analysis import clusters as clusters_mod
+from server import cache
+from server.routes import insight
 
-NOW = datetime.now(timezone.utc)
+NOW = datetime.now(UTC)
 
 
 def _event_row(event_id: int, subject: str, **overrides):
@@ -161,3 +161,18 @@ def test_limit_is_bounded(make_client):
     client = make_client([_event_row(1, "Strait closed")])
     assert client.get("/api/scenarios?limit=0").status_code == 422
     assert client.get("/api/scenarios?limit=99").status_code == 422
+
+
+def test_startup_warm_up_fills_the_cache(make_client, caplog):
+    """The warm-up calls the route as a plain function, where Query() defaults are
+    objects rather than numbers."""
+    import asyncio
+    import logging
+
+    from server.app import _warm_scenarios
+    from server.settings import Settings
+
+    make_client([_event_row(1, "Strait closed")])
+    with caplog.at_level(logging.INFO):
+        asyncio.run(_warm_scenarios(Settings(_env_file=None)))
+    assert "scenario cache warmed" in caplog.text

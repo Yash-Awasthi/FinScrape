@@ -12,6 +12,7 @@ from fastapi.encoders import jsonable_encoder
 
 from server import db, queries
 from server.ai import analyze_event
+from server.alert_rules import fire_alerts
 from server.auth import require_api_key
 from server.ingest import ingest_events
 from server.routes.telegram import notify_new_events
@@ -65,9 +66,10 @@ async def ingest(
         # never raw input — fixes the re-alert-dupes bug). Non-blocking.
         if get_settings().has_llm:
             background.add_task(_background_ai, result["inserted_ids"])
-        # Telegram alerts on the freshly inserted rows (sync fn → threadpool; no-op
-        # without a bot token + subscribers). Alerts on insertedIds, never raw input.
+        # Telegram alerts on the freshly inserted rows (no-op without a bot token and
+        # subscribers). Alerts on insertedIds, never raw input.
         background.add_task(notify_new_events, result["inserted_rows"])
+        background.add_task(fire_alerts, db.pool(), result["inserted_rows"])
 
     return IngestResponse(
         inserted=result["inserted"],
@@ -92,7 +94,8 @@ async def _background_ai(event_ids: list[int]) -> None:
                 continue
             result = await asyncio.to_thread(analyze_event, event)
             await queries.save_ai_cache(pool, cache_key, eid, result)
-        except Exception as exc:  # pragma: no cover - background best-effort
+        # One event's failure spares the rest.
+        except Exception as exc:  # noqa: BLE001  # pragma: no cover
             log.warning("background ai failed for event %s: %s", eid, exc)
     await hub.broadcast(
         jsonable_encoder({"type": "ai_updated", "stats": await queries.get_stats(pool)})

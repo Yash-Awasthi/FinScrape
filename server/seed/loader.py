@@ -11,7 +11,7 @@ only for *newly inserted* events, and seed correlations are replaced (DELETE see
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import asyncpg
@@ -37,7 +37,7 @@ def resolve_events(
         ev = {k: v for k, v in row.items() if k not in _SEED_ONLY}
         day = (now - timedelta(days=int(row.get("days_ago", 0)))).date()
         ts = datetime(
-            day.year, day.month, day.day, int(row.get("hour", 12)), tzinfo=timezone.utc
+            day.year, day.month, day.day, int(row.get("hour", 12)), tzinfo=UTC
         )
         ev["timestamp"] = ts.isoformat()
         events.append(ev)
@@ -52,7 +52,7 @@ def load_dataset() -> dict:
 
 async def seed(pool: asyncpg.Pool, now: datetime | None = None) -> dict:
     """Load the curated dataset into a live pool. Returns a counts summary."""
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
     data = load_dataset()
     events, accuracy_by_subject = resolve_events(data.get("events", []), now)
 

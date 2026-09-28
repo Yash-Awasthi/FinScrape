@@ -76,10 +76,10 @@ class JudgeVerdict:
 
 
 def format_lessons_block(lessons: dict[str, Any] | None) -> str:
-    """Render AccuracyTracker.get_lessons() output as a LESSONS block.
+    """Render grounded past-call stats as a LESSONS block.
 
-    Empty/falsy input returns "" so a cold accuracy DB leaves the judge
-    prompt byte-identical to before this existed — no lessons, no block.
+    Empty/falsy input returns "" so the judge prompt is byte-identical to one
+    built without lessons — no lessons, no block.
 
     ponytail: grounded stats, not natural-language reflection — upgrade path
     is one LLM call over wrong_calls below if the stats prove too blunt.
@@ -140,7 +140,7 @@ def judge_debate(
 
     stats must carry consensus_score_raw, agreement_level, dissenting_agents.
 
-    `lessons` (from AccuracyTracker.get_lessons()) is folded in as a LESSONS
+    `lessons` (grounded past-call stats) is folded in as a LESSONS
     block — grounded past hit rate / wrong calls the debators never see.
     Only the judge carries this; empty lessons add nothing to the prompt.
     """

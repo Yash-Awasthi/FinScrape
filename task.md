@@ -16,89 +16,88 @@ Local stack: API `:8010`, Postgres 17 `:5434` (database `worldfin`; tests use
 `worldfin_test` through `WORLDFIN_TEST_DATABASE_URL`), Ollama `:11434`. The Docker
 stack called nexus owns 8000, 5432, 6379, 3000 and 4173; never use those ports.
 
+Start the stack before any live check (each in its own background shell), then
+confirm `curl localhost:8010/health` shows `"db":true,"llm":true`:
+
+```
+ollama serve                                         # skip if :11434 already answers
+.venv/Scripts/python -m server.main                  # API on :8010
+.venv/Scripts/python -m worker.main --once           # one ingest cycle, then exits
+cd web && npm run dev                                # dashboard on :8080, only if needed
+```
+
+Postgres is a Windows service (`postgresql-x64-17`) and is normally already up.
+Memory is tight on this machine: Ollama plus Laya plus the API can exhaust it, and
+idle background shells may be stopped. Start only what the current item needs,
+stop it when the live check is done, and set `FINSCRAPE_LAYA=0` for checks that do
+not involve sector labels.
+
 Gates to keep green: `pytest -q`, `ruff check` and `ruff format --check` on the
 `NEW_DIRS` in the Makefile, `pyright`, `python -m tests.server.selfcheck`, and in
 `web/`: `npm run typecheck`, `npm run test`, `npm run build`, `npx playwright test`.
 
+## Owner context
+
+Facts about the owner's setup that the items below rely on (as of 28 Sep 2026):
+
+- **Deployment target:** free services, with the SPA on Vercel and Postgres on Supabase.
+  The API and worker host is still open (item 9).
+- **GPU:** an RTX 4060 (8 GB) on the local machine; long training runs are fine (item 11).
+- **Accounts still to create, when item 9 starts:** Vercel, Supabase, a hosted LLM key
+  (OpenRouter or similar, since Ollama is not available on free hosting), and possibly a
+  free always-on host for the API and worker. Claude says which ones once the options
+  are compared.
+- **ReliefWeb:** app name requested on 28 Sep 2026 with the owner's NIT Raipur address
+  (G1). When it arrives, the owner adds `RELIEFWEB_APPNAME` to `.env`.
+- **Store:** stick to one data store, chosen on how each path is used (item 10).
+- Ask the owner only for real decisions or credentials, not for anything in the repo.
+
 ## Open
 
-### 1. Company headlines lose their sector
-"amd joins 1 trillion club" and "amazon amzn to join 4 trillion club" are
-labelled `other`. `laya.choose_sector` rejects the LLM's "technology" without
-a keyword, and the keyword list cannot name every company.
-- Fix direction: a sector for the tickers in `finscrape/analysis/ticker_map.py`,
-  passed into `choose_sector` as supporting evidence alongside keywords.
-- Test: `choose_sector("technology", view_other, "", tickers=["AMD"])` returns
-  `technology`, and a political story with no tickers still returns `other`.
-- Live check: re-label the corpus and confirm neither headline reads `other`
-  and that no Gaza or Pakistan story turns into `technology`.
+### 9. Deploy: finish the Supabase move
+Found live since June: Cloudflare Pages (SPA, `winfin.pages.dev`), Render API
+(`winfin-api`), GitHub Actions ingest, Neon Postgres. Vercel is not needed. On 29 Sep
+Neon's data (9,690 events, 837 outcomes) was copied into Supabase (schema 0001–0007,
+RLS on); Render and the `WORLDFIN_DATABASE_URL` secret point at Supabase; Render runs
+`WORLDFIN_ENV=production` with CORS `https://winfin.pages.dev`. PR #6 merged; the
+live API serves 9,698 events from Supabase and the first ingest run inserted 8
+(GDELT 6 with no 429s).
+- The freemodel.dev LLM key expired 28 Jul, so ingest has run on the heuristic
+  fallback since (6,634 CAUTIOUS). Get a working key (OpenRouter free or paid) into
+  the GitHub secret and Render env.
+- Parenthesised acronyms still read as tickers ("Rapid Support Forces (RSF)", "(OCHA)"
+  on event 21206). Keep a `(TICK)` match only when it is a listed symbol.
+- The dashboard on Pages is an older build; redeploy with the `wrangler` command in
+  `docs/DEPLOY.md` once `npx wrangler login` has been run on this machine.
+- The 837 outcomes were scored with the old same-day window; re-score them with
+  `server.accuracy.backtest` (lookback 180 days) against Supabase.
+- Rotate the Supabase password and Render key that were pasted into a chat.
+- Once Supabase has run a week cleanly, delete the Neon project.
+- Email digest: add a scheduled Action for `python -m worker.digest daily` once the
+  owner sets `RESEND_PROXY_URL` and `FINSCRAPE_DIGEST_TO`.
 
-### 2. A measured sector accuracy number
-The sector chain was tuned by eye on 74 events. There is no fixed evaluation.
-- Build `tests/fixtures/sector_gold.json` (about 50 real subjects with the
-  expected sector and a one-line reason) and an eval test that runs the chain
-  without Laya and reports accuracy. Record the number in `notes.md`.
-- Mark the gold labels as provisional so the owner can review them.
-- Live check: run the eval with Laya installed and record that number too.
-
-### 3. Feed-level health for world RSS
-`source_health` has one `world_rss` row. A single dead feed out of 32 is
-invisible; it only shows as a WARN line in the log.
-- Record one row per feed (`world/<key>`) with its entry count and status.
-- Test: a feed whose fetch fails produces a WARN row; the others stay OK.
-- Live check: `/api/health` lists every feed after one worker cycle.
-
-### 4. GDELT runs on its own slower interval
-GDELT answers 429 on most first attempts. It shares the 15-minute interval.
-- Add `WORLDFIN_GDELT_INTERVAL_MIN` (default 30) and use it for that job only.
-- Test: the scheduler gives the `gdelt` job the configured interval.
-- Live check: one cycle logs fewer 429 retries.
-
-### 5. ETag accepts lists and `*`
-The ETag middleware compares `If-None-Match` as one exact string, so a client
-sending `W/"a", W/"b"` or `*` gets 200 instead of 304.
-- Test: both forms return 304 for an unchanged response.
-- Live check: `curl -H 'If-None-Match: *' localhost:8010/api/stats` returns 304.
-
-### 6. Scenario direction once outcomes exist
-Direction leads with each event's `signal_score` until `predict()` reaches the
-`empirical` tier. The backtest has now scored 37 outcomes.
-- Investigate what tier current scenarios report and whether the blend in
-  `finscrape/scenarios._member_p` still makes sense with real outcomes.
-- Test and change only if the numbers show a problem; otherwise record the
-  finding in `notes.md` and close.
-
-### 7. Quiet the test warnings
-pytest prints 21 warnings, including Starlette's notice that `httpx` with its
-TestClient is deprecated.
-- Fix each at its source; do not filter warnings away.
-- Check: `pytest -q -W error::DeprecationWarning` passes for our own code.
-
-### 8. Full-stack end-to-end test
-The Playwright suite mocks REST and WebSocket by design.
-`tests/server/test_routes_smoke.py` is the only test that touches a live database.
-- Add one Playwright spec that runs against the real API and `worldfin_test`,
-  seeded with `server.seed`, and walks feed, inspector and scenarios.
-- Keep it out of the default CI run if CI has no Postgres; document how to run it.
-
-### 9. One store for local state
-`data/finscrape.db` (SQLite) still holds the pipeline's dedup events, alert
-rules, portfolio and signal outcomes. The worker copies merges to Postgres by
-subject, which works only while both stores agree.
-- Move the dedup lookup (`FinScrapePipeline._find_duplicate`) to read recent
-  events from Postgres, then retire the SQLite events table.
-- Test: a paraphrased second report merges into the Postgres row with no
-  SQLite involved.
-- Large item: split it into more than one commit if the steps stand alone.
-
-### 10. Upgrade ruff to 0.16
-Ruff and pyright are pinned (`pyproject.toml`, dev group) because `uv.lock` is not
-committed and CI once picked up ruff 0.16.9, whose new default rules reported 92
-findings (RUF100, UP017, BLE001, I001 and others) in code that had not changed.
-- Bump the pin, run `ruff check` on the `NEW_DIRS`, and fix the findings in the
-  same commit. Blind `except Exception` handlers that guard a worker cycle need a
-  reason comment or a narrower type, not a blanket ignore.
-- Check: CI's backend job goes green on the new version.
+### 11. Laya: stage 1 and the daily loop (parked by the owner, 29 Sep)
+The current promoted checkpoint stays in use; the 03:30 task keeps running unattended.
+Built (7fb3bcba): `scripts/laya_train/` has `train.py` (LoRA or full),
+`build_pretrain.py` (FNSPID and two Twitter finance sets) and `daily.py` (Claude
+labels the headlines Laya is unsure of via `claude -p`, a LoRA candidate trains, and
+it is promoted only if it beats the current model on gold + holdout). The Windows
+task "WorldFin Laya daily" runs it at 03:30; state, logs and `history.jsonl` live in
+`C:\Users\yasha\laya-ft`.
+- First run (28 Sep): 494 hand labels plus 58 from Claude; stock 71.4% vs candidate
+  72.9% on 70 gold + holdout cases, promoted, and `.env` now sets
+  `FINSCRAPE_LAYA_MODEL`. That was a one-case gain, so promotion now needs at least
+  2 more correct cases (`MIN_GAIN`).
+- The owner runs stage 1 from `Desktop\laya-stage1.txt` and reports the
+  `STOCK x% STAGE1 y%` line. Record it; if stage 1 loses, delete `laya-ft\stage1`
+  so the daily LoRA starts from the stock model again.
+- Read `history.jsonl` and the latest `logs\daily-*.log`: did runs happen, did
+  labels arrive, were promotions real gains. Spot-check Claude's labels.
+- A promoted model loads only in new processes. Make `finscrape.analysis.laya`
+  reload when `current\` changes, or restart the API and worker on promotion.
+- Grow the gold set towards 250 and have the owner review it, then drop its
+  provisional mark; at 56 cases a one-headline gap is 1.8 points.
+- Direction has no gold at all; label a direction set and measure it.
 
 ## Gated
 
@@ -106,16 +105,7 @@ findings (RUF100, UP017, BLE001, I001 and others) in code that had not changed.
 v1 is retired (410) and v2 rejects unapproved app names (403). Needs the owner to
 request an app name at https://apidoc.reliefweb.int/parameters#appname and set
 `RELIEFWEB_APPNAME` in `.env`; the source turns itself on after that.
+Checked 28 Sep 2026: `.env` has no `RELIEFWEB_APPNAME`, and the worker built no reliefweb source.
+Requested 28 Sep 2026 with the owner's NIT Raipur address; waiting on ReliefWeb's reply.
 
-### G2. Fine-tune Laya
-Needs a labelled set of WorldFin decisions and a GPU run of the upstream
-notebook. Revisit after item 2 gives an accuracy number worth improving.
-
-### G3. Refuse the default API key in production
-Startup warns when `FINSCRAPE_API_KEY` is the published default. Refusing needs a
-signal that separates a deployment from a local demo (for example
-`WORLDFIN_ENV=production`). That is a product decision for the owner.
-
-### G4. CORS origins
-CORS is `*` by default, and the API accepts no credentials. Tighten it only when a
-deployment names its browser origins in `WORLDFIN_CORS_ORIGINS`.
+G2–G5 were decided by the owner on 28 Sep 2026 and became items 9–11.

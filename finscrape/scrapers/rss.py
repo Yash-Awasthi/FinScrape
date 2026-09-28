@@ -39,22 +39,24 @@ class RSSScraperSource(BaseScraper):
     def _fetch_feed(self, feed_name: str, feed_url: str) -> list[ScrapedArticle]:
         """Fetch one feed (impersonated + conditional-cached) and process entries."""
         try:
-            raw = fast_get(feed_url)
-            if not raw:
-                logger.warning("[%s/%s] Feed fetch failed", self.name, feed_name)
-                return []
-            feed = feedparser.parse(raw)
-            logger.info("[%s/%s] Parsed %d entries", self.name, feed_name, len(feed.entries))
-
-            articles = []
-            for entry in feed.entries[: self.max_articles]:
-                article = self._process_entry(entry, feed_name)
-                if article:
-                    articles.append(article)
-            return articles
+            return self._fetch_feed_or_raise(feed_name, feed_url)
         except Exception as e:
-            logger.warning("[%s/%s] Feed parse error: %s", self.name, feed_name, e)
+            logger.warning("[%s/%s] %s", self.name, feed_name, e)
             return []
+
+    def _fetch_feed_or_raise(self, feed_name: str, feed_url: str) -> list[ScrapedArticle]:
+        raw = fast_get(feed_url)
+        if not raw:
+            raise RuntimeError("Feed fetch failed")
+        feed = feedparser.parse(raw)
+        logger.info("[%s/%s] Parsed %d entries", self.name, feed_name, len(feed.entries))
+
+        articles = []
+        for entry in feed.entries[: self.max_articles]:
+            article = self._process_entry(entry, feed_name)
+            if article:
+                articles.append(article)
+        return articles
 
     def scrape_news(self) -> list[ScrapedArticle]:
         # Feeds fetch in parallel — total wall time ≈ slowest feed, not their sum.

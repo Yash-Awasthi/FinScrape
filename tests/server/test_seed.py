@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from server.seed.loader import load_dataset, resolve_events
 
-NOW = datetime(2026, 6, 29, 18, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 6, 29, 18, 0, tzinfo=UTC)
 
 
 def test_resolve_events_sets_absolute_utc_timestamp():

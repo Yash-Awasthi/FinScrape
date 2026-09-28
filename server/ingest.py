@@ -13,7 +13,7 @@ without a database; only `ingest_events` needs a live pool.
 from __future__ import annotations
 
 import hashlib
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import asyncpg
@@ -23,12 +23,31 @@ from dateutil import parser as dtparser
 _JUNK_PARAMS = ("fbclid", "gclid", "mc_cid", "mc_eid", "ref", "ref_src")
 
 # Columns written on insert, in order. Mirrors finscrape FinEvent + geo + content_hash.
-_INSERT_COLS = (
-    "content_hash subject event_type impact_direction signal_score confidence verdict "
-    "heuristic_impact divergence_flag reasoning magnitude novelty actionability "
-    "sector_impact tickers sources articles affected_entities second_order_effects "
-    "key_metrics lat lon timestamp"
-).split()
+_INSERT_COLS = [
+    "content_hash",
+    "subject",
+    "event_type",
+    "impact_direction",
+    "signal_score",
+    "confidence",
+    "verdict",
+    "heuristic_impact",
+    "divergence_flag",
+    "reasoning",
+    "magnitude",
+    "novelty",
+    "actionability",
+    "sector_impact",
+    "tickers",
+    "sources",
+    "articles",
+    "affected_entities",
+    "second_order_effects",
+    "key_metrics",
+    "lat",
+    "lon",
+    "timestamp",
+]
 
 
 def normalize_subject(subject: str) -> str:
@@ -62,18 +81,18 @@ def parse_timestamp(ts: str | None) -> datetime:
         try:
             dt = dtparser.isoparse(ts)
             if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            return dt.astimezone(timezone.utc)
+                dt = dt.replace(tzinfo=UTC)
+            return dt.astimezone(UTC)
         except (ValueError, OverflowError, TypeError):
             pass
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def content_hash(subject: str, articles: list[str] | None, ts: datetime) -> str:
     """Deterministic dedup key: norm(subject) + canon(first URL) + UTC day.
     Same story, same day → same hash → UNIQUE rejects the duplicate."""
     first = canonical_url(articles[0]) if articles else ""
-    day = ts.astimezone(timezone.utc).date().isoformat()
+    day = ts.astimezone(UTC).date().isoformat()
     key = f"{normalize_subject(subject)}|{first}|{day}"
     return hashlib.sha256(key.encode("utf-8")).hexdigest()
 
@@ -82,7 +101,7 @@ def day_bounds(date_str: str) -> tuple[datetime, datetime]:
     """Half-open [day, day+1) UTC bounds for a 'YYYY-MM-DD' string. The ONE convention
     reused by feed / dates / stats so their counts can never disagree (Appendix B)."""
     d = date.fromisoformat(date_str)
-    start = datetime(d.year, d.month, d.day, tzinfo=timezone.utc)
+    start = datetime(d.year, d.month, d.day, tzinfo=UTC)
     return start, start + timedelta(days=1)
 
 

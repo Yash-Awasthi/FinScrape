@@ -8,7 +8,7 @@ import pytest
 
 pytest.importorskip("asyncpg")
 
-from server.queries import get_recent_predictions, impact_shift  # noqa: E402
+from server.queries import get_recent_predictions, impact_shift
 
 
 @pytest.mark.parametrize(

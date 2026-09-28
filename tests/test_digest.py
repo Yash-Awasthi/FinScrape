@@ -3,7 +3,7 @@
 import os
 import json
 import pytest
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from unittest.mock import patch, MagicMock
 
 from finscrape.digest import DigestBuilder, EmailDigest
@@ -125,7 +125,7 @@ class TestEmailDigest:
     def test_not_configured(self):
         digest = EmailDigest(proxy_url="", to_email="")
         assert not digest.is_configured
-        result = digest.send_daily()
+        result = digest.send_daily([])
         assert result.get("skipped")
 
     def test_configured(self):
@@ -144,11 +144,7 @@ class TestEmailDigest:
             to_email="test@example.com",
             from_email="from@example.com",
         )
-        # Mock the state manager to return some events
-        digest.state = MagicMock()
-        digest.state.events = [make_event()]
-
-        result = digest.send_daily()
+        result = digest.send_daily([make_event()])
         assert result.get("ok")
         mock_post.assert_called_once()
 
@@ -169,10 +165,7 @@ class TestEmailDigest:
             proxy_url="http://proxy",
             to_email="test@example.com",
         )
-        digest.state = MagicMock()
-        digest.state.events = [make_event()]
-
-        result = digest.send_weekly()
+        result = digest.send_weekly([make_event()])
         assert result.get("ok")
 
     @patch("finscrape.digest.requests.post")
@@ -184,23 +177,5 @@ class TestEmailDigest:
             proxy_url="http://proxy",
             to_email="test@example.com",
         )
-        digest.state = MagicMock()
-        digest.state.events = []
-
-        result = digest.send_daily()
+        result = digest.send_daily([])
         assert "error" in result
-
-    def test_get_recent_events_filters_by_time(self):
-        digest = EmailDigest(proxy_url="http://proxy", to_email="t@e.com")
-        old_ts = (datetime.now(timezone.utc) - timedelta(hours=48)).isoformat()
-        new_ts = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
-
-        digest.state = MagicMock()
-        digest.state.events = [
-            make_event(timestamp=old_ts),
-            make_event(timestamp=new_ts),
-        ]
-
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
-        recent = digest._get_recent_events(cutoff)
-        assert len(recent) == 1

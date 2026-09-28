@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import asyncio
 import os
-
 from urllib.parse import urlparse
 
 # Deliberately not WORLDFIN_DATABASE_URL: these tests TRUNCATE, and sharing the
@@ -30,12 +29,16 @@ def pg_reachable() -> bool:
     async def _check() -> bool:
         try:
             conn = await asyncio.wait_for(asyncpg.connect(PG_DSN), timeout=2)
-        except (OSError, asyncpg.PostgresError, asyncio.TimeoutError):
+        except (TimeoutError, OSError, asyncpg.PostgresError):
             return False
         await conn.close()
         return True
 
-    return asyncio.run(_check())
+    reachable = asyncio.run(_check())
+    # CI sets this so a missing database fails the run instead of skipping it quietly.
+    if not reachable and os.getenv("WORLDFIN_REQUIRE_PG"):
+        raise RuntimeError(f"WORLDFIN_REQUIRE_PG is set but {PG_DSN!r} is unreachable")
+    return reachable
 
 
 async def fresh_pool(*truncate):

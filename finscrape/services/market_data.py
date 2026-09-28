@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
 
@@ -258,7 +258,7 @@ def determine_market_status(
     Returns: "open", "closed", "pre-market", "after-hours"
     """
     if now is None:
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
     
     # Simplified US market hours (UTC offsets approximate)
     hour = now.hour

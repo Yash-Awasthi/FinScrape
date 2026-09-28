@@ -252,9 +252,9 @@ class BaseScraper(ABC):
         tickers.update(re.findall(r"\(([A-Z]{1,5})\)", text))
         # $TICKER pattern — e.g. $AAPL
         tickers.update(re.findall(r"\$([A-Z]{1,5})\b", text))
-        # Standalone uppercase ticker in prose — e.g. "shares of AAPL dropped"
-        # Must be preceded by a word boundary and be 2-5 uppercase letters
-        tickers.update(re.findall(r"(?<![A-Z])([A-Z]{2,5})(?![A-Z])", text))
+        # Exchange-prefixed — e.g. NYSE: XYZ. Bare capitals are left out: in news
+        # copy they are acronyms (IE, KBRA, NATO) far more often than symbols.
+        tickers.update(re.findall(r"\b(?:NYSE|NASDAQ|Nasdaq|AMEX)\s*:\s*([A-Z]{1,5})\b", text))
         # Futures — e.g. ES=F
         tickers.update(re.findall(r"\b([A-Z]{1,2}=F)\b", text))
         # Indexes — e.g. ^GSPC

@@ -21,7 +21,6 @@ from finscrape.scrapers.world.feeds import (
 )
 from server.geocode import geocode_event, geocode_text
 
-
 # --- feed registry ---
 
 
@@ -76,22 +75,38 @@ def test_usgs_parse_filters_and_geo():
 # --- GDELT ---
 
 
-def test_gdelt_parse_skips_empty_titles():
-    data = {
-        "articles": [
-            {
-                "title": "Sanctions widen on shipping",
-                "domain": "reuters.com",
-                "url": "u",
-                "seendate": "20260101T000000Z",
-            },
-            {"title": "", "domain": "x.com"},
-        ]
-    }
-    events = GDELTIngestor().parse(data)
-    assert len(events) == 1
-    assert events[0].event_type == "geopolitical_event"
-    assert events[0].source.startswith("gdelt/reuters.com")
+def test_gdelt_title_comes_from_the_url_slug():
+    from finscrape.ingestors.gdelt import slug_title
+
+    assert (
+        slug_title(
+            "https://www.rnz.co.nz/news/world/1642590/suspected-plot-to-attack-uk-s-fairford-airbase"
+        )
+        == "Suspected plot to attack uk s fairford airbase"
+    )
+    assert (
+        slug_title(
+            "https://article.wn.com/view/2026/09/28/USIran_talks_continue_on_Hormuz_despite_Trumps_rejection/"
+        )
+        == "USIran talks continue on Hormuz despite Trumps rejection"
+    )
+    assert slug_title("https://allafrica.com/stories/202609280693.html") == ""
+
+
+def test_gdelt_export_parses_conflict_events_with_geo():
+    from pathlib import Path
+
+    data = (Path(__file__).parent / "fixtures" / "gdelt_export.CSV.zip").read_bytes()
+    events = GDELTIngestor(max_records=10).parse(data)
+    assert 3 <= len(events) <= 10
+    assert all(e.title and e.url.startswith("http") for e in events)
+    assert all(
+        e.source.startswith("gdelt/") and e.event_type == "geopolitical_event"
+        for e in events
+    )
+    assert any(e.lat is not None for e in events)
+    assert "Hormuz" in " ".join(e.title for e in events)
+    assert len({e.url for e in events}) == len(events)
 
 
 # --- ReliefWeb ---
@@ -203,8 +218,8 @@ def test_feed_registry_invariants():
 def test_every_tier_the_correlation_engine_scores_is_represented():
     """detect_convergence needs >=3 distinct source types in one cluster; a registry
     that only spans two tiers can never produce a convergence signal."""
-    from server.correlate import _TIER_WEIGHT
     from finscrape.scrapers.world.feeds import FEEDS
+    from server.correlate import _TIER_WEIGHT
 
     tiers = {f.tier for f in FEEDS}
     assert len(tiers) >= 3, f"only {tiers} — convergence needs 3+ distinct source types"

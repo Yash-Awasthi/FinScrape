@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import threading
 import time
-from typing import Callable
+from collections.abc import Callable
 
 # Tier TTLs in seconds — pick by how fast the upstream truth moves.
 FAST = 30  # volatile (crypto/markets quotes)

@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 // E2E drives the real built SPA (vite preview) with REST + WS fully mocked in the
 // browser (see e2e/dashboard.spec.ts) — no backend/DB needed, so it's deterministic
-// and CI-fast. Full-stack E2E against a live api+postgres is a follow-up (Phase 11).
+// and CI-fast. The full-stack run lives in playwright.live.config.ts.
 export default defineConfig({
   testDir: "./e2e",
   timeout: 30_000,

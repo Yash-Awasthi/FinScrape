@@ -18,10 +18,9 @@ import pytest
 
 asyncpg = pytest.importorskip("asyncpg")
 
-from server import db, queries  # noqa: E402
-from server.ingest import ingest_events  # noqa: E402
-
-from tests.server import PG_DSN as DSN  # noqa: E402
+from server import db, queries
+from server.ingest import ingest_events
+from tests.server import PG_DSN as DSN
 
 TEST_EVENT = Path(__file__).resolve().parents[2] / "test_event.json"
 
@@ -30,7 +29,7 @@ def _pg_reachable() -> bool:
     async def _check() -> bool:
         try:
             conn = await asyncio.wait_for(asyncpg.connect(DSN), timeout=2)
-        except (OSError, asyncpg.PostgresError, asyncio.TimeoutError):
+        except (TimeoutError, OSError, asyncpg.PostgresError):
             return False
         await conn.close()
         return True

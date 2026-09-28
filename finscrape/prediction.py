@@ -5,7 +5,7 @@ tell you odds of events. WorldFin tells you the **calibrated probability that a
 signal's direction realizes in price** — with the reliability evidence attached.
 
 How it works (honest, small-sample aware):
-- Empirical layer: reliability tables built from `signal_outcomes` — P(hit)
+- Empirical layer: reliability tables built from scored outcomes — P(hit)
   per verdict, per confidence bucket, per source, per event_type, with
   exponential recency decay. Sample sizes are tracked and surfaced.
 - Structural layer: the finance-lexicon sentiment score of the event text
@@ -15,15 +15,13 @@ How it works (honest, small-sample aware):
 - Every prediction carries `sample_size`, `reliability_tier` and the factor
   breakdown, so a user can audit WHY the number is what it is.
 
-Pure functions + a tiny sqlite reader; no network.
+Pure functions; no I/O.
 """
 
 from __future__ import annotations
 
 import math
-import sqlite3
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any
 
 _DECAY_HALF_LIFE_DAYS = 45.0  # outcomes older than this matter less
@@ -53,21 +51,6 @@ def _recency_weight(checked_at: str | None, now: datetime | None = None) -> floa
         return math.pow(0.5, age_days / _DECAY_HALF_LIFE_DAYS)
     except ValueError:
         return 0.5
-
-
-def load_outcomes(db_path: Path) -> list[dict[str, Any]]:
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    try:
-        rows = conn.execute(
-            "SELECT verdict, outcome, confidence, source, event_type, checked_at "
-            "FROM signal_outcomes WHERE outcome IS NOT NULL"
-        ).fetchall()
-        return [dict(r) for r in rows]
-    except sqlite3.OperationalError:
-        return []
-    finally:
-        conn.close()
 
 
 def reliability_tables(outcomes: list[dict[str, Any]]) -> dict[str, Any]:
@@ -126,6 +109,11 @@ def structural_probability(text: str) -> float:
     return 1.0 / (1.0 + math.exp(-2.2 * score))
 
 
+# Recency-weighted outcomes needed before a call is labelled empirical; below it the
+# hit rates still blend in, but a handful of results is not a track record.
+MIN_EMPIRICAL_WEIGHT = 30.0
+
+
 def _empirical_p(hit_rate: float | None, weight: float, prior: float = 0.5) -> float | None:
     """Empirical hit-rate shrunk toward the prior by evidence weight."""
     if hit_rate is None:
@@ -166,12 +154,16 @@ def predict(text: str, verdict: str, confidence: float, source: str,
             estimates.append((rate, weight))
 
     structural = structural_probability(text)
-    if estimates:
+    verdict_up = verdict in ("INVEST",)
+    # A hit rate is P(verdict landed); only a directional verdict turns it into
+    # P(up), and a PULL_OUT that lands means prices fell.
+    if estimates and verdict in ("INVEST", "PULL_OUT"):
         wsum = sum(w for _, w in estimates)
         empirical_p = sum(r * w for r, w in estimates) / wsum
+        empirical_up = empirical_p if verdict_up else 1 - empirical_p
         empirical_share = min(0.75, wsum / (wsum + 6.0))
-        p_positive = empirical_p * empirical_share + structural * (1 - empirical_share)
-        data_tier = "empirical" if empirical_total >= 1.0 else "thin-data"
+        p_positive = empirical_up * empirical_share + structural * (1 - empirical_share)
+        data_tier = "empirical" if empirical_total >= MIN_EMPIRICAL_WEIGHT else "thin-data"
     else:
         p_positive = structural
         empirical_share = 0.0
@@ -179,7 +171,6 @@ def predict(text: str, verdict: str, confidence: float, source: str,
 
     # Directional consistency: if the verdict is PULL_OUT, price "realizing"
     # means downside — flip the probability onto the verdict's own axis.
-    verdict_up = verdict in ("INVEST",)
     p_verdict_right = p_positive if verdict_up else (1 - p_positive)
 
     confidence_band = round(0.5 + 0.4 * min(1.0, abs(p_verdict_right - 0.5) * 2), 3)

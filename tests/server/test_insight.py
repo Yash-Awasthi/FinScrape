@@ -4,17 +4,17 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
 pytest.importorskip("fastapi")
 pytest.importorskip("asyncpg")
 
-from fastapi import FastAPI  # noqa: E402
-from fastapi.testclient import TestClient  # noqa: E402
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
-from server.routes import insight  # noqa: E402
+from server.routes import insight
 
 
 def _selected_columns(query: str) -> set[str]:
@@ -59,7 +59,7 @@ class FakePool:
 
 @pytest.fixture()
 def client(monkeypatch):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     event_rows = [
         {
             "id": 7,

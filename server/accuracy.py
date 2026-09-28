@@ -11,6 +11,7 @@ is shared with finscrape/accuracy.py rather than duplicated.
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import datetime
 
 import asyncpg
 
@@ -19,8 +20,8 @@ from finscrape.accuracy import calibration, equity_metrics
 THRESHOLD_PCT = 1.0
 DIRECTIONAL = ("INVEST", "PULL_OUT")
 
-# (tickers) -> realized % move over the window (or None if unknown)
-PriceFetcher = Callable[[list[str]], float | None]
+# (tickers, event time, hours after) -> realized % move over that window, or None
+PriceFetcher = Callable[[list[str], datetime, float], float | None]
 
 
 def verdict_outcome(verdict: str, change_pct: float) -> str:
@@ -111,7 +112,7 @@ async def backtest(
     written = 0
     for ev in events:
         tickers = ev["tickers"] or []
-        change = price_fetcher(tickers)
+        change = price_fetcher(tickers, ev["timestamp"], hours_after)
         if change is None:
             continue
         outcome = verdict_outcome(ev["verdict"], change)

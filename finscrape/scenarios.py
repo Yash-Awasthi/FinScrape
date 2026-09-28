@@ -12,7 +12,8 @@ seam, so tests run without Postgres, Ollama or a network.
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from finscrape.analysis.sectors import normalize as normalize_sectors
 
@@ -181,6 +182,7 @@ def score_scenario(
     sector_tilt: dict[str, float] = {}
     ticker_tilt: dict[str, float] = {}
     tiers: list[str] = []
+    sample_size = 0
     divergent = 0
 
     for member in members:
@@ -198,6 +200,8 @@ def score_scenario(
         )
         p_positive = _member_p(member, prediction)
         tiers.append(str(prediction.get("data_tier") or "no-outcomes"))
+        tables = prediction.get("reliability_tables") or {}
+        sample_size = max(sample_size, int(tables.get("sample_size") or 0))
         weighted_p += p_positive * weight
         total_weight += weight
         if member.get("divergence_flag"):
@@ -242,6 +246,7 @@ def score_scenario(
         "stance": stance,
         "tilt": round(tilt, 3),
         "data_tier": data_tier,
+        "sample_size": sample_size,
         "divergent_members": divergent,
         "sectors": sectors,
         "exposure": exposure,

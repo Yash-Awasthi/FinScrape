@@ -27,6 +27,8 @@ class WorldRSSScraper(RSSScraperSource):
     def __init__(self, max_articles: int = 20, max_age_hours: float = 24.0):
         super().__init__(feeds=feed_urls(), max_articles=max_articles)
         self.max_age_hours = max_age_hours
+        # feed key -> (fresh entries, fetch error), filled by collect()
+        self.feed_health: dict[str, tuple[int, str | None]] = {}
 
     def collect(self) -> list[ScrapedArticle]:
         """Every fresh entry from every feed, un-enriched, interleaved across feeds.
@@ -35,9 +37,14 @@ class WorldRSSScraper(RSSScraperSource):
         feeds to answer filled the whole budget and the rest never contributed.
         """
         with ThreadPoolExecutor(max_workers=min(8, len(self.feeds))) as pool:
-            per_feed = list(
-                pool.map(lambda kv: self._fetch_feed(*kv), self.feeds.items())
+            results = list(
+                pool.map(lambda kv: self._fetch_one(*kv), self.feeds.items())
             )
+        per_feed = [articles for articles, _ in results]
+        self.feed_health = {
+            key: (len(articles), error)
+            for key, (articles, error) in zip(self.feeds, results)
+        }
         out: list[ScrapedArticle] = []
         seen: set[str] = set()
         for row in zip_longest(*per_feed):
@@ -46,6 +53,13 @@ class WorldRSSScraper(RSSScraperSource):
                     seen.add(article.url)
                     out.append(article)
         return out
+
+    def _fetch_one(self, key: str, url: str) -> tuple[list[ScrapedArticle], str | None]:
+        try:
+            return self._fetch_feed_or_raise(key, url), None
+        except Exception as exc:  # noqa: BLE001 - one broken feed must not sink the others
+            logger.warning("[%s/%s] %s", self.name, key, exc)
+            return [], str(exc)
 
     def enrich(self, article: ScrapedArticle) -> ScrapedArticle:
         return self._enrich_with_full_text(article)
@@ -65,11 +79,9 @@ class WorldRSSScraper(RSSScraperSource):
         age_hours: float | None = None
         parsed_time = entry.get("published_parsed")
         if parsed_time:
-            dt = _dt.datetime.fromtimestamp(
-                calendar.timegm(parsed_time), tz=_dt.timezone.utc
-            )
+            dt = _dt.datetime.fromtimestamp(calendar.timegm(parsed_time), tz=_dt.UTC)
             age_hours = round(
-                (_dt.datetime.now(_dt.timezone.utc) - dt).total_seconds() / 3600, 1
+                (_dt.datetime.now(_dt.UTC) - dt).total_seconds() / 3600, 1
             )
             if age_hours > self.max_age_hours:
                 return None
@@ -85,4 +97,4 @@ class WorldRSSScraper(RSSScraperSource):
         )
 
 
-__all__ = ["WorldRSSScraper", "FEEDS"]
+__all__ = ["FEEDS", "WorldRSSScraper"]

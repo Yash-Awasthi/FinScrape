@@ -37,7 +37,8 @@ class WSHub:
         for ws in targets:
             try:
                 await ws.send_json(message)
-            except Exception:  # pragma: no cover - network flakiness
+            # A dead socket is dropped.
+            except Exception:  # noqa: BLE001  # pragma: no cover
                 dead.append(ws)
         if dead:
             async with self._lock:

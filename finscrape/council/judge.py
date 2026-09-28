@@ -68,7 +68,7 @@ class JudgeVerdict:
 
 
 def format_lessons_block(lessons: dict[str, Any] | None) -> str:
-    """Render AccuracyTracker.get_lessons() output as a LESSONS block."""
+    """Render grounded past-call stats as a LESSONS block."""
     if not lessons:
         return ""
 

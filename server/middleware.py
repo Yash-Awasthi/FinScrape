@@ -30,6 +30,14 @@ def _envelope(status: int, message: str) -> JSONResponse:
     )
 
 
+def _etag_matches(if_none_match: str, etag: str) -> bool:
+    """RFC 9110 If-None-Match: `*` or a list, compared weakly (W/ prefix ignored)."""
+    if if_none_match.strip() == "*":
+        return True
+    ours = etag.removeprefix("W/")
+    return any(t.strip().removeprefix("W/") == ours for t in if_none_match.split(","))
+
+
 def configure_hardening(app: FastAPI) -> None:
     s = get_settings()
     limiter = Limiter(s.rate_limit_per_min)
@@ -72,8 +80,8 @@ def configure_hardening(app: FastAPI) -> None:
             ):
                 return resp
             body = b"".join([chunk async for chunk in resp.body_iterator])
-            etag = 'W/"' + hashlib.sha1(body).hexdigest() + '"'  # noqa: S324 (not security)
-            if request.headers.get("if-none-match") == etag:
+            etag = 'W/"' + hashlib.sha1(body).hexdigest() + '"'
+            if _etag_matches(request.headers.get("if-none-match", ""), etag):
                 not_modified = Response(status_code=304)
                 not_modified.headers["ETag"] = etag
                 return not_modified

@@ -8,7 +8,9 @@ A source that throws degrades to WARN and is recorded — it never crashes the w
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
+import threading
 import uuid
 
 import asyncpg
@@ -16,6 +18,7 @@ import asyncpg
 from finscrape.logging_config import correlation_id
 from finscrape.market_data import get_market_data
 from finscrape.pipeline import FinScrapePipeline
+from server.alert_rules import fire_alerts
 from server.correlate import (
     VELOCITY_WINDOW_DAYS,
     Market,
@@ -31,6 +34,7 @@ from server.queries import get_recent_predictions
 from server.settings import get_settings
 from worker.health import (
     finish_scrape_run,
+    record_feed_health,
     record_source_health,
     start_scrape_run,
 )
@@ -109,6 +113,63 @@ async def merge_coverage(
         )
 
 
+class PostgresEvents:
+    """The pipeline's dedup window, read from Postgres instead of its SQLite file.
+
+    The pipeline runs in a worker thread, so reads hop onto the event loop that owns
+    the pool. Events the pipeline accepts wait in `pending` until the cycle ingests
+    them; merges into any row are applied by `merge_coverage`, keyed by subject.
+    """
+
+    _RECENT = (
+        "SELECT id, subject, event_type, tickers, sources, articles "
+        "FROM events ORDER BY id DESC LIMIT 100"
+    )
+
+    def __init__(self, pool: asyncpg.Pool) -> None:
+        self.pool = pool
+        self.loop = asyncio.get_running_loop()
+        self.pending: list[dict] = []
+        self._lock = threading.Lock()
+
+    @property
+    def events(self) -> list[dict]:
+        rows = asyncio.run_coroutine_threadsafe(
+            self.pool.fetch(self._RECENT), self.loop
+        ).result()
+        stored = [
+            {
+                **dict(r),
+                **{k: _json_list(r[k]) for k in ("tickers", "sources", "articles")},
+            }
+            for r in rows
+        ]
+        subjects = {e["subject"] for e in stored}
+        with self._lock:
+            # Once ingested, a pending event is read back from Postgres instead.
+            self.pending = [e for e in self.pending if e["subject"] not in subjects][
+                -100:
+            ]
+            return list(reversed(stored)) + self.pending
+
+    def add_event(self, event: dict) -> int:
+        with self._lock:
+            self.pending.append(event)
+        return 0
+
+    def update_event(self, event_id: int, **fields) -> None:
+        pass  # merge_coverage writes the merge once the cycle ingests
+
+
+def _json_list(value) -> list:
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except ValueError:
+            return []
+    return value if isinstance(value, list) else []
+
+
 async def prune_old_rows(pool: asyncpg.Pool, days: int) -> None:
     """Age out operational tables. Events are the product and are never pruned."""
     if days <= 0:
@@ -118,6 +179,7 @@ async def prune_old_rows(pool: asyncpg.Pool, days: int) -> None:
         ("scrape_runs", "started_at"),
         ("ai_analysis_cache", "created_at"),
         ("visited_urls", "visited_at"),
+        ("alert_history", "fired_at"),
     ):
         await pool.execute(
             f"DELETE FROM {table} WHERE {column} < now() - make_interval(days => $1)",
@@ -138,13 +200,7 @@ class Worker:
         self.max_articles = max_articles
         self.sources = build_sources(max_articles)
         self.enrichers = build_enrichers()
-        # Reuse the fusion brain; disable side-effects the worker doesn't own.
-        self.pipeline = FinScrapePipeline(
-            sources=[],
-            enable_alerts=False,
-            enable_accuracy=False,
-            enable_portfolio=False,
-        )
+        self.pipeline = FinScrapePipeline(PostgresEvents(pool))
         # Correlation state persists across cycles (first cycle emits nothing).
         self._corr_snapshot: dict | None = None
         self._corr_seen: set[str] = set()
@@ -169,7 +225,7 @@ class Worker:
                 if enrich:
                     article = enrich(article)
                 fe = self.pipeline._analyze_article(source_name, article)
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 - one bad article must not end the cycle
                 log.warning("[%s] analyze failed: %s", source_name, exc)
                 continue
             if not self.pipeline.ai_failed():
@@ -202,9 +258,12 @@ class Worker:
             await mark_visited(self.pool, name, judged)
             status = "OK" if items else "EMPTY"
             await record_source_health(self.pool, name, len(items), status)
+            if feeds := getattr(self.sources[name], "feed_health", None):
+                await record_feed_health(self.pool, feeds)
             await finish_scrape_run(self.pool, run_id, "ok", result["inserted"])
             record_ingest(name, result["inserted"], result["duplicates"], status)
             if result["inserted_ids"]:
+                await fire_alerts(self.pool, result["inserted_rows"])
                 # Push to API WS clients across processes (no-op unless Redis enabled).
                 await publish(
                     {
@@ -242,24 +301,12 @@ class Worker:
         await self.run_correlations()
 
     async def run_backtest(self) -> int:
-        """Score matured directional verdicts vs realized price moves (Phase 7).
-        Uses finscrape market_data as the price fetcher; runs the blocking fetch in a
-        thread. Returns rows written to accuracy_outcomes."""
+        """Score matured directional verdicts against the price move in the window
+        after each event (Phase 7). Returns rows written to accuracy_outcomes."""
+        from finscrape.market_data import event_move
         from server.accuracy import backtest
 
-        def price_fetcher(tickers: list[str]) -> float | None:
-            from finscrape.market_data import get_market_data
-
-            data = get_market_data(tickers)
-            changes = [
-                d.get("change_pct", d.get("change_percent"))
-                for d in data
-                if isinstance(d, dict)
-            ]
-            changes = [c for c in changes if isinstance(c, (int, float))]
-            return sum(changes) / len(changes) if changes else None
-
-        return await backtest(self.pool, lambda t: None if not t else price_fetcher(t))
+        return await backtest(self.pool, event_move)
 
     async def _recent_markets(self, lookback_hours: int) -> list[Market]:
         """Price moves for the most-mentioned recent tickers → feeds detect_market

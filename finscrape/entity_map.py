@@ -83,6 +83,16 @@ def resolve_tickers(text: str) -> list[str]:
     return sorted(found)
 
 
+# Headline plus roughly the first two sentences. A keyword deep in the body is
+# usually background ("amid the U.S.-Iran war"), not what the story is about.
+LEDE_CHARS = 280
+
+
+def lede_tickers(title: str, text: str) -> list[str]:
+    """`resolve_tickers` over the headline and lede only."""
+    return resolve_tickers(f"{title} {(text or '')[:LEDE_CHARS]}")
+
+
 def keywords_for_ticker(symbol: str) -> list[str]:
     """Keywords/phrases associated with a ticker — the reverse of resolve_tickers."""
     return list(_reverse().get((symbol or "").upper(), ()))

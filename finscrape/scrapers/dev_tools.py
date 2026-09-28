@@ -7,8 +7,7 @@ a clear message when no key is configured — never crashes the pipeline.
     FirecrawlNewsScraper  — firecrawl.dev /v1/search (news query → markdown pages)
     SerpNewsScraper       — serpapi.com Google News (structured news results)
 
-Both emit plain ScrapedArticles, so they slot into AVAILABLE_SCRAPERS like any
-builtin source: `main.py scrape --sources firecrawl --max-articles 8`.
+Both emit plain ScrapedArticles, like any builtin source.
 """
 
 from __future__ import annotations

@@ -73,3 +73,16 @@ def test_american_express_resolves_from_the_one_map():
 def test_apple_and_apple_inc_are_one_entity():
     tickers = resolve_company_tickers("Apple reported earnings. Apple Inc. beat estimates.")
     assert tickers == ["AAPL"]
+
+
+def test_bare_capitals_are_acronyms_not_tickers():
+    text = (
+        "the dean of the IE School said, citing ratings agency KBRA, that World War II "
+        "debt levels were unmatched"
+    )
+    assert BaseScraper.extract_tickers_from_text(text) == []
+
+
+def test_exchange_prefixed_symbol_is_a_ticker():
+    assert "XYZ" in BaseScraper.extract_tickers_from_text("Block (NYSE: XYZ) rose 4%")
+    assert "PLTR" in BaseScraper.extract_tickers_from_text("Palantir NASDAQ:PLTR jumped")

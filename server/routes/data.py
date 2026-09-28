@@ -197,7 +197,7 @@ async def suggestions(limit: int = Query(10, ge=1, le=50)) -> dict:
 
 # --- sector heat (production parity for /api/sectors) ---
 
-from finscrape.analysis.sectors import normalize as _normalize_sector  # noqa: E402
+from finscrape.analysis.sectors import normalize as _normalize_sector
 
 
 @router.get("/api/sectors")

@@ -87,3 +87,31 @@ def test_aggregate_includes_calibration():
     agg = aggregate(rows)
     assert agg["calibration"]["brier"] == pytest.approx((0.01 + 0.81) / 2, abs=1e-6)
     assert sum(agg["calibration"]["buckets"].values()) == 2
+
+
+def test_backtest_scores_the_window_after_each_event():
+    import asyncio
+    from datetime import UTC, datetime
+
+    from server.accuracy import backtest
+
+    at = datetime(2026, 9, 25, 15, tzinfo=UTC)
+    written: list[tuple] = []
+
+    class Pool:
+        async def fetch(self, *args):
+            return [{"id": 7, "verdict": "INVEST", "tickers": ["XOM"], "timestamp": at}]
+
+        async def fetchval(self, query, *args):
+            written.append(args)
+            return 1
+
+    calls = []
+
+    def fetcher(tickers, when, hours):
+        calls.append((tickers, when, hours))
+        return 2.5
+
+    assert asyncio.run(backtest(Pool(), fetcher)) == 1
+    assert calls == [(["XOM"], at, 24)]
+    assert written == [(7, "XOM", "INVEST", 2.5, True)]
