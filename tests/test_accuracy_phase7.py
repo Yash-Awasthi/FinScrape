@@ -89,6 +89,18 @@ def test_aggregate_includes_calibration():
     assert sum(agg["calibration"]["buckets"].values()) == 2
 
 
+def _pool(event: dict, written: list):
+    class Pool:
+        async def fetch(self, *args):
+            return [event]
+
+        async def fetchval(self, query, *args):
+            written.append(args)
+            return 1
+
+    return Pool()
+
+
 def test_backtest_scores_the_window_after_each_event():
     import asyncio
     from datetime import UTC, datetime
@@ -97,21 +109,37 @@ def test_backtest_scores_the_window_after_each_event():
 
     at = datetime(2026, 9, 25, 15, tzinfo=UTC)
     written: list[tuple] = []
-
-    class Pool:
-        async def fetch(self, *args):
-            return [{"id": 7, "verdict": "INVEST", "tickers": ["XOM"], "timestamp": at}]
-
-        async def fetchval(self, query, *args):
-            written.append(args)
-            return 1
-
+    event = {"id": 7, "verdict": "INVEST", "tickers": ["XOM"], "timestamp": at,
+             "affected_entities": []}
     calls = []
 
     def fetcher(tickers, when, hours):
         calls.append((tickers, when, hours))
-        return 2.5
+        return {"XOM": 2.5}
 
-    assert asyncio.run(backtest(Pool(), fetcher)) == 1
+    assert asyncio.run(backtest(_pool(event, written), fetcher)) == 1
     assert calls == [(["XOM"], at, 24)]
     assert written == [(7, "XOM", "INVEST", 2.5, True)]
+
+
+def test_each_ticker_is_scored_in_the_direction_the_analysis_gave_it():
+    """A PULL_OUT on a conflict story names defence stocks as winners; their rise
+    confirms the call instead of counting against it."""
+    import asyncio
+    from datetime import UTC, datetime
+
+    from server.accuracy import backtest
+
+    written: list[tuple] = []
+    event = {
+        "id": 9,
+        "verdict": "PULL_OUT",
+        "tickers": ["RTX", "ZIM"],
+        "timestamp": datetime(2026, 9, 25, 15, tzinfo=UTC),
+        "affected_entities": [{"name": "RTX Corp", "ticker": "RTX", "impact": "positive"}],
+    }
+    moves = {"RTX": 3.0, "ZIM": -2.0}  # the winner rose, the unlabelled one fell
+    assert asyncio.run(backtest(_pool(event, written), lambda t, a, h: moves)) == 1
+    event_id, ticker, verdict, called_move, correct = written[0]
+    assert (event_id, verdict, correct) == (9, "PULL_OUT", True)
+    assert called_move == 2.5  # mean of +3.0 (up, as called) and +2.0 (down, as called)

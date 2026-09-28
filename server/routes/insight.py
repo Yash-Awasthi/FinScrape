@@ -17,10 +17,11 @@ from server import cache, db
 
 router = APIRouter()
 
-# Scenarios advise only from LLM-analysed events: keyword-fallback verdicts and rows
-# the LLM later rejected as off-topic would steer the advice with noise.
+# Scenarios advise only from recent LLM-analysed events: keyword-fallback verdicts,
+# rows the LLM rejected as off-topic, and month-old news would steer the advice.
 _ANALYSED = (
-    "coalesce(key_metrics->>'prompt_variant', '') NOT IN ('heuristic', 'rejected')"
+    "coalesce(key_metrics->>'prompt_variant', '') NOT IN ('heuristic', 'rejected') "
+    "AND timestamp > now() - interval '14 days'"
 )
 
 # Columns the scenario engine grades on. `/api/storylines` needs far fewer, so

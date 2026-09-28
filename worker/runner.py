@@ -303,10 +303,10 @@ class Worker:
     async def run_backtest(self) -> int:
         """Score matured directional verdicts against the price move in the window
         after each event (Phase 7). Returns rows written to accuracy_outcomes."""
-        from finscrape.market_data import event_move
+        from finscrape.market_data import event_moves
         from server.accuracy import backtest
 
-        return await backtest(self.pool, event_move)
+        return await backtest(self.pool, event_moves)
 
     async def _recent_markets(self, lookback_hours: int) -> list[Market]:
         """Price moves for the most-mentioned recent tickers → feeds detect_market

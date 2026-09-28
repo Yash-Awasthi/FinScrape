@@ -159,7 +159,7 @@ def test_backtest_skips_heuristic_fallback_events():
                 {"prompt_variant": variant},
                 when,
             )
-        assert await backtest(pool, lambda tickers, at, hours: 2.0) == 1
+        assert await backtest(pool, lambda tickers, at, hours: {"XOM": 2.0}) == 1
         scored = await pool.fetchval(
             "SELECT e.subject FROM accuracy_outcomes a JOIN events e ON e.id = a.event_id"
         )

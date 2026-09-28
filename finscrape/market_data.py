@@ -256,10 +256,16 @@ def _event_day(at: dt.datetime) -> pd.Timestamp:
 
 
 def event_move(tickers: list[str], at: dt.datetime, hours_after: float) -> float | None:
-    """Mean `window_move` across `tickers` from one yfinance download around `at`."""
+    """Mean `window_move` across `tickers`."""
+    moves = event_moves(tickers, at, hours_after)
+    return sum(moves.values()) / len(moves) if moves else None
+
+
+def event_moves(tickers: list[str], at: dt.datetime, hours_after: float) -> dict[str, float]:
+    """`window_move` per ticker from one yfinance download around `at`."""
     tickers = [t for t in dict.fromkeys(tickers) if isinstance(t, str) and t]
     if not tickers:
-        return None
+        return {}
     day = _event_day(at)
     try:
         df = yf.download(
@@ -272,15 +278,15 @@ def event_move(tickers: list[str], at: dt.datetime, hours_after: float) -> float
         )
     except Exception as e:  # noqa: BLE001 - a dead yfinance leaves the event unscored
         logger.warning("Window fetch error: %s", e)
-        return None
+        return {}
     if df is None or df.empty or "Close" not in df.columns:
-        return None
+        return {}
     close = df["Close"]
-    series = [close] if isinstance(close, pd.Series) else [close[t] for t in close]
-    moves = []
-    for s in series:
+    series = {tickers[0]: close} if isinstance(close, pd.Series) else {t: close[t] for t in close}
+    moves: dict[str, float] = {}
+    for sym, s in series.items():
         s.index = pd.to_datetime(s.index).tz_localize(None)
         move = window_move(s, at, hours_after)
         if move is not None:
-            moves.append(move)
-    return sum(moves) / len(moves) if moves else None
+            moves[str(sym)] = move
+    return moves

@@ -42,9 +42,9 @@ Measured 29 Sep 2026 on the 56-headline sector gold set with the real analysis p
 
 | Model | Valid JSON | Sector accuracy | p50 latency |
 |---|---|---|---|
-| `qwen3.8-flash:free` | 74% | 88% | 35 s |
-| `mimo-v2.6-flash:free` | 96% | 67% | 14 s |
-| `deepseek-v4.1-flash:free` | 77% | 68% | 26 s |
+| `qwen3.8-flash:free` | 79% | 79.5% | 30 s (p90 82 s) |
+| `mimo-v2.6-flash:free` | 96% | 66.7% | 14 s (p90 21 s) |
+| `deepseek-v4.1-flash:free` | 77% | 67.4% | 13 s (p90 32 s) |
 
 ## Keys / secrets
 These are **temporary throwaway account keys** — kept in **GitHub → Settings → Secrets** and

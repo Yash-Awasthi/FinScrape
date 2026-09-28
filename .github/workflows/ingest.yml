@@ -24,7 +24,7 @@ jobs:
       OPENAI_BASE_URL: https://tokenharbor.ai/v1
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       FINSCRAPE_WIRE_API: chat
-      # Most accurate on the sector gold set (88%) but a quarter of calls fail or time
+      # Most accurate on the sector gold set (80%) but a fifth of calls fail or time
       # out, so mimo (96% valid) takes over; see docs/DEPLOY.md.
       FINSCRAPE_MODEL: qwen3.8-flash:free
       FINSCRAPE_MODEL_FALLBACK: mimo-v2.6-flash:free

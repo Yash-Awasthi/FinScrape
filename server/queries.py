@@ -14,6 +14,11 @@ from server.ingest import day_bounds
 _SORT_COLS = {"timestamp", "signal_score", "confidence", "id", "created_at"}
 
 
+# Rows the LLM judged off-topic after a heuristic-era ingest (scripts/reanalyse.py)
+# stay stored but leave the feed and the counts.
+_SHOWN = "coalesce(key_metrics->>'prompt_variant', '') <> 'rejected'"
+
+
 async def get_events(
     pool: asyncpg.Pool,
     *,
@@ -27,8 +32,7 @@ async def get_events(
     sort: str = "id",
     direction: str = "desc",
 ) -> list[dict]:
-    # Rows the LLM judged off-topic after a heuristic-era ingest (scripts/reanalyse.py).
-    conds: list[str] = ["coalesce(key_metrics->>'prompt_variant', '') <> 'rejected'"]
+    conds: list[str] = [_SHOWN]
     params: list = []
 
     def p(v) -> str:
@@ -68,13 +72,13 @@ async def count_events_for_date(pool: asyncpg.Pool, date: str) -> int:
 
 
 async def get_stats(pool: asyncpg.Pool) -> dict:
-    total = await pool.fetchval("SELECT COUNT(*) FROM events")
     by_verdict = {
         r["verdict"]: r["c"]
         for r in await pool.fetch(
-            "SELECT verdict, COUNT(*) AS c FROM events GROUP BY verdict"
+            f"SELECT verdict, COUNT(*) AS c FROM events WHERE {_SHOWN} GROUP BY verdict"
         )
     }
+    total = sum(by_verdict.values())
     last_update = await pool.fetchval("SELECT MAX(created_at) FROM events")
     return {"total_events": total, "by_verdict": by_verdict, "last_update": last_update}
 

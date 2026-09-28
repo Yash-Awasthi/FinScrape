@@ -20,8 +20,29 @@ from finscrape.accuracy import calibration, equity_metrics
 THRESHOLD_PCT = 1.0
 DIRECTIONAL = ("INVEST", "PULL_OUT")
 
-# (tickers, event time, hours after) -> realized % move over that window, or None
-PriceFetcher = Callable[[list[str], datetime, float], float | None]
+# (tickers, event time, hours after) -> realized % move per ticker over that window
+PriceFetcher = Callable[[list[str], datetime, float], dict[str, float]]
+
+_IMPACT_SIGN = {"positive": 1, "negative": -1}
+
+
+def called_move(
+    verdict: str, entities: list[dict], moves: dict[str, float]
+) -> float | None:
+    """Mean move in the direction the analysis called for each ticker.
+
+    A PULL_OUT on a conflict story still names defence stocks as winners; scoring
+    their rise against the verdict counted a right call as wrong. A ticker takes its
+    entity's impact sign when the analysis gave one, else the verdict's.
+    """
+    default = 1 if verdict == "INVEST" else -1
+    signs = {
+        str(e.get("ticker") or "").upper(): _IMPACT_SIGN[str(e.get("impact"))]
+        for e in entities or []
+        if isinstance(e, dict) and str(e.get("impact")) in _IMPACT_SIGN
+    }
+    signed = [signs.get(t.upper(), default) * m for t, m in moves.items()]
+    return round(sum(signed) / len(signed), 4) if signed else None
 
 
 def verdict_outcome(verdict: str, change_pct: float) -> str:
@@ -95,7 +116,7 @@ async def backtest(
     accuracy_outcomes (idempotent — skips events already scored). Returns rows written."""
     events = await pool.fetch(
         """
-        SELECT e.id, e.verdict, e.tickers, e.timestamp
+        SELECT e.id, e.verdict, e.tickers, e.timestamp, e.affected_entities
         FROM events e
         WHERE e.verdict = ANY($1::text[])
           AND e.timestamp <= now() - ($2 || ' hours')::interval
@@ -115,10 +136,12 @@ async def backtest(
     written = 0
     for ev in events:
         tickers = ev["tickers"] or []
-        change = price_fetcher(tickers, ev["timestamp"], hours_after)
+        moves = price_fetcher(tickers, ev["timestamp"], hours_after)
+        change = called_move(ev["verdict"], ev["affected_entities"] or [], moves)
         if change is None:
             continue
-        outcome = verdict_outcome(ev["verdict"], change)
+        # `change` is already signed toward the call, so INVEST's rule applies.
+        outcome = verdict_outcome("INVEST", change)
         correct = None if outcome == "neutral" else (outcome == "correct")
         # The SELECT above already skips scored events; this makes the skip authoritative
         # when two worker runs overlap, and keeps `written` a count of real writes.
