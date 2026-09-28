@@ -105,7 +105,7 @@ describe("ScenarioPanel", () => {
 
   it("shows how many outcomes back the tier", async () => {
     const panel = await mount([scenario({ data_tier: "thin-data", sample_size: 13 })]);
-    expect(panel.el.querySelector(".sc-meta")!.textContent).toContain("thin-data · n=13");
+    expect(panel.el.querySelector(".sc-meta")!.textContent).toContain("thin record (13 scored calls)");
   });
 
   it("does not say '1 reports'", async () => {

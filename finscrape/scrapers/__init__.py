@@ -62,6 +62,22 @@ def reset_breakers() -> None:
     _breakers.clear()
 
 
+def _parenthesised_tickers(text: str) -> list[str]:
+    """Symbols written as "Name (TICK)". A bracketed token spelling the initials of
+    the words before it is an acronym being defined ("World Trade Organization
+    (WTO)"), and anything off the listed-symbol list is an agency or group (OCHA)."""
+    from finscrape.entity_map import listed_symbols
+
+    out = []
+    for m in re.finditer(r"\(([A-Z]{1,5})\)", text):
+        sym = m.group(1)
+        words = re.findall(r"[A-Za-z][\w'-]*", text[: m.start()])[-len(sym):]
+        if "".join(w[0].upper() for w in words) == sym or sym not in listed_symbols():
+            continue
+        out.append(sym)
+    return out
+
+
 class BaseScraper(ABC):
     """Base class for all news scrapers.
 
@@ -248,8 +264,8 @@ class BaseScraper(ABC):
 
         tickers = set()
 
-        # (TICKER) pattern — e.g. (AAPL)
-        tickers.update(re.findall(r"\(([A-Z]{1,5})\)", text))
+        # (TICKER) pattern — e.g. Apple (AAPL); acronyms in brackets are not tickers.
+        tickers.update(_parenthesised_tickers(text))
         # $TICKER pattern — e.g. $AAPL
         tickers.update(re.findall(r"\$([A-Z]{1,5})\b", text))
         # Exchange-prefixed — e.g. NYSE: XYZ. Bare capitals are left out: in news

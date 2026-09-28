@@ -42,7 +42,7 @@
     <!-- HERO -->
     <section class="hero" id="top">
       <div class="hero-copy">
-        <div class="eyebrow"><span class="pulse"></span> LIVE · 7-AGENT COUNCIL ONLINE</div>
+        <div class="eyebrow"><span class="pulse"></span> <span id="live-eyebrow">LIVE · WORLD EVENTS → MARKET CALLS</span></div>
         <h1>See what moves markets — <span class="grad">before it's news.</span></h1>
         <p class="lede">
           WorldFin ingests geopolitics + world news, resolves <em>which tickers and
@@ -58,13 +58,15 @@
       <div class="hero-globe">
         <div class="globe-host" id="globe"></div>
         <div class="float-card fc-1">
-          <div class="fc-row"><span class="chip invest">INVEST</span><b>NVDA</b><span class="up">+4</span></div>
-          <div class="fc-row"><span class="chip pull">PULL_OUT</span><b>XOM</b><span class="down">−3</span></div>
-          <div class="fc-meta">87% hit-rate · 30d</div>
+          <div id="fc-calls">
+            <div class="fc-row"><span class="chip invest">INVEST</span><b>NVDA</b><span class="up">+4</span></div>
+            <div class="fc-row"><span class="chip pull">PULL_OUT</span><b>XOM</b><span class="down">−3</span></div>
+          </div>
+          <div class="fc-meta" id="fc-meta">example calls · live ones load from the API</div>
         </div>
         <div class="float-card fc-2">
           <div class="fc-break">⚡ BREAKING · STRAIT OF HORMUZ</div>
-          <div class="fc-meta">wire + gov + intel corroborated · 0:47</div>
+          <div class="fc-meta">wire + gov + intel corroborated</div>
         </div>
       </div>
     </section>
@@ -77,10 +79,10 @@
     <!-- THESIS / STATS -->
     <section class="band">
       <div class="band-grid">
-        <div class="stat"><b class="count" data-to="87">0</b><span>%</span><label>historical hit-rate</label></div>
-        <div class="stat"><b class="count" data-to="14">0</b><span>+4</span><label>world feeds + live data APIs</label></div>
+        <div class="stat"><b id="stat-events">9,700+</b><label>world events analysed</label></div>
+        <div class="stat"><b id="stat-feeds">32</b><span>+2</span><label>world feeds + GDELT and USGS</label></div>
         <div class="stat"><b>−5…+5</b><label>calibrated signal scoring</label></div>
-        <div class="stat"><b class="count" data-to="7">0</b><label>AI agents debate each call</label></div>
+        <div class="stat"><b id="stat-hit">—</b><label id="stat-hit-label">hit-rate on scored calls</label></div>
       </div>
     </section>
 
@@ -91,7 +93,7 @@
         <h2>Turn global events into auditable market calls.</h2>
       </div>
       <div class="steps">
-        <div class="step"><span class="step-n">01</span><h3>Ingest</h3><p>Geopolitics + world news across wire, gov, and intel tiers, plus keyless data APIs — quakes, conflict, disasters, crypto.</p></div>
+        <div class="step"><span class="step-n">01</span><h3>Ingest</h3><p>Geopolitics + world news across wire, gov, and intel tiers, plus keyless data APIs — GDELT conflict events and USGS earthquakes.</p></div>
         <div class="step"><span class="step-n">02</span><h3>Resolve</h3><p>Which companies, tickers, and sectors the event moves — role-tagged primary / competitor / supplier / regulator.</p></div>
         <div class="step"><span class="step-n">03</span><h3>Judge</h3><p>First- and second-order impact, a verdict (INVEST / PULL_OUT / OBSERVE / CAUTIOUS) and a −5…+5 score.</p></div>
         <div class="step"><span class="step-n">04</span><h3>Prove</h3><p>Every call scored against the realized price move — hit-rate, by-verdict, and an equity curve you can audit.</p></div>
@@ -123,19 +125,6 @@
       <div class="grid" id="features-grid"></div>
     </section>
 
-    <!-- MODES -->
-    <section class="section" id="modes">
-      <div class="sec-head">
-        <span class="kicker">THREE OPERATING MODES</span>
-        <h2>Same engine, reflowed by market focus.</h2>
-      </div>
-      <div class="modes">
-        <div class="mode"><h3>World</h3><p>Globe, correlations, breaking-news, live TV + world feeds.</p><div class="chips"><span>XOM</span><span>RTX</span><span>ZIM</span></div></div>
-        <div class="mode"><h3>Finance</h3><p>Markets rollup, accuracy proof, sentiment + portfolio.</p><div class="chips"><span>NVDA</span><span>AAPL</span><span>JPM</span></div></div>
-        <div class="mode"><h3>Crypto</h3><p>Movers, on-chain-adjacent signals, sentiment.</p><div class="chips"><span>BTC</span><span>ETH</span><span>COIN</span></div></div>
-      </div>
-    </section>
-
     <!-- PROOF -->
     <section class="section" id="proof">
       <div class="sec-head">
@@ -144,7 +133,7 @@
       </div>
       <div class="pillars">
         <div class="pillar"><h3>Calibrated</h3><p>Scores are −5…+5 with explicit thresholds; ±5 reserved for genuinely extraordinary events. AI and heuristics cross-check.</p></div>
-        <div class="pillar"><h3>Explainable</h3><p>A 7-agent council deliberates each call and surfaces consensus <em>and</em> dissent — never a black box.</p></div>
+        <div class="pillar"><h3>Explainable</h3><p>Every call carries its reasoning, affected companies and second-order effects; an on-demand multi-agent council adds consensus <em>and</em> dissent — never a black box.</p></div>
         <div class="pillar"><h3>Open proof</h3><p>Hit-rate is backtested against realized moves and shown openly, with an equity curve. Open-source core (MIT).</p></div>
       </div>
     </section>
@@ -156,12 +145,12 @@
         <h2>The depth is the product.</h2>
       </div>
       <div class="depth-grid">
-        <div class="dg"><b>14</b><label>curated world feeds (wire · gov · intel)</label></div>
+        <div class="dg"><b id="dg-feeds">32</b><label>curated world feeds (wire · gov · intel)</label></div>
         <div class="dg"><b>4</b><label>keyless live data APIs</label></div>
-        <div class="dg"><b>7</b><label>analyst-persona AI agents</label></div>
-        <div class="dg"><b>11</b><label>dashboard panels</label></div>
-        <div class="dg"><b>GPT-5.x</b><label>extraction model (free tier)</label></div>
-        <div class="dg"><b>692</b><label>tests · ruff · pyright green</label></div>
+        <div class="dg"><b>8</b><label>analyst-persona AI agents</label></div>
+        <div class="dg"><b>18</b><label>dashboard panels</label></div>
+        <div class="dg"><b>Qwen · MiMo</b><label>analysis models, primary + fallback (free tier)</label></div>
+        <div class="dg"><b>1,200+</b><label>tests · ruff · pyright green in CI</label></div>
         <div class="dg"><b>Postgres</b><label>asyncpg + content-hash dedup</label></div>
         <div class="dg"><b>$0</b><label>fully free-tier deployment</label></div>
       </div>

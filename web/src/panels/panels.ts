@@ -266,6 +266,14 @@ export class MarketsLivePanel extends Panel {
   }
 }
 
+/** How much scored history backs a scenario, in words a reader can act on. */
+export function evidence(scenario: Pick<Scenario, "data_tier" | "sample_size">): string {
+  const n = scenario.sample_size ?? 0;
+  if (scenario.data_tier === "empirical") return `backed by ${n} scored calls`;
+  if (scenario.data_tier === "thin-data") return `thin record (${n} scored calls)`;
+  return "analysis only, no scored record for this call";
+}
+
 function quoteCard(q: Quote): string {
   const up = (q.change_pct ?? 0) > 0;
   const down = (q.change_pct ?? 0) < 0;
@@ -384,6 +392,9 @@ export class WatchlistPanel extends Panel {
 export class CandlesPanel extends Panel {
   private symbol = "AAPL";
   private period = "1mo";
+  // setContent paints on the next frame, so the shell is not in this.el yet when
+  // the first refresh runs; keep the element itself.
+  private shell: HTMLElement | null = null;
 
   constructor() {
     super({ id: "candles", title: "Chart", w: 8, h: 6 });
@@ -421,11 +432,12 @@ export class CandlesPanel extends Panel {
       this.period = (wrap.querySelector<HTMLSelectElement>(".candles-period")!).value;
       void this.refresh();
     });
+    this.shell = wrap;
     this.setContent(wrap);
   }
 
   private async refresh(): Promise<void> {
-    const body = this.el.querySelector<HTMLElement>(".candles-body");
+    const body = this.shell?.querySelector<HTMLElement>(".candles-body");
     const title = this.el.querySelector<HTMLElement>(".panel-head");
     if (title) title.textContent = `Chart — ${this.symbol} (${this.period})`;
     if (!body) return;
@@ -1017,7 +1029,7 @@ export class ScenarioPanel extends Panel {
       (chain ? `<ul class="sc-chain">${chain}</ul>` : "") +
       `<footer class="muted sc-meta">${plural(scenario.reports ?? scenario.size, "report")} · ` +
       `${escapeHtml(scenario.sources.slice(0, 3).join(", ") || "no sources")} · ` +
-      `${escapeHtml(scenario.data_tier)} · n=${scenario.sample_size ?? 0}${caveat}</footer></article>`
+      `${escapeHtml(evidence(scenario))}${caveat}</footer></article>`
     );
   }
 }

@@ -61,10 +61,8 @@ Neon's data (9,690 events, 837 outcomes) was copied into Supabase (schema 0001â€
 RLS on); Render and the `WORLDFIN_DATABASE_URL` secret point at Supabase; Render runs
 `WORLDFIN_ENV=production` with CORS `https://winfin.pages.dev`. PR #6 merged; the
 live API serves 9,698 events from Supabase and the first ingest run inserted 8
-(GDELT 6 with no 429s).
-- The freemodel.dev LLM key expired 28 Jul, so ingest has run on the heuristic
-  fallback since (6,634 CAUTIOUS). Get a working key (OpenRouter free or paid) into
-  the GitHub secret and Render env.
+(GDELT 6 with no 429s). The LLM is TokenHarbor `qwen3.8-flash:free` since PR #7;
+the next ingest stored real LLM reasoning again.
 - Parenthesised acronyms still read as tickers ("Rapid Support Forces (RSF)", "(OCHA)"
   on event 21206). Keep a `(TICK)` match only when it is a listed symbol.
 - The dashboard on Pages is an older build; redeploy with the `wrangler` command in

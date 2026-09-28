@@ -108,3 +108,32 @@ def test_market_status_coarse():
 def test_get_global_quotes_never_raises():
     out = get_global_quotes([("SSE", "600519"), ("NYSE", "AAPL")])
     assert isinstance(out, dict)  # contents depend on network availability
+
+
+def test_yahoo_quotes_fan_out_and_cache(monkeypatch):
+    import threading
+    import time
+
+    from finscrape import exchanges
+
+    exchanges._quote_cache.clear()
+    calls: list[str] = []
+    active, peak = [0], [0]
+    lock = threading.Lock()
+
+    def fake_one(sym):
+        with lock:
+            calls.append(sym)
+            active[0] += 1
+            peak[0] = max(peak[0], active[0])
+        time.sleep(0.05)
+        with lock:
+            active[0] -= 1
+        return {"symbol": sym, "price": 1.0, "change_pct": 0.0, "currency": "USD", "source": "yahoo"}
+
+    monkeypatch.setattr(exchanges, "_yahoo_quote", fake_one)
+    syms = [("", s) for s in ("AAPL", "MSFT", "NVDA", "JPM", "XOM", "SHEL.L")]
+    assert len(exchanges.get_global_quotes(syms)) == 6
+    assert peak[0] > 1  # fetched concurrently, not one after another
+    exchanges.get_global_quotes(syms[:3])
+    assert len(calls) == 6  # the second call is served from the cache

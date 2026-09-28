@@ -571,3 +571,32 @@ tr.story-member td::before {
 .sc-chain { margin: 0; padding-left: 16px; font-size: 11px; color: var(--muted); line-height: 1.5; }
 .sc-meta { font-size: 10.5px; }
 .sc-warn { color: #f5a623; }
+
+/* ── Controls inside panels (filter chips, form buttons and fields) ── */
+.feed-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.ffilter,
+.panel form button {
+  background: #161a23;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 11px;
+  font: 600 11.5px/1.4 inherit;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+.panel form button { border-radius: 6px; padding: 5px 12px; }
+.ffilter:hover,
+.panel form button:hover { border-color: var(--accent); color: #fff; }
+.ffilter.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.ffilter:focus-visible,
+.panel form button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.panel form input,
+.panel form select {
+  background: #0d1017;
+  color: var(--text);
+  border: 1px solid #232a37;
+  border-radius: 6px;
+  padding: 5px 9px;
+  font-size: 13px;
+}

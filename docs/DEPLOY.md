@@ -14,7 +14,7 @@ The live stack runs **$0/month, no credit card** across four free services + a f
 | API | **Render** free web service (`winfin-api`, Singapore) | Docker `Dockerfile.api` → Supabase; sleeps after 15 min idle |
 | Database | **Supabase** Postgres (Seoul, `bfzkjwucytbtnmzomtvt`) | session pooler, port 5432; RLS on every table so the Data API exposes nothing |
 | Worker | **GitHub Actions** cron (`.github/workflows/ingest.yml`, :13/:43) | `python -m worker.main --once`; unlimited on public repo |
-| LLM | **TokenHarbor** free models (`qwen3.8-flash:free`; `deepseek-v4.1-flash:free` and `mimo-v2.6-flash:free` also work) | OpenAI chat API at `https://tokenharbor.ai/v1`, `FINSCRAPE_WIRE_API=chat`. Heuristic fallback covers outages |
+| LLM | **TokenHarbor** free models, primary + fallback (`FINSCRAPE_MODEL_FALLBACK`) | Worker: `qwen3.8-flash:free` → `mimo-v2.6-flash:free`. API (someone is waiting): `mimo-v2.6-flash:free` → `deepseek-v4.1-flash:free`. OpenAI chat API at `https://tokenharbor.ai/v1`. Heuristic fallback covers a full outage |
 
 ## Environment
 
@@ -36,6 +36,15 @@ The API reads `$PORT` (Render injects it; `settings.port` aliases `WORLDFIN_PORT
 - Worker updates the dashboard on **refresh**, not live WS push (cross-process WS needs Redis — deferred).
 - GitHub cron can be delayed/skipped under load (~"every 30 min", not exact).
 - Supabase free: 500 MB database, paused after a week without activity (the ingest cron keeps it active); TokenHarbor free models have usage caps — the heuristic fallback absorbs LLM exhaustion.
+
+## Choosing the model
+Measured 29 Sep 2026 on the 56-headline sector gold set with the real analysis prompt:
+
+| Model | Valid JSON | Sector accuracy | p50 latency |
+|---|---|---|---|
+| `qwen3.8-flash:free` | 74% | 88% | 35 s |
+| `mimo-v2.6-flash:free` | 96% | 67% | 14 s |
+| `deepseek-v4.1-flash:free` | 77% | 68% | 26 s |
 
 ## Keys / secrets
 These are **temporary throwaway account keys** — kept in **GitHub → Settings → Secrets** and

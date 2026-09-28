@@ -247,6 +247,8 @@ def score_scenario(
         "tilt": round(tilt, 3),
         "data_tier": data_tier,
         "sample_size": sample_size,
+        # Summed member weight (confidence x magnitude x actionability).
+        "weight": round(total_weight, 3),
         "divergent_members": divergent,
         "sectors": sectors,
         "exposure": exposure,
@@ -296,7 +298,9 @@ def build_scenarios(
 
     grouped = [c for c in clusters if _corroboration(c) >= min_size]
     scenarios = _score(grouped) or _score(clusters)
+    # Conviction alone let upbeat trivia outrank a crisis; weigh in how much it matters.
     scenarios.sort(
-        key=lambda s: (abs(s["tilt"]) * s["probability"], s["size"]), reverse=True
+        key=lambda s: (abs(s["tilt"]) * s["probability"] * s["weight"], s["size"]),
+        reverse=True,
     )
     return scenarios[:limit]

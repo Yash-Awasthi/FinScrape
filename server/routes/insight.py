@@ -17,21 +17,27 @@ from server import cache, db
 
 router = APIRouter()
 
+# Scenarios advise only from LLM-analysed events: keyword-fallback verdicts and rows
+# the LLM later rejected as off-topic would steer the advice with noise.
+_ANALYSED = (
+    "coalesce(key_metrics->>'prompt_variant', '') NOT IN ('heuristic', 'rejected')"
+)
+
 # Columns the scenario engine grades on. `/api/storylines` needs far fewer, so
 # this query is its own rather than a widened share.
-_SCENARIO_COLUMNS = """
+_SCENARIO_COLUMNS = f"""
     SELECT id, subject, reasoning, verdict, signal_score, confidence, event_type,
            magnitude, actionability, sector_impact, divergence_flag,
            tickers, sources, articles, affected_entities, second_order_effects,
            created_at
-    FROM events ORDER BY id DESC LIMIT $1
+    FROM events WHERE {_ANALYSED} ORDER BY id DESC LIMIT $1
 """
 
 # Newest id keys the cache — a new event is the only thing that can change the
 # answer inside the TTL — and the row count tells the key which window it is.
-_SCENARIO_HEAD = """
+_SCENARIO_HEAD = f"""
     SELECT max(id) AS newest, count(*) AS considered
-    FROM (SELECT id FROM events ORDER BY id DESC LIMIT $1) w
+    FROM (SELECT id FROM events WHERE {_ANALYSED} ORDER BY id DESC LIMIT $1) w
 """
 
 # Clustering embeds every distinct subject through Ollama, so an uncached

@@ -139,3 +139,57 @@ def test_alert_rules_crud_and_firing(monkeypatch):
         asyncio.run(body())
     finally:
         get_settings.cache_clear()
+
+
+def test_backtest_skips_heuristic_fallback_events():
+    from datetime import UTC, datetime, timedelta
+
+    from server import db
+    from server.accuracy import backtest
+
+    async def body():
+        pool = await fresh_pool("accuracy_outcomes", "events")
+        when = datetime.now(UTC) - timedelta(days=3)
+        for subject, variant in (("llm call", "v1"), ("fallback call", "heuristic")):
+            await pool.execute(
+                "INSERT INTO events (content_hash, subject, event_type, verdict, tickers,"
+                " key_metrics, timestamp) VALUES ($1, $1, 'other', 'INVEST', $2, $3, $4)",
+                subject,
+                ["XOM"],
+                {"prompt_variant": variant},
+                when,
+            )
+        assert await backtest(pool, lambda tickers, at, hours: 2.0) == 1
+        scored = await pool.fetchval(
+            "SELECT e.subject FROM accuracy_outcomes a JOIN events e ON e.id = a.event_id"
+        )
+        assert scored == "llm call"
+        await db.disconnect()
+
+    asyncio.run(body())
+
+
+def test_feed_hides_events_the_llm_rejected():
+    from datetime import UTC, datetime
+
+    from server import db, queries
+
+    async def body():
+        pool = await fresh_pool("events")
+        for subject, variant in (
+            ("kept", "v1"),
+            ("off topic", "rejected"),
+            ("fallback", "heuristic"),
+        ):
+            await pool.execute(
+                "INSERT INTO events (content_hash, subject, event_type, verdict, key_metrics,"
+                " timestamp) VALUES ($1, $1, 'other', 'OBSERVE', $2, $3)",
+                subject,
+                {"prompt_variant": variant},
+                datetime.now(UTC),
+            )
+        subjects = {e["subject"] for e in await queries.get_events(pool, limit=10)}
+        assert subjects == {"kept", "fallback"}
+        await db.disconnect()
+
+    asyncio.run(body())

@@ -129,6 +129,18 @@ def _company_names() -> dict[str, str]:
 
 
 @functools.lru_cache(maxsize=1)
+def listed_symbols() -> frozenset[str]:
+    """Every ticker on the SEC list."""
+    try:
+        raw = json.loads(_COMPANY_FILE.read_text(encoding="utf-8"))
+    except OSError:
+        return frozenset()
+    return frozenset(
+        str(row.get("ticker") or "").strip().upper() for row in raw.values() if isinstance(row, dict)
+    )
+
+
+@functools.lru_cache(maxsize=1)
 def _company_regex() -> re.Pattern | None:
     """One alternation over all company names, longest-first so
     'alphabet inc. class a capital stock' wins over its 'alphabet inc.' prefix."""

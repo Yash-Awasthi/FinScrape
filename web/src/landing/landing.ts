@@ -1,11 +1,13 @@
 import "./landing.css";
 
+import { API_BASE } from "../api";
+
 // ---- content ----------------------------------------------------------------
 const FEATURES: [string, string, string][] = [
   ["🌍", "Live globe", "Every event geolocated, colored by verdict. Click a point for the full reasoning chain."],
   ["🎯", "Event → ticker resolution", "A Strait-of-Hormuz headline becomes XOM, CVX, RTX, ZIM — with per-entity impact."],
   ["🔗", "Second-order effects", "The knock-on chain: war-risk premiums, rerouting, LNG spillover, insurer exposure."],
-  ["⚖️", "Multi-agent AI council", "Eight analyst personas deliberate each call and surface consensus and dissent."],
+  ["⚖️", "Multi-agent AI council", "On demand, eight analyst personas deliberate a call and surface consensus and dissent."],
   ["📈", "Accuracy proof", "Historical hit-rate, by-verdict breakdown, and an equity-curve sparkline you can audit."],
   ["🛰️", "Correlation engine", "Flags when 3+ independent source-types corroborate a story — before it's news."],
   ["⚡", "Breaking-news detection", "Wire + gov + intel triangulation fires a banner the moment a story converges."],
@@ -16,14 +18,6 @@ const FEATURES: [string, string, string][] = [
   ["⏱️", "Freshness guaranteed", "Only news ≤24h old, with per-source health monitoring."],
 ];
 
-const TICKS = [
-  ["INVEST", "NVDA", "+4", "up"], ["PULL_OUT", "XOM", "−3", "down"],
-  ["OBSERVE", "BTC", "+1", "up"], ["CAUTIOUS", "TSM", "−2", "down"],
-  ["INVEST", "LLY", "+3", "up"], ["PULL_OUT", "TSLA", "−3", "down"],
-  ["INVEST", "CVX", "+2", "up"], ["OBSERVE", "ETH", "+1", "up"],
-  ["CAUTIOUS", "GOOGL", "−2", "down"], ["INVEST", "RTX", "+4", "up"],
-];
-
 function fill(): void {
   const grid = document.getElementById("features-grid");
   if (grid)
@@ -31,18 +25,95 @@ function fill(): void {
       ([ic, t, d]) => `<div class="card"><div class="ic">${ic}</div><h3>${t}</h3><p>${d}</p></div>`,
     ).join("");
 
-  const row = (v: string, t: string, c: string, cls: string) =>
-    `<span><b>${t}</b> <i style="color:var(--${cls === "up" ? "green" : "red"})">${v} ${c}</i></span>`;
-  const track = document.getElementById("ticker");
-  if (track) {
-    const items = TICKS.map(([v, t, c, cls]) => row(v, t, c, cls)).join("");
-    track.innerHTML = items + items; // duplicate for seamless loop
-  }
-
   const mini = document.getElementById("hero-stats");
   if (mini)
     mini.innerHTML =
-      `<span><b>37+</b> live events</span><span><b>14</b> world feeds</span><span><b>$0</b> free-tier</span>`;
+      `<span><b id="mini-events">9,700+</b> events analysed</span><span><b>32</b> world feeds</span><span><b>$0</b> free-tier</span>`;
+}
+
+// ---- live numbers from the API (the static copy stands in while it wakes) ----
+interface LiveEvent {
+  subject: string;
+  verdict: string;
+  signal_score: number;
+  tickers: string[];
+}
+
+const esc = (s: string) =>
+  s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+async function getJSON<T>(path: string): Promise<T | null> {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 20000);
+  try {
+    const res = await fetch(API_BASE + path, { signal: ctl.signal });
+    return res.ok ? ((await res.json()) as T) : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function setText(id: string, text: string): void {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+
+function callRow(e: LiveEvent): string {
+  const up = e.signal_score > 0;
+  const score = `${up ? "+" : e.signal_score < 0 ? "−" : ""}${Math.abs(e.signal_score)}`;
+  const chip = e.verdict === "INVEST" ? "invest" : "pull";
+  return (
+    `<div class="fc-row"><span class="chip ${chip}">${esc(e.verdict)}</span>` +
+    `<b>${esc(e.tickers[0])}</b><span class="${up ? "up" : "down"}">${score}</span></div>`
+  );
+}
+
+async function live(): Promise<void> {
+  const [stats, accuracy, feeds, recent] = await Promise.all([
+    getJSON<{ total_events: number }>("/api/stats"),
+    getJSON<{ scored: number; hit_rate: number }>("/api/accuracy"),
+    getJSON<{ feeds: unknown[] }>("/api/feeds"),
+    getJSON<{ events: LiveEvent[] }>("/api/events?limit=60"),
+  ]);
+  if (stats?.total_events) {
+    const n = stats.total_events.toLocaleString("en-US");
+    setText("stat-events", n);
+    setText("mini-events", n);
+    setText("live-eyebrow", `LIVE · ${n} EVENTS ANALYSED`);
+  }
+  if (feeds?.feeds?.length) {
+    setText("stat-feeds", String(feeds.feeds.length));
+    setText("dg-feeds", String(feeds.feeds.length));
+  }
+  // A handful of scored calls is not a track record; say so rather than quote it.
+  if (accuracy && accuracy.scored >= 30) {
+    setText("stat-hit", `${Math.round(accuracy.hit_rate * 100)}%`);
+    setText("stat-hit-label", `hit-rate on ${accuracy.scored} calls scored against the next trading day`);
+  } else if (accuracy) {
+    setText("stat-hit", String(accuracy.scored));
+    setText("stat-hit-label", "calls scored so far against realized moves");
+  }
+
+  const events = (recent?.events ?? []).filter((e) => e.tickers?.length);
+  const directional = events.filter((e) => e.verdict === "INVEST" || e.verdict === "PULL_OUT");
+  const calls = document.getElementById("fc-calls");
+  if (calls && directional.length >= 2) {
+    calls.innerHTML = directional.slice(0, 2).map(callRow).join("");
+    setText("fc-meta", "latest directional calls");
+  }
+  const track = document.getElementById("ticker");
+  if (track && events.length) {
+    const items = events
+      .slice(0, 16)
+      .map((e) => {
+        const cls = e.signal_score > 0 ? "green" : e.signal_score < 0 ? "red" : "mut";
+        return `<span><b>${esc(e.tickers[0])}</b> <i style="color:var(--${cls})">${esc(e.verdict)} ${e.signal_score > 0 ? "+" : ""}${e.signal_score}</i></span>`;
+      })
+      .join("");
+    track.innerHTML = items + items; // duplicate for a seamless loop
+  }
 }
 
 // ---- count-up + reveal ------------------------------------------------------
@@ -123,3 +194,4 @@ async function globe(): Promise<void> {
 fill();
 animate();
 void globe();
+void live();

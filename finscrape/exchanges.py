@@ -22,6 +22,8 @@ from __future__ import annotations
 import logging
 import os
 import re
+import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
 import requests
@@ -242,6 +244,31 @@ def fetch_china_quotes(symbols: list[tuple[str, str]]) -> dict[str, dict]:
 # Global quotes via Yahoo (covers every registered exchange)
 # ---------------------------------------------------------------------------
 
+# The tape, watchlist and markets panels ask for overlapping symbols within seconds.
+_QUOTE_TTL_S = 30.0
+_quote_cache: dict[str, tuple[float, dict]] = {}
+
+
+def _yahoo_quote(sym: str) -> dict | None:
+    try:
+        import yfinance as yf
+
+        fast = yf.Ticker(sym).fast_info
+        price, prev = fast.last_price, fast.previous_close
+        return {
+            "symbol": sym,
+            "price": float(price) if price is not None else None,
+            "change_pct": round((float(price) - float(prev)) / float(prev) * 100, 2)
+            if price and prev
+            else None,
+            "currency": getattr(fast, "currency", None) or None,
+            "source": "yahoo",
+        }
+    except Exception as e:  # noqa: BLE001 — one bad ticker never kills the batch
+        logger.warning("yahoo quote %s failed: %s", sym, e)
+        return None
+
+
 def get_global_quotes(
     wanted: list[tuple[str, str]],
     *,
@@ -251,49 +278,39 @@ def get_global_quotes(
 
     `wanted`: (exchange_code, bare_symbol) pairs. Chinese A-shares go through
     the keyless Eastmoney/Sina adapters when `prefer_native_cn` (faster than
-    Yahoo there); everything else rides Yahoo Finance in a thread fan-out.
+    Yahoo there); everything else rides Yahoo Finance in a thread fan-out, cached briefly.
     """
+    now = time.monotonic()
     out: dict[str, dict] = {}
     cn: list[tuple[str, str]] = []
     yahoo: list[str] = []
 
     for exchange_code, symbol in wanted:
         code = exchange_code.upper()
-        if code in ("SSE", "SZSE") and prefer_native_cn:
+        key = resolve_symbol(symbol, code)
+        hit = _quote_cache.get(key)
+        if hit and now - hit[0] < _QUOTE_TTL_S:
+            out[key] = hit[1]
+        elif code in ("SSE", "SZSE") and prefer_native_cn:
             cn.append((code, symbol))
-            continue
-        yahoo.append(resolve_symbol(symbol, code))
+        else:
+            yahoo.append(key)
 
-    if cn:
-        try:
-            out.update(fetch_china_quotes(cn))
-        except Exception as e:  # noqa: BLE001 — adapters degrade, never raise
-            logger.warning("china adapter failed: %s", e)
-
-    if yahoo:
-        try:
-            import yfinance as yf
-
-            tickers = yf.Tickers(" ".join(yahoo))
-            for sym in yahoo:
-                try:
-                    fast = tickers.tickers[sym].fast_info
-                    price = fast.last_price
-                    prev = fast.previous_close
-                    out[sym] = {
-                        "symbol": sym,
-                        "price": float(price) if price is not None else None,
-                        "change_pct": round((float(price) - float(prev)) / float(prev) * 100, 2)
-                        if price and prev
-                        else None,
-                        "currency": getattr(fast, "currency", None) or None,
-                        "source": "yahoo",
-                    }
-                except Exception as e:  # noqa: BLE001 — one bad ticker never kills the batch
-                    logger.warning("yahoo quote %s failed: %s", sym, e)
-        except Exception as e:  # noqa: BLE001
-            logger.warning("yfinance unavailable: %s", e)
-
+    fetched: dict[str, dict] = {}
+    # One HTTP round trip per Yahoo symbol plus the China batch; run them together.
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        china = pool.submit(fetch_china_quotes, cn) if cn else None
+        for sym, quote in zip(yahoo, pool.map(_yahoo_quote, yahoo)):
+            if quote:
+                fetched[sym] = quote
+        if china:
+            try:
+                fetched.update(china.result())
+            except Exception as e:  # noqa: BLE001 — adapters degrade, never raise
+                logger.warning("china adapter failed: %s", e)
+    for key, quote in fetched.items():
+        _quote_cache[key] = (now, quote)
+    out.update(fetched)
     return out
 
 

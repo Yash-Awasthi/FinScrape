@@ -101,6 +101,9 @@ async def backtest(
           AND e.timestamp <= now() - ($2 || ' hours')::interval
           AND e.timestamp >= now() - ($3 || ' days')::interval
           AND jsonb_array_length(e.tickers) > 0
+          -- The record measures the analysis engine, not the keyword fallback
+          -- that stands in while the LLM is down.
+          AND coalesce(e.key_metrics->>'prompt_variant', '') <> 'heuristic'
           AND NOT EXISTS (SELECT 1 FROM accuracy_outcomes a WHERE a.event_id = e.id)
         ORDER BY e.timestamp DESC LIMIT $4
         """,

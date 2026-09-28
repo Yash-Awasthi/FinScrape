@@ -27,7 +27,8 @@ async def get_events(
     sort: str = "id",
     direction: str = "desc",
 ) -> list[dict]:
-    conds: list[str] = []
+    # Rows the LLM judged off-topic after a heuristic-era ingest (scripts/reanalyse.py).
+    conds: list[str] = ["coalesce(key_metrics->>'prompt_variant', '') <> 'rejected'"]
     params: list = []
 
     def p(v) -> str:

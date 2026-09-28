@@ -149,7 +149,20 @@ def call_ai(prompt: str, system_prompt: str, model: str | None = None) -> dict |
     # Read env at call time, not import time — main.py --ollama sets
     # OPENAI_BASE_URL after this module is imported, so frozen constants
     # would never see it.
-    effective_model = model or os.getenv("FINSCRAPE_MODEL", DEFAULT_MODEL)
+    primary = model or os.getenv("FINSCRAPE_MODEL", DEFAULT_MODEL)
+    result = _call_model(prompt, system_prompt, primary)
+    # A pinned model means that model; otherwise a flaky free-tier primary hands
+    # over to the next model in FINSCRAPE_MODEL_FALLBACK (comma-separated).
+    if result is None and model is None:
+        for fallback in filter(None, os.getenv("FINSCRAPE_MODEL_FALLBACK", "").split(",")):
+            logger.info("Primary model %s failed; trying %s", primary, fallback.strip())
+            result = _call_model(prompt, system_prompt, fallback.strip())
+            if result is not None:
+                break
+    return result
+
+
+def _call_model(prompt: str, system_prompt: str, effective_model: str) -> dict | None:
     base_url = os.getenv("OPENAI_BASE_URL", "")
     openrouter_key = os.getenv("OPENROUTER_API_KEY", "")
 

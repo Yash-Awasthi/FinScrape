@@ -320,3 +320,13 @@ def test_scenario_reports_the_outcome_sample_behind_its_tier():
     scenario = score_scenario({"members": [event()]}, [], predict)
     assert scenario is not None
     assert scenario["sample_size"] == 13
+
+
+def test_important_events_outrank_trivia_at_the_same_tilt():
+    trivia = event(id=1, subject="miner reports new gold zone", magnitude="low",
+                   actionability="low", confidence=0.5)
+    crisis = event(id=2, subject="strait closed to tankers", magnitude="high",
+                   actionability="high", confidence=0.9)
+    clusters = [{"members": [trivia]}, {"members": [crisis]}]
+    ranked = build_scenarios(clusters, [], fake_predict(0.8), min_size=1)
+    assert [s["title"] for s in ranked][0] == "strait closed to tankers"

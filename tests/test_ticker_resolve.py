@@ -86,3 +86,10 @@ def test_bare_capitals_are_acronyms_not_tickers():
 def test_exchange_prefixed_symbol_is_a_ticker():
     assert "XYZ" in BaseScraper.extract_tickers_from_text("Block (NYSE: XYZ) rose 4%")
     assert "PLTR" in BaseScraper.extract_tickers_from_text("Palantir NASDAQ:PLTR jumped")
+
+
+def test_parenthesised_acronyms_are_not_tickers_unless_listed():
+    text = "Rapid Support Forces (RSF) clashed near El Fasher, the UN (OCHA) said; Apple (AAPL) fell"
+    tickers = BaseScraper.extract_tickers_from_text(text)
+    assert "AAPL" in tickers
+    assert "RSF" not in tickers and "OCHA" not in tickers
