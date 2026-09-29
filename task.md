@@ -61,10 +61,12 @@ the `ingest` Action, dispatched every 30 minutes by the Cloudflare cron Worker
 - The cron Worker needs its `GH_TOKEN` secret (fine-grained PAT, this repo, Actions
   read and write): `cd ops/ingest-cron && npx wrangler secret put GH_TOKEN`. Until
   then GitHub's own schedule fires every 3-6 hours.
-- Watch two dispatched runs: qwen timeouts fall back to mimo (29 Sep: three timeouts,
-  each recovered on retry, so the fallback was not exercised), GDELT export has no
-  429s (0 on 29 Sep), Reddit RSS stores posts (100 on 29 Sep), correlations start
-  emitting once the 24-hour window holds tier-tagged events.
+- Ingest watched twice on 29 Sep (runs dispatched by hand): qwen timed out 3 and 8
+  times; the second run handed 4 calls to mimo, and 1 of 5 new events fell to the
+  heuristic when both failed. GDELT export: 0 429s. Reddit RSS returned the same 100
+  posts (spanning 3 days) both times, so sentiment fills slowly. Correlations: 0 so
+  far; they need tier-tagged events from several sources in one 24-hour window.
+  Re-check once the cron has run for a day.
 - Owner: rotate the Supabase password, Render key and TokenHarbor key pasted into a
   chat, and the Nexus Neon password; then update Render env and GitHub secrets.
 - Owner: delete the Neon project after a clean week on Supabase (from 29 Sep).

@@ -16,7 +16,6 @@ __pycache__/
 .ipynb_checkpoints/
 
 # uv / venv
-uv.lock
 
 # IDE settings
 .vscode/

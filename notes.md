@@ -97,6 +97,7 @@ every event, not holdings). Laya (item 11) is parked; ReliefWeb (G1) is gated.
 - Sentiment reads Reddit posts the worker stores from one RSS fetch per run (2dd328b0). Live: an ingest run stored 100 posts; the panel shows four NVDA posts.
 - Ingest dispatched every 30 min by the Cloudflare cron Worker `winfin-ingest-cron` (0293b598); it needs its GH_TOKEN secret (item 9).
 - Demo script rewritten (9019d1a5). Merged as PR #11 (942f9e59).
+- uv.lock was gitignored, so CI and ingest resolved fresh and broke on regex 2026.9.29 (no wheels); the lock is committed now (PR #14). Check: CI green, a dispatched ingest run succeeded.
 
 ## Local hazards
 
