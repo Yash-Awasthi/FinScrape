@@ -6,7 +6,7 @@ Usage:
     python main.py quotes --exchange NSE --symbols RELIANCE TCS
     python main.py devtools list                   # bring-your-own API keys
 
-Ingestion, alerts, portfolio and digests run on Postgres through the API
+Ingestion, alerts and digests run on Postgres through the API
 (`python -m server.main`) and the worker (`python -m worker.main`).
 """
 

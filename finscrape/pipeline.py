@@ -175,7 +175,7 @@ class FinScrapePipeline:
                 key_metrics[k] = v
 
         # Build event with enriched fields
-        subject = self._normalize_subject(result.get("subject", article.title))
+        subject = " ".join(str(result.get("subject") or article.title).split())
         verdict = Verdict.from_score(final_score)
 
         event = FinEvent(
@@ -369,7 +369,11 @@ class FinScrapePipeline:
                 candidates.append((idx, e.get("subject", "")))
 
         for idx, existing_subject in candidates:
-            if SequenceMatcher(None, existing_subject, new_event.subject).ratio() >= 0.85:
+            if SequenceMatcher(
+                None,
+                self._normalize_subject(existing_subject),
+                self._normalize_subject(new_event.subject),
+            ).ratio() >= 0.85:
                 return recent[idx]
 
         # Embedding fallback: paraphrased duplicates the character ratio misses.

@@ -4,7 +4,7 @@
 // it, so j/k can walk rows and read each one without a dialog opening and closing.
 
 import { api, type EventOut, type Prediction, verdictColor } from "../api";
-import { escapeHtml } from "../util";
+import { escapeHtml, sourceLabel } from "../util";
 
 const PLACEHOLDER =
   '<p class="empty">Select a signal — click a row, or press j / k to walk the feed.</p>';
@@ -78,7 +78,7 @@ export class Inspector {
 
     const meta = document.createElement("div");
     meta.className = "insp-meta";
-    meta.textContent = `${ev.event_type} · ${Math.round(ev.confidence * 100)}% · ${ev.tickers.join(", ") || "no tickers"} · ${ev.sources.join(", ")}`;
+    meta.textContent = `${ev.event_type} · ${Math.round(ev.confidence * 100)}% · ${ev.tickers.join(", ") || "no tickers"} · ${ev.sources.map(sourceLabel).join(", ")}`;
 
     wrap.append(badge, h, meta);
     return wrap;

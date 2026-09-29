@@ -13,7 +13,7 @@ The live stack runs **$0/month, no credit card** across four free services + a f
 | Web (landing + SPA) | **Cloudflare Pages** (`winfin`) | static, no sleep; landing `/`, app `/app/` |
 | API | **Render** free web service (`winfin-api`, Singapore) | Docker `Dockerfile.api` → Supabase; sleeps after 15 min idle |
 | Database | **Supabase** Postgres (Seoul, `bfzkjwucytbtnmzomtvt`) | session pooler, port 5432; RLS on every table so the Data API exposes nothing |
-| Worker | **GitHub Actions** cron (`.github/workflows/ingest.yml`, :13/:43) | `python -m worker.main --once`; unlimited on public repo |
+| Worker | **GitHub Actions** (`.github/workflows/ingest.yml`), dispatched at :13/:43 by the Cloudflare cron Worker `winfin-ingest-cron` (`ops/ingest-cron`) | `python -m worker.main --once`; GitHub's own schedule stays as a fallback but fires only every 3–6 hours |
 | LLM | **TokenHarbor** free models, primary + fallback (`FINSCRAPE_MODEL_FALLBACK`) | Worker: `qwen3.8-flash:free` → `mimo-v2.6-flash:free`. API (someone is waiting): `mimo-v2.6-flash:free` → `deepseek-v4.1-flash:free`. OpenAI chat API at `https://tokenharbor.ai/v1`. Heuristic fallback covers a full outage |
 
 ## Environment
@@ -30,6 +30,7 @@ The API reads `$PORT` (Render injects it; `settings.port` aliases `WORLDFIN_PORT
 - **Web:** `cd web && VITE_API_BASE=https://winfin-api.onrender.com npm run build && npx wrangler pages deploy dist --project-name=winfin --branch=main`
 - **API:** push to `master` → Render auto-deploys (`autoDeploy: yes`). Or POST a deploy via the Render API.
 - **Worker:** runs every 30 min automatically; `gh workflow run ingest.yml` to fire now.
+- **Ingest cron:** `cd ops/ingest-cron && npx wrangler deploy`; its `GH_TOKEN` secret is a fine-grained PAT (this repo, Actions read and write), set with `npx wrangler secret put GH_TOKEN`.
 
 ## Known free-tier limits
 - Render free **sleeps after 15 min idle** → first hit after idle ~30–50 s (cold start). A keep-warm GH cron ping fixes it (uses free Actions minutes).

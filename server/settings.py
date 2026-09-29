@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     # "production" turns the warnings below into refusals to start.
     env: str = Field(default="development", validation_alias="WORLDFIN_ENV")
 
-    # --- Ingest auth (every mutating route: POST /api/events, the portfolio
+    # --- Ingest auth (every mutating route: POST /api/events, the alert
     # routes, and the vendored /api/v1 signal-ingest routes) ---
     api_key: str = Field(default=DEFAULT_API_KEY, validation_alias="FINSCRAPE_API_KEY")
 
@@ -52,8 +52,6 @@ class Settings(BaseSettings):
 
     # --- Optional infra ---
     redis_url: str = Field(default="", validation_alias="WORLDFIN_REDIS_URL")
-    # Writable dir for the SQLite-backed portfolio/watchlist store (Phase 13).
-    data_dir: str = Field(default="data", validation_alias="WORLDFIN_DATA_DIR")
     # Telegram bot token for outbound alerts + the inbound webhook (Phase 13).
     telegram_bot_token: str = Field(default="", validation_alias="TELEGRAM_BOT_TOKEN")
     # Shared secret echoed by Telegram in X-Telegram-Bot-Api-Secret-Token. The webhook

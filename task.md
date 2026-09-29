@@ -54,25 +54,28 @@ Facts about the owner's setup that the items below rely on (as of 28 Sep 2026):
 
 ## Open
 
-### 9. Deploy: finish the Supabase move
-Found live since June: Cloudflare Pages (SPA, `winfin.pages.dev`), Render API
-(`winfin-api`), GitHub Actions ingest, Neon Postgres. Vercel is not needed. On 29 Sep
-Neon's data (9,690 events, 837 outcomes) was copied into Supabase (schema 0001–0007,
-RLS on); Render and the `WORLDFIN_DATABASE_URL` secret point at Supabase; Render runs
-`WORLDFIN_ENV=production` with CORS `https://winfin.pages.dev`. PR #6 merged; the
-live API serves 9,698 events from Supabase and the first ingest run inserted 8
-(GDELT 6 with no 429s). The LLM is TokenHarbor `qwen3.8-flash:free` since PR #7;
-the next ingest stored real LLM reasoning again.
-- Parenthesised acronyms still read as tickers ("Rapid Support Forces (RSF)", "(OCHA)"
-  on event 21206). Keep a `(TICK)` match only when it is a listed symbol.
-- The dashboard on Pages is an older build; redeploy with the `wrangler` command in
-  `docs/DEPLOY.md` once `npx wrangler login` has been run on this machine.
-- The 837 outcomes were scored with the old same-day window; re-score them with
-  `server.accuracy.backtest` (lookback 180 days) against Supabase.
-- Rotate the Supabase password and Render key that were pasted into a chat.
+### 9. Production: what is left
+Live since June on Cloudflare Pages (`winfin.pages.dev`), Render (`winfin-api`) and
+the `ingest` Action; moved from Neon to Supabase on 29 Sep (9,690 events copied, RLS
+on every table). LLM: TokenHarbor free models with a fallback (worker qwen → mimo,
+API mimo → deepseek; benchmark in `docs/DEPLOY.md`). PRs #6–#10 merged.
+- Finish `scripts/reanalyse.py` over the older heuristic rows (4,100+ before the last
+  7 days) at mimo speed, or leave them: scenarios and the backtest already skip them.
+- Watch the next few `ingest` runs: qwen timeouts fall back to mimo; GDELT via the
+  export file. `keepwarm` pings Render on weekdays 02:00–18:00 UTC.
+- Rotate the Supabase password, Render key and TokenHarbor key pasted into a chat,
+  and the Nexus Neon password printed by mistake.
 - Once Supabase has run a week cleanly, delete the Neon project.
 - Email digest: add a scheduled Action for `python -m worker.digest daily` once the
   owner sets `RESEND_PROXY_URL` and `FINSCRAPE_DIGEST_TO`.
+
+### 15. The track record
+Scoring now signs each ticker by its entity impact (2a92ceb2) and skips fallback
+verdicts. PULL_OUT calls dominate (782 of 834) and many are July conflict calls.
+- Read the re-scored `/api/accuracy` by verdict and by source; decide what the
+  landing page should claim.
+- The worker emits PULL_OUT for most conflict news; check whether the prompt or the
+  score thresholds push it there, against the realized moves now available.
 
 ### 11. Laya: stage 1 and the daily loop (parked by the owner, 29 Sep)
 The current promoted checkpoint stays in use; the 03:30 task keeps running unattended.

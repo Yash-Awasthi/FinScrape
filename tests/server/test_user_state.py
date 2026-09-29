@@ -1,4 +1,4 @@
-"""User state in Postgres (portfolio, Telegram subscribers, alert rules); needs a test DB."""
+"""User state in Postgres (Telegram subscribers, alert rules); needs a test DB."""
 
 from __future__ import annotations
 
@@ -18,50 +18,6 @@ pytestmark = pytest.mark.skipif(
 )
 
 AUTH = {"X-API-Key": "local-dev-key"}
-
-
-def test_portfolio_crud_persists_in_postgres(monkeypatch):
-    import httpx2
-
-    from server import db
-    from server.routes import portfolio
-    from server.settings import get_settings
-
-    monkeypatch.setenv("FINSCRAPE_API_KEY", "local-dev-key")
-    get_settings.cache_clear()
-    app = FastAPI()
-    app.include_router(portfolio.router)
-
-    async def body():
-        await fresh_pool("positions", "watchlists")
-        transport = httpx2.ASGITransport(app=app)
-        async with httpx2.AsyncClient(transport=transport, base_url="http://t") as c:
-            position = {"ticker": "aapl", "shares": 10, "avg_cost": 150}
-            r = await c.post("/api/portfolio/position", json=position, headers=AUTH)
-            assert r.json()["ok"]
-            got = (await c.get("/api/portfolio")).json()
-            assert [p["ticker"] for p in got["positions"]] == ["AAPL"]
-            assert got["summary"]["tickers"] == ["AAPL"]
-
-            for tickers in (["msft"], ["nvda", "msft"]):
-                body = {"name": "tech", "tickers": tickers}
-                r = await c.post("/api/portfolio/watchlist", json=body, headers=AUTH)
-            assert r.json()["watchlist"]["tickers"] == ["MSFT", "NVDA"]
-
-            gone = "/api/portfolio/position?ticker=AAPL"
-            assert (await c.delete(gone, headers=AUTH)).json()["ok"]
-            assert not (await c.delete(gone, headers=AUTH)).json()["ok"]
-            bad = {"ticker": "x", "shares": -1}
-            r = await c.post("/api/portfolio/position", json=bad, headers=AUTH)
-            assert r.status_code == 400
-            r = await c.post("/api/portfolio/position", json={"ticker": "x"})
-            assert r.status_code == 401
-        await db.disconnect()
-
-    try:
-        asyncio.run(body())
-    finally:
-        get_settings.cache_clear()
 
 
 def test_telegram_subscribers_persist_in_postgres(monkeypatch):
@@ -190,6 +146,34 @@ def test_feed_hides_events_the_llm_rejected():
             )
         subjects = {e["subject"] for e in await queries.get_events(pool, limit=10)}
         assert subjects == {"kept", "fallback"}
+        await db.disconnect()
+
+    asyncio.run(body())
+
+
+def test_scenarios_skip_price_move_rows():
+    """CoinGecko rows are a coin's own 24h move ("QNT surged 299%"), not news that
+    could move a market, so a scenario built on one only restates the price."""
+    from datetime import UTC, datetime
+
+    from server import db
+    from server.routes.insight import _SCENARIO_COLUMNS
+
+    async def body():
+        pool = await fresh_pool("events")
+        for subject, source in (
+            ("Hormuz closed", "gdelt/x.com:wire"),
+            ("QNT surged 299%", "coingecko"),
+        ):
+            await pool.execute(
+                "INSERT INTO events (content_hash, subject, event_type, verdict, sources,"
+                " timestamp) VALUES ($1, $1, 'other', 'OBSERVE', $2, $3)",
+                subject,
+                [source],
+                datetime.now(UTC),
+            )
+        rows = await pool.fetch(_SCENARIO_COLUMNS, 10)
+        assert [r["subject"] for r in rows] == ["Hormuz closed"]
         await db.disconnect()
 
     asyncio.run(body())

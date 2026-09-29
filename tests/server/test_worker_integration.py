@@ -133,3 +133,25 @@ def test_paraphrased_report_merges_into_the_postgres_row(monkeypatch):
         await db.disconnect()
 
     asyncio.run(body())
+
+
+def test_retired_sources_leave_the_health_list():
+    """A source the worker no longer builds (coingecko, an unconfigured reliefweb)
+    would read STALE forever and mark the API degraded."""
+    from server import db
+    from worker.health import (
+        aggregate_health,
+        forget_retired_sources,
+        record_source_health,
+    )
+
+    async def body():
+        pool = await fresh_pool("source_health")
+        for name in ("world_rss", "coingecko", "world/bbc_world"):
+            await record_source_health(pool, name, 1, "OK")
+        await forget_retired_sources(pool, ["world_rss", "gdelt"])
+        names = {r["source"] for r in await aggregate_health(pool, stale_after_min=60)}
+        assert names == {"world_rss", "world/bbc_world"}
+        await db.disconnect()
+
+    asyncio.run(body())

@@ -42,9 +42,8 @@ export const PAGE_LAYOUT: PanelSlot[] = [
   // band 9 — forward-looking + social
   { id: "prediction", w: 6, h: 5 },
   { id: "sentiment", w: 6, h: 5 },
-  // band 10 — personal + date strip
-  { id: "portfolio", w: 6, h: 5 },
-  { id: "calendar", w: 6, h: 5 },
+  // band 10 — date strip
+  { id: "calendar", w: 12, h: 5 },
 ];
 
 export function pagePanelIds(): Set<string> {

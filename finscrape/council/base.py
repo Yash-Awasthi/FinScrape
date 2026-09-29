@@ -43,14 +43,9 @@ class AgentVerdict:
 
     @staticmethod
     def _verdict_from_score(score: int) -> str:
-        if score >= 3:
-            return "INVEST"
-        elif score >= 1:
-            return "OBSERVE"
-        elif score >= -1:
-            return "CAUTIOUS"
-        else:
-            return "PULL_OUT"
+        from finscrape.models import Verdict
+
+        return Verdict.from_score(score).value
 
     def to_dict(self) -> dict:
         return asdict(self)

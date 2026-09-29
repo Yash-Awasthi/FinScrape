@@ -19,11 +19,11 @@ class TestVerdictFromScore:
     def test_observe(self, score):
         assert Verdict.from_score(score) is Verdict.OBSERVE
 
-    @pytest.mark.parametrize("score", [-1, 0])
+    @pytest.mark.parametrize("score", [-2, -1, 0])
     def test_cautious(self, score):
         assert Verdict.from_score(score) is Verdict.CAUTIOUS
 
-    @pytest.mark.parametrize("score", [-2, -3, -5, -10])
+    @pytest.mark.parametrize("score", [-3, -5, -10])
     def test_pull_out(self, score):
         assert Verdict.from_score(score) is Verdict.PULL_OUT
 

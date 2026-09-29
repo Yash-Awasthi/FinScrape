@@ -19,7 +19,6 @@ import {
   LiveTVPanel,
   MarketsLivePanel,
   NewsLobbyPanel,
-  PortfolioPanel,
   PredictionPanel,
   ScenarioPanel,
   SectorPanel,
@@ -56,7 +55,6 @@ const liveTVPanel = new LiveTVPanel();
 const correlationPanel = new CorrelationPanel();
 const accuracyPanel = new AccuracyPanel();
 const sentimentPanel = new SentimentPanel();
-const portfolioPanel = new PortfolioPanel();
 const predictionPanel = new PredictionPanel();
 const scenarioPanel = new ScenarioPanel();
 const sourceHealthPanel = new SourceHealthPanel();
@@ -77,7 +75,6 @@ for (const p of [
   correlationPanel,
   accuracyPanel,
   sentimentPanel,
-  portfolioPanel,
   predictionPanel,
   scenarioPanel,
   sourceHealthPanel,
@@ -210,7 +207,6 @@ async function loadPanelsData(): Promise<void> {
   if (shown.has("lobby")) jobs.push(newsLobbyPanel.load());
   if (shown.has("accuracy")) jobs.push(accuracyPanel.load());
   if (shown.has("sentiment")) jobs.push(sentimentPanel.load());
-  if (shown.has("portfolio")) jobs.push(portfolioPanel.load());
   if (shown.has("sources")) jobs.push(sourceHealthPanel.load());
   if (shown.has("livetv")) liveTVPanel.render();
   await Promise.allSettled(jobs);

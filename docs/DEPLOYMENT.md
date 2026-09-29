@@ -42,7 +42,7 @@ always-on worker. Set `WORLDFIN_ENV=production`, a real `FINSCRAPE_API_KEY` and
 | `GET /api/agents/analyze?ticker=` | multi-agent research commentary | ✅ | ✅ `routes/agents.py` |
 | `GET /api/ai/analyze?id=` | per-event LLM reasoning | ✅ | ✅ |
 | `GET /api/feeds` · `/api/rss-proxy` | world news feeds | ✅ | ✅ |
-| `GET /api/accuracy` · `/api/sentiment` · `/api/portfolio` | tracking panels | ✅ | ✅ |
+| `GET /api/accuracy` · `/api/sentiment` | tracking panels | ✅ | ✅ |
 | `GET /api/correlations` | cross-source signals | ✅ (local heuristic) | ✅ (pipeline tables) |
 | `GET/POST /api/alerts/rules` | alert rules, fired by the worker on new events | ✅ | ✅ `routes/alerts.py` |
 | `WS /ws` | realtime event push | ✅ | ✅ |

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { api, type Portfolio, type Scenario } from "../api";
+import { api, type Scenario } from "../api";
 import { ScenarioPanel } from "./panels";
 
 // setContent paints on the next animation frame.
@@ -26,26 +26,13 @@ const scenario = (overrides: Partial<Scenario> = {}): Scenario => ({
   chain: ["Freight rates spike"],
   advice: "Risk-off: reduce transport; add energy.",
   member_ids: [1, 2, 3],
-  sources: ["reuters/world"],
+  sources: ["world/bbc_world:mainstream"],
   first_seen: null,
   ...overrides,
 });
 
-const portfolio = (tickers: string[]): Portfolio => ({
-  positions: tickers.map((ticker) => ({ ticker, shares: 10, avg_cost: 1 })),
-  watchlists: [],
-  summary: {},
-});
-
-async function mount(
-  scenarios: Scenario[],
-  held: string[] = [],
-  portfolioFails = false,
-): Promise<ScenarioPanel> {
+async function mount(scenarios: Scenario[]): Promise<ScenarioPanel> {
   vi.spyOn(api, "scenarios").mockResolvedValue(scenarios);
-  vi.spyOn(api, "portfolio").mockImplementation(() =>
-    portfolioFails ? Promise.reject(new Error("no portfolio")) : Promise.resolve(portfolio(held)),
-  );
   const panel = new ScenarioPanel();
   await panel.load();
   await painted();
@@ -62,18 +49,10 @@ describe("ScenarioPanel", () => {
     expect(panel.el.querySelector(".sc-prob")!.textContent).toBe("72%");
   });
 
-  it("marks exposure the user actually holds", async () => {
-    const panel = await mount([scenario()], ["XOM"]);
-    const chips = [...panel.el.querySelectorAll<HTMLElement>(".sc-tk")];
-    const byName = Object.fromEntries(chips.map((c) => [c.dataset.sym, c]));
-    expect(byName.XOM.classList.contains("sc-held")).toBe(true);
-    expect(byName.SHEL.classList.contains("sc-held")).toBe(false);
-  });
-
-  it("still advises when the portfolio is unreachable", async () => {
-    const panel = await mount([scenario()], [], true);
-    expect(panel.el.querySelector(".sc-advice")).not.toBeNull();
-    expect(panel.el.querySelector(".sc-held")).toBeNull();
+  it("names the feed, not its storage tag", async () => {
+    const panel = await mount([scenario()]);
+    expect(panel.el.textContent).toContain("bbc_world");
+    expect(panel.el.textContent).not.toContain(":mainstream");
   });
 
   it("re-aims the chart when a ticker chip is clicked", async () => {
@@ -125,7 +104,6 @@ describe("ScenarioPanel", () => {
   });
 
   it("says so when the engine is down", async () => {
-    vi.spyOn(api, "portfolio").mockResolvedValue(portfolio([]));
     vi.spyOn(api, "scenarios").mockRejectedValue(new Error("502"));
     const panel = new ScenarioPanel();
     await panel.load();

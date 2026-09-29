@@ -68,6 +68,7 @@ def _fake_worker():
 
     w = Worker.__new__(Worker)
     w.sources = {"world_rss": list, "gdelt": list}
+    w.pool = None
     return w
 
 
@@ -81,7 +82,14 @@ def test_scheduler_covers_every_source_plus_correlate_and_backtest():
     worker = _fake_worker()
     scheduler = _schedule(worker, Settings(_env_file=None))
     ids = {job.id for job in scheduler.get_jobs()}
-    assert ids == {"world_rss", "gdelt", "correlations", "backtest", "retention"}
+    assert ids == {
+        "world_rss",
+        "gdelt",
+        "social",
+        "correlations",
+        "backtest",
+        "retention",
+    }
 
 
 def test_backtest_failure_does_not_take_the_worker_down():
@@ -161,3 +169,76 @@ def test_one_dead_feed_does_not_degrade_the_service():
     assert sources_healthy(rows(1))
     assert not sources_healthy(rows(16))
     assert not sources_healthy([SourceHealth(source="gdelt", status="WARN")])
+
+
+def test_events_keep_the_articles_tiered_source_tag():
+    """Correlation types read the ':<tier>' suffix; storing the worker's source key
+    ('world_rss') made every item 'other', so multi-source signals never fired."""
+    from types import SimpleNamespace
+
+    from worker.runner import Worker
+
+    seen: list[str] = []
+
+    class Pipeline:
+        def _analyze_article(self, source_name, article):
+            seen.append(source_name)
+
+        def ai_failed(self):
+            return False
+
+        def merged_into(self):
+            return {"subject": "s"}
+
+    w = Worker.__new__(Worker)
+    w.enrichers, w.pipeline = {}, Pipeline()
+    art = SimpleNamespace(url="https://x/1", source="world/bbc_world:mainstream")
+    _, merges, _ = w._analyze_blocking("world_rss", [(art, None)])
+    assert seen == ["world/bbc_world:mainstream"]
+    assert merges == [("s", "https://x/1", "world/bbc_world:mainstream")]
+
+
+def test_first_correlation_run_can_emit(monkeypatch):
+    """The ingest Action runs `--once`: a fresh process whose first run is its only
+    one, so a first-run-seeds gate meant production never stored a signal."""
+    import asyncio
+    from datetime import UTC, datetime
+
+    from worker import runner
+
+    monkeypatch.setattr(runner, "build_sources", lambda n: {})
+    monkeypatch.setattr(runner, "build_enrichers", dict)
+    monkeypatch.setattr(runner, "FinScrapePipeline", lambda store: None)
+    title = "Oil pipeline supply halt in the strait"
+    now = datetime.now(UTC)
+    rows = [
+        {
+            "subject": title,
+            "sources": [src],
+            "articles": [f"https://{i}"],
+            "timestamp": now,
+            "lat": None,
+            "lon": None,
+        }
+        for i, src in enumerate(["a:wire", "b:gov", "c:intel"])
+    ]
+    written: list = []
+
+    class Pool:
+        async def fetch(self, *a):
+            return rows
+
+        async def execute(self, *a):
+            written.append(a[2])
+
+    async def nothing(*a):
+        return []
+
+    async def first_run():
+        w = runner.Worker(Pool())  # PostgresEvents needs a running loop
+        monkeypatch.setattr(w, "_recent_markets", nothing)
+        monkeypatch.setattr(w, "_recent_predictions", nothing)
+        return await w.run_correlations()
+
+    assert asyncio.run(first_run()) > 0
+    assert "convergence" in written

@@ -8,14 +8,13 @@ import {
   type DateCount,
   type FeedInfo,
   type HealthResponse,
-  type Portfolio,
   type RssItem,
   type Sector,
   type Sentiment,
   type Suggestion,
 } from "../api";
 import { CHANNELS, countries, embedUrl } from "../data/channels";
-import { escapeHtml, timeAgo } from "../util";
+import { escapeHtml, sourceLabel, timeAgo } from "../util";
 import { VIZ_COLORS, barChart, calibration, columns, signColor, sparkline, stackedBar } from "./viz";
 import { history, record } from "./series";
 import { type Candle, type Prediction, type Quote, type Scenario, type ScenarioLeg } from "../api";
@@ -566,6 +565,12 @@ function bucketMidpoint(bucket: string): number {
   return Number.isFinite(hi) ? (lo + hi) / 2 : lo;
 }
 
+const TIER_NOTE: Record<string, string> = {
+  empirical: "from past outcomes",
+  "thin-data": "few past outcomes, mostly prior",
+  "no-outcomes": "prior only, no outcomes yet",
+};
+
 export class PredictionPanel extends Panel {
   constructor() {
     super({ id: "prediction", title: "Prediction — calibrated event impact", w: 6, h: 5 });
@@ -616,10 +621,11 @@ export class PredictionPanel extends Panel {
           const pct = Math.round(pr.p_verdict_correct * 100);
           return (
             `<div class="pred-card">` +
-            `<div class="pred-top"><b>${escapeHtml(pr.event.ticker || pr.event.subject.slice(0, 30))}</b>` +
+            `<div class="pred-top"><b>${escapeHtml(pr.event.verdict)}${pr.event.ticker ? ` · ${escapeHtml(pr.event.ticker)}` : ""}</b>` +
             `<span class="pred-p">${pct}%</span></div>` +
+            `<div class="pred-subj">${escapeHtml(pr.event.subject)}</div>` +
             `<div class="pred-bar"><i style="width:${pct}%;background:${pct >= 55 ? "#16c784" : pct <= 45 ? "#ea3943" : "#f5a623"}"></i></div>` +
-            `<div class="muted pred-note">P(verdict correct) · ${pr.data_tier} · emp.share ${Math.round(pr.empirical_share * 100)}%</div>` +
+            `<div class="muted pred-note">chance the call is right · ${TIER_NOTE[pr.data_tier] ?? pr.data_tier}</div>` +
             `</div>`
           );
         })
@@ -753,7 +759,7 @@ export class SentimentPanel extends Panel {
   }
   private render(body: HTMLElement, s: Sentiment): void {
     if (!s.total_posts) {
-      body.innerHTML = `<p class="empty">No social posts for ${escapeHtml(s.ticker)}.</p>`;
+      body.innerHTML = `<p class="empty">No Reddit post in the last 7 days mentions ${escapeHtml(s.ticker)}.</p>`;
       return;
     }
     const cls = s.sentiment_score >= 0 ? "up" : "down";
@@ -774,41 +780,6 @@ export class SentimentPanel extends Panel {
       ]) +
       `<div class="muted">bull ${s.bullish_count} · bear ${s.bearish_count} · neut ${s.neutral_count} · ${escapeHtml(s.platforms.join(", ") || "—")}</div>` +
       `<ul class="news">${posts}</ul>`;
-  }
-}
-
-export class PortfolioPanel extends Panel {
-  constructor() {
-    super({ id: "portfolio", title: "Portfolio", w: 4, h: 3 });
-  }
-  async load(): Promise<void> {
-    try {
-      this.render(await api.portfolio());
-    } catch {
-      this.setContent('<p class="empty">Portfolio unavailable.</p>');
-    }
-  }
-  private render(p: Portfolio): void {
-    const positions = p.positions.length
-      ? p.positions
-          .map(
-            (pos) =>
-              `<tr><td>${escapeHtml(pos.ticker)}</td><td>${pos.shares}</td><td>$${pos.avg_cost}</td></tr>`,
-          )
-          .join("")
-      : '<tr><td colspan="3" class="muted">No positions.</td></tr>';
-    const watch = p.watchlists.length
-      ? p.watchlists
-          .map(
-            (w) =>
-              `<li><b>${escapeHtml(w.name)}</b>: ${escapeHtml((w.tickers || []).join(", ")) || "—"}</li>`,
-          )
-          .join("")
-      : '<li class="muted">No watchlists.</li>';
-    this.setContent(
-      `<table class="feed"><thead><tr><th>Ticker</th><th>Shares</th><th>Cost</th></tr></thead><tbody>${positions}</tbody></table>` +
-        `<ul class="news">${watch}</ul>`,
-    );
   }
 }
 
@@ -953,7 +924,6 @@ function legBars(legs: ScenarioLeg[], label: string): string {
 }
 
 export class ScenarioPanel extends Panel {
-  private held = new Set<string>();
 
   constructor() {
     super({ id: "scenarios", title: "Scenarios — what to do about it", w: 12, h: 7 });
@@ -964,16 +934,6 @@ export class ScenarioPanel extends Panel {
   }
 
   async load(): Promise<void> {
-    // Positions only decorate the exposure chips, so a missing portfolio must
-    // not cost the advice.
-    try {
-      const portfolio = await api.portfolio();
-      this.held = new Set(
-        portfolio.positions.map((p) => String(p.ticker || "").toUpperCase()),
-      );
-    } catch {
-      this.held = new Set();
-    }
     try {
       this.render(await api.scenarios());
     } catch {
@@ -998,14 +958,11 @@ export class ScenarioPanel extends Panel {
     const color = STANCE_COLOR[scenario.stance] ?? VIZ_COLORS.muted;
     const pct = Math.round(scenario.probability * 100);
     const chips = scenario.exposure
-      .map((leg) => {
-        const owned = this.held.has(leg.name);
-        return (
-          `<button class="sc-tk${owned ? " sc-held" : ""}" data-sym="${escapeHtml(leg.name)}" ` +
-          `title="${owned ? "in your portfolio · " : ""}net tilt ${leg.tilt.toFixed(2)}">` +
-          `${escapeHtml(leg.name)} ${leg.direction === "up" ? "▲" : "▼"}</button>`
-        );
-      })
+      .map(
+        (leg) =>
+          `<button class="sc-tk" data-sym="${escapeHtml(leg.name)}" title="net tilt ${leg.tilt.toFixed(2)}">` +
+          `${escapeHtml(leg.name)} ${leg.direction === "up" ? "▲" : "▼"}</button>`,
+      )
       .join("");
     const chain = scenario.chain
       .map((fx) => `<li>${escapeHtml(fx)}</li>`)
@@ -1028,7 +985,7 @@ export class ScenarioPanel extends Panel {
       (chips ? `<div class="sc-chips">${chips}</div>` : "") +
       (chain ? `<ul class="sc-chain">${chain}</ul>` : "") +
       `<footer class="muted sc-meta">${plural(scenario.reports ?? scenario.size, "report")} · ` +
-      `${escapeHtml(scenario.sources.slice(0, 3).join(", ") || "no sources")} · ` +
+      `${escapeHtml(scenario.sources.slice(0, 3).map(sourceLabel).join(", ") || "no sources")} · ` +
       `${escapeHtml(evidence(scenario))}${caveat}</footer></article>`
     );
   }

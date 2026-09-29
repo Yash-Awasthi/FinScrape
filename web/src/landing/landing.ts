@@ -11,8 +11,7 @@ const FEATURES: [string, string, string][] = [
   ["📈", "Accuracy proof", "Historical hit-rate, by-verdict breakdown, and an equity-curve sparkline you can audit."],
   ["🛰️", "Correlation engine", "Flags when 3+ independent source-types corroborate a story — before it's news."],
   ["⚡", "Breaking-news detection", "Wire + gov + intel triangulation fires a banner the moment a story converges."],
-  ["💬", "Social sentiment", "Reddit + StockTwits bullish/bearish and volume spikes, per ticker."],
-  ["💼", "Portfolio & watchlists", "Track positions and get position-aware signal weighting."],
+  ["💬", "Social sentiment", "Bullish and bearish Reddit posts per ticker, from r/stocks, r/investing and r/wallstreetbets."],
   ["🔔", "Telegram alerts", "Push INVEST / PULL_OUT signals straight to your phone."],
   ["📊", "Markets Live", "Live quotes across 28 exchanges — US, India, China, Europe, Asia — with a watchlist and a scrolling tape."],
   ["⏱️", "Freshness guaranteed", "Only news ≤24h old, with per-source health monitoring."],
@@ -90,7 +89,7 @@ async function live(): Promise<void> {
   // A handful of scored calls is not a track record; say so rather than quote it.
   if (accuracy && accuracy.scored >= 30) {
     setText("stat-hit", `${Math.round(accuracy.hit_rate * 100)}%`);
-    setText("stat-hit-label", `hit-rate on ${accuracy.scored} calls scored against the next trading day`);
+    setText("stat-hit-label", `of ${accuracy.scored} INVEST/PULL_OUT calls right: a move of 1% or more their way by the next close`);
   } else if (accuracy) {
     setText("stat-hit", String(accuracy.scored));
     setText("stat-hit-label", "calls scored so far against realized moves");

@@ -24,3 +24,8 @@ export function timeAgo(iso: string | null | undefined, now = Date.now()): strin
   if (secs < 86_400) return `${Math.floor(secs / 3600)}h`;
   return `${Math.floor(secs / 86_400)}d`;
 }
+
+// "world/bbc_world:mainstream" -> "bbc_world", "gdelt/reuters.com:wire" -> "reuters.com".
+export function sourceLabel(tag: string): string {
+  return tag.replace(/:[a-z]+$/, "").replace(/^[^/]+\//, "");
+}

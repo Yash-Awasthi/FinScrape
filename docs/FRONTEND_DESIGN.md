@@ -35,7 +35,7 @@
 | Variant | Purpose | Panels |
 |---|---|---|
 | **World** | geopolitical events | feed, globe, stats, correlations, worldnews, livetv, calendar, accuracy |
-| **Finance** | equity intelligence | feed, globe, stats, markets, suggestions, correlations, accuracy, calendar, sentiment, portfolio |
+| **Finance** | equity intelligence | feed, globe, stats, markets, suggestions, correlations, accuracy, calendar, sentiment |
 | **News Lobby** | the news room | lobby (tabbed multi-feed), stats, suggestions, globe, signal-feed |
 | **Markets Live** | the trading tape | markets-live (quote cards by region), watchlist, stats, globe, suggestions |
 

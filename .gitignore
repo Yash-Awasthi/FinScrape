@@ -55,3 +55,4 @@ data/*.db-wal
 data/*.db-shm
 
 backups/
+.wrangler/

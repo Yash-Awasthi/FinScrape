@@ -53,8 +53,8 @@ SCORING CALIBRATION:
 VERDICT GUIDELINES:
 - INVEST: Strong positive signal (score >= 3) with high confidence.
 - OBSERVE: Mildly positive or unclear (score 1-2), warrants monitoring.
-- CAUTIOUS: Mildly negative or ambiguous (score -1 to 0), exercise caution.
-- PULL_OUT: Strong negative signal (score <= -2), significant downside risk.
+- CAUTIOUS: Mildly negative or ambiguous (score -2 to 0), exercise caution.
+- PULL_OUT: Strong negative signal (score <= -3), significant downside risk.
 
 You return ONLY valid JSON. No commentary, no markdown fences."""
 

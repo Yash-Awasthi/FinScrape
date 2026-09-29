@@ -1,23 +1,16 @@
-"""GET /api/sentiment?ticker= — social sentiment (Reddit + StockTwits) via finscrape.
+"""GET /api/sentiment?ticker= — Reddit sentiment from posts the worker stored.
 
-The scrapers hit public, unauthenticated, and FLAKY endpoints with blocking `requests`,
-so the call runs in a threadpool, behind a circuit breaker, with a medium TTL cache.
-Any failure (timeout, rate-limit, open breaker) degrades to an empty result — the panel
-shows "no data", never an error.
+Reddit blocks anonymous JSON and throttles RSS after one request from a server IP,
+so the worker fetches (worker/social.py) and this route only reads Postgres.
 """
 
 from __future__ import annotations
 
-import asyncio
-
 from fastapi import APIRouter, Query
 
-from server import cache
-from server.circuit import CircuitBreaker
+from server import db
 
 router = APIRouter()
-
-_sentiment_cb = CircuitBreaker("sentiment")
 
 
 def _empty(ticker: str) -> dict:
@@ -35,46 +28,44 @@ def _empty(ticker: str) -> dict:
     }
 
 
-def _fetch(ticker: str) -> dict:
-    """Blocking: scrape both platforms, aggregate to one result dict."""
-    from finscrape.sentiment.aggregator import SentimentAggregator
+def _aggregate(ticker: str, rows: list) -> dict:
+    from finscrape.sentiment.reddit import classify_sentiment, extract_ticker_mentions
 
-    agg = SentimentAggregator()
-    results = agg.scrape_all([ticker]).get(ticker, [])
-    r = agg.aggregate(results)
-    return {
-        "ticker": ticker,
-        "sentiment_score": round(r.sentiment_score, 4),
-        "bullish_count": r.bullish_count,
-        "bearish_count": r.bearish_count,
-        "neutral_count": r.neutral_count,
-        "total_posts": r.total_posts,
-        "bullish_pct": round(r.bullish_pct, 4),
-        "volume_spike": r.volume_spike,
-        "platforms": [x.platform for x in results if x.total_posts > 0],
-        "top_posts": [
+    hits = [r for r in rows if extract_ticker_mentions(r["title"], [ticker])]
+    moods = [classify_sentiment(r["title"]) for r in hits]
+    bull, bear = moods.count("bullish"), moods.count("bearish")
+    out = _empty(ticker)
+    out.update(
+        sentiment_score=round((bull - bear) / len(hits), 4) if hits else 0.0,
+        bullish_count=bull,
+        bearish_count=bear,
+        neutral_count=len(hits) - bull - bear,
+        total_posts=len(hits),
+        bullish_pct=round(bull / (bull + bear), 4) if bull + bear else 0.0,
+        platforms=["reddit"] if hits else [],
+        top_posts=[
             {
-                "text": (p.text or "")[:280],
-                "author": p.author,
-                "platform": p.platform,
-                "url": p.url,
+                "text": r["title"][:280],
+                "author": r["author"],
+                "platform": f"r/{r['subreddit']}",
+                "url": r["url"],
             }
-            for p in r.top_posts[:8]
+            for r in hits[:8]
         ],
-    }
+    )
+    return out
 
 
 @router.get("/api/sentiment")
 async def sentiment(ticker: str = Query(..., min_length=1, max_length=10)) -> dict:
     sym = ticker.upper().strip()
     try:
-        result = await asyncio.to_thread(
-            lambda: cache.get_or_set(
-                f"sentiment:{sym}",
-                cache.MEDIUM,
-                lambda: _sentiment_cb.call(lambda: _fetch(sym)),
-            )
+        rows = await db.pool().fetch(
+            "SELECT url, subreddit, author, title FROM social_posts "
+            "WHERE published_at > now() - interval '7 days' AND title ILIKE '%' || $1 || '%' "
+            "ORDER BY published_at DESC",
+            sym,
         )
-    except Exception:  # noqa: BLE001 - any upstream failure (incl. CircuitOpen) → empty
+    except Exception:  # noqa: BLE001 - a missing table or dropped pool reads as no posts
         return _empty(sym)
-    return result if isinstance(result, dict) else _empty(sym)
+    return _aggregate(sym, rows)

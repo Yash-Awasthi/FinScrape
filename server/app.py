@@ -31,7 +31,6 @@ from server.routes import events as events_routes
 from server.routes import health as health_routes
 from server.routes import insight as insight_routes
 from server.routes import market as market_routes
-from server.routes import portfolio as portfolio_routes
 from server.routes import sentiment as sentiment_routes
 from server.routes import telegram as telegram_routes
 from server.schemas import HealthResponse
@@ -169,7 +168,6 @@ def create_app() -> FastAPI:
     app.include_router(agents_routes.router)
     app.include_router(accuracy_routes.router)
     app.include_router(sentiment_routes.router)
-    app.include_router(portfolio_routes.router)
     app.include_router(alerts_routes.router)
     app.include_router(telegram_routes.router)
     _guard_mutating_routes(geopolitical_router)

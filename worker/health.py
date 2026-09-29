@@ -87,3 +87,12 @@ async def aggregate_health(pool: asyncpg.Pool, stale_after_min: int = 60) -> lis
             }
         )
     return out
+
+
+async def forget_retired_sources(pool: asyncpg.Pool, current: list[str]) -> None:
+    """Drop health rows for top-level sources the worker no longer builds; per-feed
+    `world/<key>` rows are left to the feed registry."""
+    await pool.execute(
+        "DELETE FROM source_health WHERE position('/' in source) = 0 AND source <> ALL($1::text[])",
+        current,
+    )

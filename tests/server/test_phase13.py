@@ -1,4 +1,4 @@
-"""Phase 13 — sentiment / portfolio / telegram / prompt-A-B (no DB, no network).
+"""Phase 13 — sentiment / telegram / prompt-A-B (no DB, no network).
 
 Each route is mounted on a throwaway FastAPI app (like test_hardening) so we exercise
 behaviour without the DB lifespan; network + Telegram sends are monkeypatched/no-op.
@@ -48,25 +48,11 @@ def _sentiment_client() -> TestClient:
     return TestClient(app)
 
 
-def test_sentiment_degrades_to_empty_on_error(monkeypatch):
-    def boom(_ticker):
-        raise RuntimeError("upstream down")
-
-    monkeypatch.setattr(sentiment_routes, "_fetch", boom)
+def test_sentiment_degrades_to_empty_without_the_database():
     r = _sentiment_client().get("/api/sentiment?ticker=aapl")
     assert r.status_code == 200
     body = r.json()
     assert body["ticker"] == "AAPL" and body["total_posts"] == 0
-
-
-def test_sentiment_returns_fetch_result(monkeypatch):
-    monkeypatch.setattr(
-        sentiment_routes,
-        "_fetch",
-        lambda t: {"ticker": t, "total_posts": 5, "sentiment_score": 0.3},
-    )
-    r = _sentiment_client().get("/api/sentiment?ticker=tsla")
-    assert r.json()["total_posts"] == 5 and r.json()["ticker"] == "TSLA"
 
 
 # --- telegram webhook -------------------------------------------------------

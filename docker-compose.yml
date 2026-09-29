@@ -1,8 +1,5 @@
-# WorldFin — local-first compose (Phase 0: postgres + api).
-# Worker, web, ollama, redis arrive in later phases; redis is wired now as an
-# opt-in profile so nothing breaks when it's absent.
-
-version: "3.8"
+# WorldFin local stack: postgres, api, worker and web; redis is an opt-in profile.
+# Postgres listens on 127.0.0.1 only, so the default password never leaves the machine.
 
 services:
   postgres:
@@ -11,14 +8,12 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: worldfin
-      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-worldfin}
       POSTGRES_DB: worldfin
-    secrets:
-      - db_password
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
-      - "${WORLDFIN_PG_HOST_PORT:-5433}:5432"
+      - "127.0.0.1:${WORLDFIN_PG_HOST_PORT:-5433}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U worldfin -d worldfin"]
       interval: 5s
@@ -46,15 +41,19 @@ services:
     container_name: worldfin-api
     restart: unless-stopped
     environment:
-      WORLDFIN_DATABASE_URL: postgresql://worldfin:${POSTGRES_PASSWORD}@postgres:5432/worldfin
+      WORLDFIN_DATABASE_URL: postgresql://worldfin:${POSTGRES_PASSWORD:-worldfin}@postgres:5432/worldfin
       WORLDFIN_HOST: 0.0.0.0
       WORLDFIN_PORT: "8000"
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      FINSCRAPE_WIRE_API: ${FINSCRAPE_WIRE_API:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       FINSCRAPE_MODEL: ${FINSCRAPE_MODEL:-auto}
       FINSCRAPE_API_KEY: ${FINSCRAPE_API_KEY:-local-dev-key}
       WORLDFIN_REDIS_URL: ${WORLDFIN_REDIS_URL:-}
       WORLDFIN_LOG_JSON: ${WORLDFIN_LOG_JSON:-true}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
@@ -108,16 +107,21 @@ services:
     container_name: worldfin-worker
     restart: unless-stopped
     environment:
-      WORLDFIN_DATABASE_URL: postgresql://worldfin:${POSTGRES_PASSWORD}@postgres:5432/worldfin
+      WORLDFIN_DATABASE_URL: postgresql://worldfin:${POSTGRES_PASSWORD:-worldfin}@postgres:5432/worldfin
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      FINSCRAPE_WIRE_API: ${FINSCRAPE_WIRE_API:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       FINSCRAPE_MODEL: ${FINSCRAPE_MODEL:-auto}
+      FINSCRAPE_HEURISTIC_FALLBACK: ${FINSCRAPE_HEURISTIC_FALLBACK:-true}
       WORLDFIN_WORKER_INTERVAL_MIN: ${WORLDFIN_WORKER_INTERVAL_MIN:-15}
       WORLDFIN_GDELT_INTERVAL_MIN: ${WORLDFIN_GDELT_INTERVAL_MIN:-30}
       WORLDFIN_LOG_JSON: ${WORLDFIN_LOG_JSON:-true}
       WORLDFIN_METRICS_PORT: ${WORLDFIN_METRICS_PORT:-9100}
     expose:
       - "9100"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
@@ -160,7 +164,3 @@ services:
 
 volumes:
   pgdata:
-
-secrets:
-  db_password:
-    file: ./secrets/db_password.txt

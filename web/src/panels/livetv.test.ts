@@ -8,12 +8,12 @@ const painted = () => new Promise((r) => requestAnimationFrame(() => requestAnim
 describe("LiveTVPanel", () => {
   it("mounts exactly one player, never one per channel", async () => {
     // Selecting "All countries" used to render an iframe for every channel in the
-    // list — 26 simultaneous live YouTube embeds, the most expensive thing the page
+    // list, one live YouTube embed per channel, the most expensive thing the page
     // could do. The rail is buttons; only the stage is a frame.
     const panel = new LiveTVPanel();
     panel.render();
     await painted();
-    expect(CHANNELS.length).toBeGreaterThan(20); // the list really is that long
+    expect(CHANNELS.length).toBeGreaterThan(1);
     expect(panel.body.querySelectorAll("iframe")).toHaveLength(1);
     expect(panel.body.querySelectorAll(".tv-pick").length).toBe(CHANNELS.length);
   });

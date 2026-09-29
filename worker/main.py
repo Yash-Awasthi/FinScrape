@@ -23,6 +23,7 @@ from finscrape.logging_config import setup_logging
 from server import db
 from server.settings import Settings, get_settings
 from worker.runner import Worker, prune_old_rows
+from worker.social import refresh_social
 
 log = logging.getLogger("worldfin.worker.main")
 
@@ -86,6 +87,16 @@ def _schedule(worker: Worker, s: Settings) -> AsyncIOScheduler:
             max_instances=1,
             coalesce=True,
         )
+    scheduler.add_job(
+        refresh_social,
+        "interval",
+        minutes=s.worker_interval_minutes,
+        args=[worker.pool],
+        id="social",
+        jitter=60,
+        max_instances=1,
+        coalesce=True,
+    )
     # Outcomes mature against a price window, not a scrape window, so this keeps its
     # own hourly cadence instead of riding the ingest interval.
     scheduler.add_job(

@@ -140,6 +140,23 @@ class TestDeduplication:
         # The important thing is no crash
 
 
+    @patch("finscrape.pipeline.call_ai")
+    @patch("finscrape.pipeline.get_market_data", return_value=[])
+    def test_subject_keeps_its_case_and_dedup_ignores_it(self, mock_market, mock_ai, mock_ai_response):
+        # Lowercased subjects read "iran agrees to suspend enrichment" on every panel.
+        pipeline = FinScrapePipeline(MemoryEvents())
+        art = lambda n: ScrapedArticle(  # noqa: E731
+            url=f"https://example.com/{n}", title="Apple Reports Record Q4 Earnings",
+            text="Apple Inc. (AAPL) reported record fourth-quarter earnings. " * 20,
+            source="yahoo", age_hours=1.0, raw_tickers=["AAPL"],
+        )
+        mock_ai.return_value = {**mock_ai_response, "subject": "Apple reports record Q4 earnings"}
+        event = pipeline._analyze_article("yahoo", art(1))
+        assert event.subject == "Apple reports record Q4 earnings"
+        mock_ai.return_value = {**mock_ai_response, "subject": "APPLE REPORTS RECORD Q4 EARNINGS!"}
+        assert pipeline._analyze_article("reuters", art(2)) is None
+
+
 # --- Alert action tests ---
 
 class TestAlertActions:

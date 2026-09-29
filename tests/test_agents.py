@@ -198,8 +198,23 @@ class TestAgentVerdict:
         assert AgentVerdict._verdict_from_score(1) == "OBSERVE"
         assert AgentVerdict._verdict_from_score(0) == "CAUTIOUS"
         assert AgentVerdict._verdict_from_score(-1) == "CAUTIOUS"
-        assert AgentVerdict._verdict_from_score(-2) == "PULL_OUT"
+        assert AgentVerdict._verdict_from_score(-2) == "CAUTIOUS"
+        assert AgentVerdict._verdict_from_score(-3) == "PULL_OUT"
         assert AgentVerdict._verdict_from_score(-5) == "PULL_OUT"
+
+    def test_verdict_thresholds_mirror_and_agree(self):
+        # A -2 PULL_OUT hit 56% against a +2 OBSERVE; the call needs the same
+        # strength on both sides, and every copy of the mapping must agree.
+        from finscrape.council.base import AgentVerdict as CouncilVerdict
+        from finscrape.models import Verdict
+
+        mirror = {"INVEST": "PULL_OUT", "OBSERVE": "CAUTIOUS"}
+        for s in range(1, 6):
+            assert mirror[Verdict.from_score(s).value] == Verdict.from_score(-s).value
+        for s in range(-5, 6):
+            v = Verdict.from_score(s).value
+            assert AgentVerdict._verdict_from_score(s) == v
+            assert CouncilVerdict._verdict_from_score(s) == v
 
 
 # ===================================================================

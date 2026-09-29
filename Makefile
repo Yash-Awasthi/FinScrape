@@ -28,8 +28,8 @@ down: ## Stop the stack (keep volumes)
 logs: ## Tail api + postgres logs
 	$(COMPOSE) logs -f api postgres
 
-seed: ## Load the curated demo dataset (events + accuracy + correlations)
-	$(PY) python -m server.seed
+seed: ## Load the curated demo dataset into the compose stack
+	$(COMPOSE) exec -T api python -m server.seed
 
 backup: ## Dump the database to backups/ (keeps the newest 14)
 	$(PY) python scripts/db_backup.py backup

@@ -1,0 +1,8 @@
+{
+  // GitHub runs the ingest schedule every few hours at best; this cron dispatches it.
+  "name": "winfin-ingest-cron",
+  "main": "index.js",
+  "compatibility_date": "2026-09-20",
+  "workers_dev": false,
+  "triggers": { "crons": ["13,43 * * * *"] }
+}

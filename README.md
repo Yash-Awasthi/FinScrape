@@ -37,7 +37,7 @@
 | 🤖 **7-Agent Council** | Analyst personas debate with rebuttal rounds; judge model reads full transcript |
 | 📊 **Accuracy Proof** | Backtested hit-rate, by-verdict breakdown, equity-curve sparkline, Brier score |
 | 🔗 **Correlation Engine** | Fires when 3+ source-types corroborate; flags news↔market divergence |
-| 💬 **Social Sentiment** | Reddit + StockTwits sentiment aggregation with bot detection |
+| 💬 **Social Sentiment** | Bullish and bearish Reddit posts per ticker, read by RSS each ingest run |
 | 📱 **Telegram Alerts** | Subscribe to INVEST/PULL_OUT signals via Telegram bot |
 | 🔄 **Prompt A/B** | Test prompt variants with accuracy-by-variant comparison |
 | 🏥 **Source Health** | Per-source freshness monitoring with circuit breakers |
@@ -46,24 +46,34 @@
 
 ## 🚀 Quick Start
 
-```bash
-# Clone and setup
-git clone https://github.com/Yash-Awasthi/fin-scrape.git && cd fin-scrape
-cp .env.example .env          # defaults work; no key needed for the seeded demo
+Needs Docker and git. No LLM key is required: the demo loads a seeded dataset, and
+the worker falls back to keyword analysis until a model is configured.
 
-# One command: full dashboard with sample data
-make demo                     # docker compose up + seed → populated dashboard
-#   web → http://localhost:8080   ·   api → http://localhost:8010/docs
+```bash
+git clone https://github.com/Yash-Awasthi/fin-scrape.git && cd fin-scrape
+cp .env.example .env
+make demo                     # build, start postgres + api + worker + web, seed demo data
+#   web → http://localhost:8080 (dashboard at /app/)   ·   api → http://localhost:8010/docs
 ```
+
+Without `make`: `docker compose up -d --build`, then `docker compose exec api python -m server.seed`.
+Stop with `make down` (`docker compose down`); add `-v` to drop the database.
+Port taken? Set `WORLDFIN_API_HOST_PORT` (8010) or `WORLDFIN_PG_HOST_PORT` (5433) in `.env`;
+the web port is 8080.
+
+To analyse live news with a model, set `OPENAI_BASE_URL`, `OPENAI_API_KEY` and
+`FINSCRAPE_MODEL` in `.env` (any OpenAI-compatible endpoint; a host Ollama is
+`http://host.docker.internal:11434/v1` from inside compose) and run `docker compose up -d`.
 
 ### No Docker?
 
 ```bash
-# Run pieces directly
-pip install -r requirements.txt
-# Start Postgres, then:
-python -m server.main          # API at :8010
-python -m worker.main --once   # Ingest cycle
+uv sync --group server                          # Python 3.13
+# point WORLDFIN_DATABASE_URL in .env at a Postgres you run, then:
+uv run python -m server.seed                    # optional demo data
+uv run python -m server.main                    # API at :8010
+uv run python -m worker.main --once             # one ingest cycle
+cd web && npm ci && npm run dev                 # dashboard at :8080, proxies /api to :8010
 ```
 
 See **[docs/DEMO.md](docs/DEMO.md)** for the scripted 5-minute walkthrough.
@@ -202,7 +212,7 @@ All via env (`.env.example`). Key ones:
 ## 🧪 Testing
 
 ```bash
-make test                      # 737 tests (5 skip without Postgres)
+make test                      # pytest; DB tests need WORLDFIN_TEST_DATABASE_URL
 # or
 pytest tests/ -v               # Full suite
 pytest tests/test_debate.py    # Council debate tests

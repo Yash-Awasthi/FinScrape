@@ -34,10 +34,12 @@ from server.queries import get_recent_predictions
 from server.settings import get_settings
 from worker.health import (
     finish_scrape_run,
+    forget_retired_sources,
     record_feed_health,
     record_source_health,
     start_scrape_run,
 )
+from worker.social import refresh_social
 from worker.sources import Item, build_enrichers, build_sources
 
 log = logging.getLogger("worldfin.worker")
@@ -201,8 +203,9 @@ class Worker:
         self.sources = build_sources(max_articles)
         self.enrichers = build_enrichers()
         self.pipeline = FinScrapePipeline(PostgresEvents(pool))
-        # Correlation state persists across cycles (first cycle emits nothing).
-        self._corr_snapshot: dict | None = None
+        # Not None: `--once` runs have no earlier cycle to seed from, and the
+        # correlations upsert already drops repeats.
+        self._corr_snapshot: dict | None = {}
         self._corr_seen: set[str] = set()
         # Per-topic mention counts from previous cycles. detect_velocity_spike needs a
         # non-zero baseline to fire at all, so without this it can never emit.
@@ -224,7 +227,9 @@ class Worker:
             try:
                 if enrich:
                     article = enrich(article)
-                fe = self.pipeline._analyze_article(source_name, article)
+                # The article's tag carries the tier correlation types read.
+                tag = article.source or source_name
+                fe = self.pipeline._analyze_article(tag, article)
             except Exception as exc:  # noqa: BLE001 - one bad article must not end the cycle
                 log.warning("[%s] analyze failed: %s", source_name, exc)
                 continue
@@ -233,7 +238,7 @@ class Worker:
             if fe is None:
                 matched = self.pipeline.merged_into()
                 if matched and matched.get("subject"):
-                    merges.append((matched["subject"], article.url, source_name))
+                    merges.append((matched["subject"], article.url, tag))
                 continue
             d = fe.to_dict()
             lat, lon = geocode_event(
@@ -295,8 +300,11 @@ class Worker:
 
     async def run_all_once(self) -> None:
         """Run every source once concurrently (startup warm-up), then correlate."""
+        await forget_retired_sources(self.pool, list(self.sources))
         await asyncio.gather(
-            *(self.run_source(n) for n in self.sources), return_exceptions=True
+            *(self.run_source(n) for n in self.sources),
+            refresh_social(self.pool),
+            return_exceptions=True,
         )
         await self.run_correlations()
 
@@ -331,7 +339,7 @@ class Worker:
 
     async def run_correlations(self, lookback_hours: int = 24) -> int:
         """Cluster recent events + flag corroboration/divergence; persist signals.
-        First call seeds the snapshot and emits nothing (Appendix A). Returns count."""
+        Returns count."""
         if not get_settings().enable_correlation:
             return 0
         rows = await self.pool.fetch(

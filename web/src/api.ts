@@ -250,18 +250,6 @@ export interface Reliability {
   brier: { brier: number | null; n: number };
 }
 
-export interface Position {
-  ticker: string;
-  shares: number;
-  avg_cost: number;
-  [k: string]: unknown;
-}
-
-export interface Portfolio {
-  positions: Position[];
-  watchlists: { name: string; tickers: string[] }[];
-  summary: Record<string, unknown>;
-}
 
 // Empty = same-origin (dev proxy / nginx). Set VITE_API_BASE for split hosting.
 export const API_BASE = (import.meta.env.VITE_API_BASE ?? "").replace(/\/$/, "");
@@ -326,7 +314,6 @@ export const api = {
     getJSON<AgentAnalysis>(
       `/api/agents/analyze${qs({ ticker, analysts, debate_rounds })}`,
     ),
-  portfolio: () => getJSON<Portfolio>("/api/portfolio"),
   predict: (id: number) => getJSON<Prediction>(`/api/predict/${id}`),
   reliability: () => getJSON<Reliability>("/api/reliability"),
 };
