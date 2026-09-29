@@ -719,7 +719,7 @@ export class AccuracyPanel extends Panel {
 /** Tiny inline-SVG equity curve. */
 
 export class SentimentPanel extends Panel {
-  private ticker = "AAPL";
+  private ticker = "NVDA"; // the most-discussed large cap on the tracked subreddits
   constructor() {
     super({ id: "sentiment", title: "Sentiment", w: 4, h: 3 });
     window.addEventListener("worldfin:select-symbol", (e) => {

@@ -5,12 +5,12 @@ what has closed.
 
 ## Where things stand
 
-As of 29 Sep 2026: one data store (Postgres) for the API, worker, alerts, portfolio,
-Telegram and digest; the standalone SQLite mode is retired. A daily Laya refresh
-("WorldFin Laya daily", 03:30) labels unsure headlines with Claude and promotes a
-LoRA candidate only on a gain (item 11). Gates green: ruff, pyright, selfcheck,
-1146 pytest with the test database, 65 vitest, build; CI green including the new
-`e2e-live` job. `task.md` holds item 9 (deploy) and the parked Laya item 11.
+As of 29 Sep 2026: demo-ready. A fresh clone starts with `make demo`; production is
+Pages + Render + Supabase with ingest dispatched by a Cloudflare cron Worker (item 9
+lists what the owner still has to do). `docs/DEMO.md` is the walkthrough. Gates
+green: ruff, pyright, selfcheck, 1164 pytest with the test database, 66 vitest,
+build, 5 Playwright, CI `e2e-live`. The portfolio feature is gone (WorldFin tracks
+every event, not holdings). Laya (item 11) is parked; ReliefWeb (G1) is gated.
 
 ## Measured, worth not re-deriving
 
@@ -43,6 +43,13 @@ LoRA candidate only on a gain (item 11). Gates green: ruff, pyright, selfcheck,
   tickers now survive only if a text source finds them or the article names the
   company. Stored events before 23ae9432 keep their old tickers. The keyword map
   still gives defence names (LMT, NOC, RTX) to political stories such as Meloni's.
+- Track record, 29 Sep, re-scored per ticker in the called direction: 321 decisive calls,
+  59.5% (PULL_OUT 175/292, INVEST 16/29), nearly all June-July. By first source:
+  world_rss 64% (140), gdelt 62% (115), coingecko 51% (43). By score: PULL_OUT at -2
+  56% (205, mean called move -0.12%), -3 67%, -4 79%; INVEST at +3 65%.
+- GitHub fired the `13,43 * * * *` ingest schedule every 3-6 hours, not every 30 min.
+- Reddit: the JSON API and StockTwits answer 403 everywhere; Reddit RSS answers a
+  GitHub runner once, then 429s. Only 6 of 26 Live TV channels played in an embed.
 
 ## Closed
 
@@ -82,13 +89,23 @@ LoRA candidate only on a gain (item 11). Gates green: ruff, pyright, selfcheck,
 - GDELT moved from the DOC API to the 15-minute events export (0ed1af47): no rate limit, geo included, titles from URL slugs, kept only when the entity map ties them to a sector. Live: one cycle fetched 30, inserted 2, merged 2, zero 429s. Interval back to 15 min.
 - One store: portfolio (1a6bfafc), Telegram subscribers (c6a7e752), alert rules and history (4337630e) and the email digest (65442944) moved to Postgres; the standalone SQLite mode is retired (8eaa40d2). `main.py` keeps `trading`, `quotes` and `devtools`; the digest is `python -m worker.digest daily|weekly`. Live: portfolio and alert-rule CRUD round-trip, a digest of 18 events built, the pipeline merged a repeat into its Postgres row.
 
+- Scenario-heavy PULL_OUT came from asymmetric thresholds (-2 was PULL_OUT, +2 only OBSERVE); PULL_OUT now needs -3 (ea55ba75). Stored verdicts keep their label, by owner decision. The landing hit rate states what it counts (c32706d5).
+- A fresh clone could not start: compose read a gitignored password file and the seed needed host Python (74245893). Check: clean clone, `make demo` and the no-Docker path both served events.
+- Correlations had never stored a row: events carried the worker key instead of the tiered tag, and `--once` always hit the first-run gate (6b67eafb). Live: new rows read `gdelt/slguardian.org:wire`; signals wait for tagged events to fill the 24h window.
+- Live TV pruned to the six channels whose embed plays (f556dd87); subjects keep their casing (841b2d35); prediction cards name event and verdict (e1be4904); CoinGecko price rows out of scenarios (7ccd2783); retired sources leave the health list (af8dee62). Live: verified in Playwright on production, zero console errors.
+- Portfolio feature removed on owner request (dbb6357d); its tables are left in place.
+- Sentiment reads Reddit posts the worker stores from one RSS fetch per run (2dd328b0). Live: an ingest run stored 100 posts; the panel shows four NVDA posts.
+- Ingest dispatched every 30 min by the Cloudflare cron Worker `winfin-ingest-cron` (0293b598); it needs its GH_TOKEN secret (item 9).
+- Demo script rewritten (9019d1a5). Merged as PR #11 (942f9e59).
+
 ## Local hazards
 
 - `tests/server/` truncates its database, so it reads
   `WORLDFIN_TEST_DATABASE_URL` and refuses any database not named `*_test`.
   Locally that is `worldfin_test` on port 5434 (set as a Windows user variable).
-- The nexus Docker stack holds 8000, 5432, 6379, 3000 and 4173. WorldFin's API
-  runs on 8010; compose publishes Postgres on 5433, Redis on 6380, Grafana on
+- The nexus Docker stack holds 8000, 5432, 6379, 3000 and 4173, and another local
+  project (`adapfit-backend-1`) took 127.0.0.1:8010 on 29 Sep; while it runs, start
+  WorldFin's API with `WORLDFIN_PORT=8011`. WorldFin's API normally runs on 8010; compose publishes Postgres on 5433, Redis on 6380, Grafana on
   3002; Playwright previews on 4183. The native Postgres 17 service runs on 5434
   and `.env` points `WORLDFIN_DATABASE_URL` there.
 - Everything lives in Postgres. `data/finscrape.db` and `data/portfolio.db` are

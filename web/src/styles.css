@@ -134,6 +134,7 @@ body {
 .news a:hover { color: var(--accent); }
 
 .cal { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px; }
+.cal > :not(.day) { flex-basis: 100%; }
 .cal .day {
   background: var(--panel-head); border: 1px solid var(--border); color: var(--text);
   border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 12px;

@@ -1,117 +1,65 @@
-# WorldFin — Demo & Deployment
+# WorldFin demo script
 
-A scripted ~5-minute walkthrough of the WorldFin global market-intelligence dashboard,
-plus one-command bring-up and a cloud-deploy appendix. This is the deal-quality demo:
-ingest geopolitics + world news → resolve which tickers/sectors an event moves → judge
-the impact → show it on a live globe → and **prove the calls were right** over time.
+About eight minutes. WorldFin reads world news, decides which tickers and sectors
+each story moves, and keeps score of whether its calls came true.
 
----
+Live: landing https://winfin.pages.dev, dashboard https://winfin.pages.dev/app/.
+Open the API health page (https://winfin-api.onrender.com/health) a minute before
+you start: the free Render instance sleeps after 15 idle minutes and takes 30-50 s
+to wake. Offline, `make demo` serves the same dashboard on a seeded dataset (see
+the README quickstart).
 
-## Prerequisites
+## 1. Landing page (1 min)
 
-- **Docker + Docker Compose** (or Podman with the `docker compose` shim).
-- ~4 GB free RAM, ports **8080** (web), **8010** (api), **5433** (postgres) free.
-- **No API key required** — the dashboard runs on the seeded dataset out of the box.
-  For live ingestion, supply an LLM backend (local Ollama *or* a BYOK OpenRouter key) in
-  `.env`; see [`.env.example`](../.env.example).
+- The stat band is live: events analysed, feeds watched, and the hit rate.
+- Say what the hit rate counts: INVEST and PULL_OUT calls that saw a move of 1% or
+  more their way by the next close. OBSERVE and CAUTIOUS make no directional call
+  and are not scored.
+- The embedded dashboard below is the real one, not a mock-up.
 
----
+## 2. Scenarios, "what to do about it" (2 min)
 
-## One-command bring-up (clean machine)
+- Each card is a recent story turned into an instruction: risk-on or risk-off, which
+  sector to add or reduce, and the tickers that carry it (▲ ▼).
+- The percentage is the chance the call is right, from the verdict's past record.
+- The footer names the sources and says when a call has no scored record yet.
+- Click a ticker chip: the chart re-aims to that symbol.
 
-```bash
-git clone <repo-url> fin-scrape && cd fin-scrape
-cp .env.example .env          # defaults work; no key needed for the seeded demo
-make demo                     # builds + starts the stack, then seeds it
-```
+## 3. Signal Feed, Globe and Inspector (2 min)
 
-`make demo` = `make up` (postgres + api + web, waits for health) **+** `make seed` (loads
-the curated historical window). When it finishes:
+- The feed is every analysed event, newest first; filter by verdict.
+- Press `j` / `k` to walk it. The Inspector on the right shows the reasoning, the
+  affected companies with their direction, second-order effects and the sources.
+- The globe places the same events; colour is the verdict.
 
-- **Dashboard:** http://localhost:8080
-- **API docs:** http://localhost:8010/docs
+## 4. The proof: Accuracy, Prediction, Source Health (2 min)
 
-To reseed at any time (idempotent — same-day re-runs insert nothing new):
+- Accuracy: the realized hit rate by verdict and the running equity line.
+- Prediction: calibration of stated confidence against outcomes (the dashed line is
+  perfect calibration) and per-event odds that say whether they rest on outcomes or
+  only on the prior.
+- Source Health: every feed with its last fetch; a failing feed shows here instead
+  of silently dropping out.
 
-```bash
-make seed
-```
+## 5. Context panels (1 min)
 
-> The seed timestamps are **relative** (resolved to "the last ~6 days" at load time), so
-> the globe, feed, calendar, and accuracy curve are full of fresh signal on every launch —
-> never an empty-state demo.
+Markets Live and the ticker tape, Sector Heat, Suggestions (most-mentioned tickers),
+Sentiment (Reddit posts per ticker), News Lobby (raw feeds), Live TV, and Dates
+(click a day to filter the feed).
 
----
+## Honest limits
 
-## The 5-minute walkthrough
-
-**1. The globe (≈30s).** Open http://localhost:8080. Events are plotted by location and
-colored by verdict — **green = INVEST, red = PULL_OUT**, amber/neutral for OBSERVE/CAUTIOUS.
-Note the cluster over the **Strait of Hormuz** and the **Red Sea** shipping lane: this is a
-*world* monitor, not just a ticker feed. The globe auto-rotates when idle.
-
-**2. Breaking correlation (≈45s).** The **BreakingNewsBanner** fires when independent
-source-types corroborate one story. The seed includes a **triangulation** signal (wire +
-gov + intel agree on the Red Sea disruption) and a **convergence** signal (Hormuz across
-3+ source types). Open the **CorrelationPanel** — this is the "before it's news"
-differentiator: one event surfacing across independent sources inside a tight time window.
-
-**3. Click an event → the judgment chain (≈90s).** Click the **Hormuz closure** row in the
-SignalFeed (or its globe point) and read it in the **Inspector** rail on the right — or press
-`j` / `k` to walk the feed, which fills the rail as you go. The feed stays visible beside it.
-This is the core thesis on one screen:
-- **Verdict + signal score** (PULL_OUT, −4) with the reasoning.
-- **Affected entities, role-tagged:** Oil majors *(primary)*, Shipping lines *(supplier)*,
-  Defense contractors *(competitor)*, Marine insurers *(regulator)* — each with a
-  directional impact. A geopolitics headline resolved into **who it moves**.
-- **Second-order effects:** war-risk premiums, refiner scramble, LNG spillover.
-- **Calibrated probability** that the verdict's direction realizes, with its data tier and
-  sample size — the number is auditable, not asserted.
-- Click **↻ Re-run AI analysis** for on-demand expansion (uses your LLM backend if configured).
-
-**4. The trust layer — AccuracyPanel (≈60s).** This is what convinces a company. The
-**AccuracyPanel** shows the historical **hit-rate** (~87% on the seeded window), a
-**by-verdict** breakdown (INVEST vs PULL_OUT), and an **equity curve** sparkline built from
-realized price moves. The calls aren't just plausible — they're *scored*.
-
-**5. Variants + panels (≈45s).** Use the **variant switch** (World / Finance / Crypto) to
-reflow the panel grid. Tour the supporting panels: **MarketsPanel** (most-mentioned tickers
-rolled up from events), **CryptoPanel**, **CalendarPanel** (click a day to load it),
-**WorldNewsPanel**, **LiveTVPanel**. Panels drag/resize and persist their layout.
-
-**Close (≈30s).** The pitch in one line: *geopolitics + world news in → which
-tickers/sectors it moves → judged first- and second-order impact on a live globe → with the
-receipts to prove the calls were right.*
-
----
-
-## Verifying without the browser
-
-Every panel is backed by an endpoint you can curl:
-
-```bash
-curl -s localhost:8010/api/stats        # totals + by-verdict
-curl -s localhost:8010/api/dates        # calendar day counts
-curl -s localhost:8010/api/accuracy     # hit-rate + equity curve
-curl -s localhost:8010/api/correlations # breaking-correlation signals
-curl -s localhost:8010/api/markets      # most-mentioned tickers
-```
-
----
-
-## Appendix: cloud deploy ("web later" is a flip, not a rewrite)
-
-The same `docker-compose.yml` runs on any Docker host — the local-first design means cloud
-is a config change, not a port:
-
-1. Provision a small VPS / Fly.io / Render box with Docker.
-2. Copy the repo + a production `.env` (set `WORLDFIN_CORS_ORIGINS` to your web origin, add
-   a real `FINSCRAPE_API_KEY`, and an LLM backend for live ingestion).
-3. `make up` (or `docker compose up -d --build`) behind a TLS-terminating reverse proxy.
-4. `make seed` once for an instantly-populated dashboard; the **worker** service then keeps
-   ingesting live world + finance events on its schedule.
-5. Observability: `docker compose -f docker-compose.yml -f docker-compose.obs.yml up -d`
-   adds Prometheus + Grafana + Loki (see [`RUNBOOK.md`](RUNBOOK.md)).
-
-Auth, multi-tenant hosting, and managed Postgres are clean seams left for later (see
-PLAN.md "Explicitly out of scope").
+- The record is young: about 320 scored calls, mostly from June and July, and most
+  of them PULL_OUT. Since 29 Sep a PULL_OUT needs a -3 score, mirroring INVEST at +3;
+  older calls keep the verdict they were given.
+- Ingest runs every 30 minutes on free infrastructure (GitHub Actions dispatched by
+  a Cloudflare cron). The dashboard updates on refresh, not by live push.
+- The analysis uses free LLMs with a fallback chain. When every model fails, a keyword
+  heuristic keeps ingest running; those rows are kept out of scenarios and the record.
+- Tickers come from the text and a sector map, so a political story can still carry
+  defence or energy names.
+- Correlations need several independent sources on one story, so the panel is often
+  empty on a quiet day.
+- Sentiment reads one Reddit RSS fetch per ingest run; small caps are rarely
+  mentioned. Crypto moves cannot be scored against stock prices.
+- It is analysis only. Nothing places a trade.

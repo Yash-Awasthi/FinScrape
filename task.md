@@ -55,27 +55,29 @@ Facts about the owner's setup that the items below rely on (as of 28 Sep 2026):
 ## Open
 
 ### 9. Production: what is left
-Live since June on Cloudflare Pages (`winfin.pages.dev`), Render (`winfin-api`) and
-the `ingest` Action; moved from Neon to Supabase on 29 Sep (9,690 events copied, RLS
-on every table). LLM: TokenHarbor free models with a fallback (worker qwen → mimo,
-API mimo → deepseek; benchmark in `docs/DEPLOY.md`). PRs #6–#10 merged.
-- Finish `scripts/reanalyse.py` over the older heuristic rows (4,100+ before the last
-  7 days) at mimo speed, or leave them: scenarios and the backtest already skip them.
-- Watch the next few `ingest` runs: qwen timeouts fall back to mimo; GDELT via the
-  export file. `keepwarm` pings Render on weekdays 02:00–18:00 UTC.
-- Rotate the Supabase password, Render key and TokenHarbor key pasted into a chat,
-  and the Nexus Neon password printed by mistake.
-- Once Supabase has run a week cleanly, delete the Neon project.
-- Email digest: add a scheduled Action for `python -m worker.digest daily` once the
-  owner sets `RESEND_PROXY_URL` and `FINSCRAPE_DIGEST_TO`.
-
-### 15. The track record
-Scoring now signs each ticker by its entity impact (2a92ceb2) and skips fallback
-verdicts. PULL_OUT calls dominate (782 of 834) and many are July conflict calls.
-- Read the re-scored `/api/accuracy` by verdict and by source; decide what the
-  landing page should claim.
-- The worker emits PULL_OUT for most conflict news; check whether the prompt or the
-  score thresholds push it there, against the realized moves now available.
+Live on Cloudflare Pages (`winfin.pages.dev`), Render (`winfin-api`), Supabase and
+the `ingest` Action, dispatched every 30 minutes by the Cloudflare cron Worker
+`winfin-ingest-cron` (`ops/ingest-cron`). PRs #6-#11 merged.
+- The cron Worker needs its `GH_TOKEN` secret (fine-grained PAT, this repo, Actions
+  read and write): `cd ops/ingest-cron && npx wrangler secret put GH_TOKEN`. Until
+  then GitHub's own schedule fires every 3-6 hours.
+- Watch two dispatched runs: qwen timeouts fall back to mimo (29 Sep: three timeouts,
+  each recovered on retry, so the fallback was not exercised), GDELT export has no
+  429s (0 on 29 Sep), Reddit RSS stores posts (100 on 29 Sep), correlations start
+  emitting once the 24-hour window holds tier-tagged events.
+- Owner: rotate the Supabase password, Render key and TokenHarbor key pasted into a
+  chat, and the Nexus Neon password; then update Render env and GitHub secrets.
+- Owner: delete the Neon project after a clean week on Supabase (from 29 Sep).
+- Owner: email digest needs `RESEND_PROXY_URL` and `FINSCRAPE_DIGEST_TO`; then add a
+  scheduled Action for `python -m worker.digest daily`.
+- GitGuardian flags the local-only compose default password (`worldfin`, Postgres
+  bound to 127.0.0.1); mark it a false positive in the dashboard.
+- The "Workers Builds: fin-scrape" check fails on every commit, master included; it
+  belongs to another Cloudflare account (`bb494...`). Disconnect it or fix it there.
+- `world/times_of_israel` fails from GitHub runners (blocked there, fine locally).
+- About 4,600 heuristic-era rows were left unanalysed on purpose: re-running them costs
+  about 4.5 hours of the shared LLM key for roughly 600 useful rows, and scenarios and
+  the backtest already skip them.
 
 ### 11. Laya: stage 1 and the daily loop (parked by the owner, 29 Sep)
 The current promoted checkpoint stays in use; the 03:30 task keeps running unattended.
