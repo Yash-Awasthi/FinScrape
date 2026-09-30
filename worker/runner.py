@@ -69,7 +69,7 @@ def _visit_key(url: str) -> str:
 
 
 async def unvisited(pool: asyncpg.Pool, items: list[Item]) -> list[Item]:
-    """Drop items whose URL an earlier cycle already judged."""
+    """Drop items whose URL an earlier cycle judged or an earlier item repeats."""
     urls = [_visit_key(a.url) for a, _ in items]
     seen = {
         r["url"]
@@ -77,7 +77,13 @@ async def unvisited(pool: asyncpg.Pool, items: list[Item]) -> list[Item]:
             "SELECT url FROM visited_urls WHERE url = ANY($1::text[])", urls
         )
     }
-    return [item for item, url in zip(items, urls) if not url or url not in seen]
+    kept = []
+    for item, url in zip(items, urls):
+        if not url or url not in seen:
+            kept.append(item)
+            if url:
+                seen.add(url)
+    return kept
 
 
 async def mark_visited(pool: asyncpg.Pool, source: str, urls: list[str]) -> None:

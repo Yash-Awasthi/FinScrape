@@ -2,6 +2,12 @@ import { expect, test } from "@playwright/test";
 
 // Runs against the real API and the `server.seed` dataset; see playwright.live.config.ts.
 test("seeded events flow through feed, inspector and scenarios", async ({ page }) => {
+  // Only browser egress is filtered; all local REST/WS responses come from FastAPI.
+  await page.route("**/*", (route) =>
+    new URL(route.request().url()).origin === "http://127.0.0.1:4184"
+      ? route.continue()
+      : route.abort(),
+  );
   await page.goto("/app/");
 
   const feed = page.locator("table.feed");

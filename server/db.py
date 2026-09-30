@@ -59,34 +59,46 @@ def _migration_files() -> list[Path]:
     return sorted(MIGRATIONS_DIR.glob("[0-9]*.sql"))
 
 
+_MIGRATION_LOCK = 0x574F524C  # any constant shared by every runner
+
+
 async def run_migrations(p: asyncpg.Pool) -> list[str]:
     """Apply any unapplied migrations in order. Returns the filenames applied this call."""
     async with p.acquire() as conn:
-        await conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS schema_migrations (
-                filename   TEXT PRIMARY KEY,
-                applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
-            )
-            """
-        )
-        done = {
-            r["filename"]
-            for r in await conn.fetch("SELECT filename FROM schema_migrations")
-        }
+        # The API and `server.seed` may start together; one runner at a time.
+        await conn.execute("SELECT pg_advisory_lock($1)", _MIGRATION_LOCK)
+        try:
+            return await _migrate(conn)
+        finally:
+            await conn.execute("SELECT pg_advisory_unlock($1)", _MIGRATION_LOCK)
 
-        applied: list[str] = []
-        for path in _migration_files():
-            if path.name in done:
-                continue
-            sql = path.read_text()
-            async with conn.transaction():
-                await conn.execute(sql)
-                await conn.execute(
-                    "INSERT INTO schema_migrations (filename) VALUES ($1)", path.name
-                )
-            applied.append(path.name)
-            log.info("applied migration %s", path.name)
+
+async def _migrate(conn: asyncpg.pool.PoolConnectionProxy) -> list[str]:
+    await conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS schema_migrations (
+            filename   TEXT PRIMARY KEY,
+            applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """
+    )
+    done = {
+        r["filename"]
+        for r in await conn.fetch("SELECT filename FROM schema_migrations")
+    }
+
+    applied: list[str] = []
+    for path in _migration_files():
+        if path.name in done:
+            continue
+        sql = path.read_text()
+        async with conn.transaction():
+            await conn.execute(sql)
+            await conn.execute(
+                "INSERT INTO schema_migrations (filename) VALUES ($1)", path.name
+            )
+        applied.append(path.name)
+        log.info("applied migration %s", path.name)
 
     if not applied:
         log.info("no new migrations (%d already applied)", len(done))

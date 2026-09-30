@@ -4,6 +4,11 @@ AI-powered financial intelligence with 7-agent council system.
 
 ## Quick Start
 
+For the current WorldFin API and `web/` dashboard, follow
+[Local readiness and setup](docs/LOCAL-READINESS.md). The commands and stack
+description below refer to the legacy application; current quality gates are
+defined by the root `Makefile` and `.github/workflows/ci.yml`.
+
 ```bash
 # Clone and setup
 git clone https://github.com/Yash-Awasthi/fin-scrape.git

@@ -129,15 +129,22 @@ def _company_names() -> dict[str, str]:
 
 
 @functools.lru_cache(maxsize=1)
-def listed_symbols() -> frozenset[str]:
-    """Every ticker on the SEC list."""
+def listed_titles() -> dict[str, str]:
+    """Ticker → SEC company title."""
     try:
         raw = json.loads(_COMPANY_FILE.read_text(encoding="utf-8"))
     except OSError:
-        return frozenset()
-    return frozenset(
-        str(row.get("ticker") or "").strip().upper() for row in raw.values() if isinstance(row, dict)
-    )
+        return {}
+    return {
+        str(row.get("ticker") or "").strip().upper(): str(row.get("title") or "")
+        for row in raw.values()
+        if isinstance(row, dict)
+    }
+
+
+def listed_symbols() -> frozenset[str]:
+    """Every ticker on the SEC list."""
+    return frozenset(listed_titles())
 
 
 @functools.lru_cache(maxsize=1)

@@ -1,6 +1,11 @@
 # FinScrape — Complete Windows Setup Guide
 # From zero to running dashboard, using PowerShell
 
+> This guide describes the legacy `dashboard/` application on port 8787.
+> For the current WorldFin `web/` dashboard on port 8080 and FastAPI backend,
+> use [Local readiness and setup](docs/LOCAL-READINESS.md) and the
+> [README quickstart](README.md#-quick-start).
+
 ===========================================================================
 WHAT YOU WILL HAVE AT THE END
 ===========================================================================

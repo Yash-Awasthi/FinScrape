@@ -31,6 +31,37 @@ describe("timeAgo", () => {
 });
 
 describe("SourceHealthPanel", () => {
+  it("keeps the last known statuses with a stale warning and retries", async () => {
+    const request = vi.spyOn(api, "health")
+      .mockResolvedValueOnce(health([{ source: "world/test", status: "STALE", fetched_at: "2026-01-01T00:00:00Z", record_count: 3 }]))
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce(health([{ source: "world/test", status: "OK", fetched_at: new Date().toISOString(), record_count: 4 }]));
+    const panel = new SourceHealthPanel();
+    await panel.load();
+    await painted();
+    await panel.load();
+    await painted();
+    expect(panel.body.textContent).toContain("world/test");
+    expect(panel.body.textContent).toContain("last known");
+    expect(panel.body.querySelector('[role="status"]')?.textContent).toContain("Health unavailable");
+    panel.body.querySelector<HTMLButtonElement>("button")!.click();
+    await painted();
+    expect(request).toHaveBeenCalledTimes(3);
+    expect(panel.body.textContent).not.toContain("Health unavailable");
+    expect(panel.body.textContent).toContain("last fetch");
+  });
+
+  it("summarizes stale and failing sources without claiming everything is live", async () => {
+    vi.spyOn(api, "health").mockResolvedValue(health([
+      { source: "late", status: "STALE", fetched_at: null, record_count: 1 },
+      { source: "broken", status: "WARN", fetched_at: null, record_count: 0 },
+    ]));
+    const panel = new SourceHealthPanel();
+    await panel.load();
+    await painted();
+    expect(panel.body.querySelector('[role="status"]')?.textContent).toContain("2 sources need attention");
+  });
+
   it("surfaces a failing source above healthy ones", async () => {
     vi.spyOn(api, "health").mockResolvedValue(
       health([

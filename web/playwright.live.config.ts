@@ -1,8 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// Full-stack E2E: the built SPA against the real API and a seeded Postgres. Kept out
-// of `npx playwright test` because CI has no database. Run with `npm run e2e:live`
-// and WORLDFIN_TEST_DATABASE_URL pointing at a database whose name ends in `_test`.
+// Real API + seeded SQL, with a test-only environment and upstream network guard.
+// The database must be empty, on an explicit 127.0.0.1 port, and named *_test.
 const db = process.env.WORLDFIN_TEST_DATABASE_URL ?? "";
 if (!/_test(\?|$)/.test(db)) {
   throw new Error("WORLDFIN_TEST_DATABASE_URL must name a *_test database");
@@ -21,26 +20,22 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: [
     {
-      command: `${python} -m server.seed && ${python} -m server.main`,
+      command: `"${python}" -m tests.live_e2e api`,
       cwd: "..",
-      url: `${api}/health`,
+      url: `${api}/ready`,
       reuseExistingServer: false,
       timeout: 120_000,
       env: {
-        WORLDFIN_DATABASE_URL: db,
-        WORLDFIN_HOST: "127.0.0.1",
-        WORLDFIN_PORT: "8012",
-        // Unreachable on purpose: embeddings degrade at once instead of waiting on Ollama.
-        OLLAMA_HOST: "http://127.0.0.1:9",
-        FINSCRAPE_LAYA: "0",
+        WORLDFIN_TEST_DATABASE_URL: db,
       },
     },
     {
-      command: "npm run build && npm run preview -- --host 127.0.0.1 --port 4184 --strictPort",
+      command: `"${python}" -m tests.live_e2e web`,
+      cwd: "..",
       url: "http://127.0.0.1:4184",
       reuseExistingServer: false,
       timeout: 120_000,
-      env: { WORLDFIN_API_URL: api },
+      env: { WORLDFIN_TEST_DATABASE_URL: db },
     },
   ],
 });

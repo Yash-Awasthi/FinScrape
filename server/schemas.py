@@ -47,6 +47,10 @@ class EventOut(EventIn):
     created_at: datetime
 
 
+class IngestBatch(BaseModel):
+    events: list[EventIn]
+
+
 class IngestResponse(BaseModel):
     ok: bool = True
     inserted: int

@@ -270,7 +270,9 @@ fin-scrape/
 - [ ] **Phase 17:** Discord/Slack alert channels
 - [ ] **Phase 18:** Mobile app (React Native)
 
-See **[PLAN.md](PLAN.md)** for the full 2-year roadmap.
+See **[task.md](task.md)** for current work and owner-gated items, and
+**[plan.md](plan.md)** for audit follow-ups. For verified local setup and check
+results, see **[docs/LOCAL-READINESS.md](docs/LOCAL-READINESS.md)**.
 
 ---
 

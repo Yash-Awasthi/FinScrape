@@ -606,7 +606,30 @@ def grounded_tickers(
         name = str(e.get("name") or "").strip()
         while (core := _COMPANY_SUFFIX.sub("", name)) != name:
             name = core
-        if len(name) >= 3 and re.search(rf"\b{re.escape(name.lower())}\b", text_lower):
-            named.add(e.get("ticker"))
+        ticker = e.get("ticker")
+        if (
+            len(name) >= 3
+            and re.search(rf"\b{re.escape(name.lower())}\b", text_lower)
+            and _ticker_is(ticker, name)
+        ):
+            named.add(ticker)
     backed = set(from_text) | named
     return [t for t in dict.fromkeys(llm) if t in backed]
+
+
+def _ticker_is(ticker: object, name: str) -> bool:
+    """The LLM writes a symbol for unlisted names (flydubai "FZ") or borrows another
+    issuer's (Vanguard "VGI"), so the curated map or the SEC title must agree."""
+    from finscrape.analysis.ticker_map import resolve_company_tickers
+    from finscrape.entity_map import listed_titles
+
+    if not isinstance(ticker, str):
+        return False
+    if ticker in resolve_company_tickers(name):
+        return True
+    title = listed_titles().get(ticker.upper(), "").split()
+    head = re.sub(r"[^a-z0-9]", "", title[0].lower()) if title else ""
+    compact = re.sub(r"[^a-z0-9]", "", name.lower())
+    return (len(head) >= 2 and compact.startswith(head)) or (
+        len(compact) >= 3 and head.startswith(compact)
+    )

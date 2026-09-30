@@ -43,6 +43,13 @@ const STATS = {
 
 // Fulfill every REST call the dashboard makes on load. Shapes mirror src/api.ts.
 async function mockBackend(page: import("@playwright/test").Page) {
+  // Keep this suite local, including third-party images and embedded media.
+  await page.route("**/*", (route) => {
+    const url = new URL(route.request().url());
+    return url.origin === "http://127.0.0.1:4183"
+      ? route.continue()
+      : route.abort();
+  });
   await page.route("**/api/**", async (route) => {
     const path = new URL(route.request().url()).pathname;
     const json = (() => {

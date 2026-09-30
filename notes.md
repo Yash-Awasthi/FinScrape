@@ -5,12 +5,12 @@ what has closed.
 
 ## Where things stand
 
-As of 29 Sep 2026: demo-ready. A fresh clone starts with `make demo`; production is
+As of 30 Sep 2026: demo-ready. A fresh clone starts with `make demo`; production is
 Pages + Render + Supabase with ingest dispatched by a Cloudflare cron Worker (item 9
 lists what the owner still has to do). `docs/DEMO.md` is the walkthrough. Gates
-green: ruff, pyright, selfcheck, 1164 pytest with the test database, 66 vitest,
-build, 5 Playwright, CI `e2e-live`. The portfolio feature is gone (WorldFin tracks
-every event, not holdings). Laya (item 11) is parked; ReliefWeb (G1) is gated.
+green: ruff, pyright, selfcheck, 1193 pytest with the test database, 69 vitest,
+build, 5 Playwright, 1 real-API Playwright (`e2e-live`). The portfolio feature is gone (WorldFin tracks
+every event, not holdings). Laya runs in the ingest Action (item 11); ReliefWeb is live.
 
 ## Measured, worth not re-deriving
 
@@ -102,6 +102,12 @@ every event, not holdings). Laya (item 11) is parked; ReliefWeb (G1) is gated.
 - Demo readiness (30 Sep list) re-checked: `/api/accuracy` 323 decisive calls, 59.4% (PULL_OUT 176/294, INVEST 16/29), matching the 29 Sep re-score; since the -3 PULL_OUT rule, 30 of 321 new events are PULL_OUT (26% before). The owner keeps the live hit rate on the landing page. The 54 heuristic rows from the qwen 429s go through the new `reanalyse` Action (`gh workflow run reanalyse.yml -f days=7`).
 - Scenario cards showed `N/A` and `—` exposure chips: the LLM writes placeholders as the ticker of unlisted entities. `clean_tickers` checks ticker shape, scenarios reuse it, migration 0010 cleans stored rows (PR #20). Live: no placeholder chips on `/api/scenarios`, 0 of the latest 500 events carry one (10 before).
 - The `reanalyse` Action's first run upgraded the 54 heuristic rows from the qwen 429s: 40 updated, 10 rejected, 4 failed (5m26s). Production Playwright pass at 1440x900 and 390x844 on `/` and `/app/`: zero console errors.
+- Real-API browser test isolated: `tests/live_e2e.py` strips credentials, blocks outbound network and needs an empty `*_test` database on 127.0.0.1 (f84eda48). Check: 1 passed on a fresh temporary cluster.
+- Invalid ingest batches returned 500; a typed body now answers 422 with the failing index (d10b2209). URLs repeated inside one fetch were analysed twice (746038a5). Scenario cache ignored coverage merges into old rows (ec9cb551). Source Health blanked on one failed poll; it keeps the last statuses with a retry (3311ceaf).
+- Clean clone, 30 Sep: `make demo` failed twice. Host `node_modules` overwrote the image's (web `.dockerignore`, 82b7e92d), and API startup raced `make seed` on migrations (advisory lock, f43dd0de). nginx's CSP blocked fonts, YouTube and the landing's `/app/` frame (a5ddbdb0). The landing hero was squeezed by the globe canvas; textures loaded over http failed CORS locally (d7a8794c, c2c9837d). Check: `make demo` and the no-Docker path both serve 16 seeded events, zero console errors at 1440x900 and 390x844.
+- LLM entity tickers were kept whenever the name appeared in the text, so unlisted companies got invented or borrowed symbols (flydubai FZ, Vanguard VGI, OpenAI MSFT). The curated map or the SEC title must now agree (e87da694); 284 of 1,264 recent entity tickers would drop, country ETFs for politicians included. Stored events keep their tickers.
+- Ingest watched 30 Sep (36689858687 scheduled, 36691543848 cron-dispatched) after the 3000-token fix: zero 429s, zero JSON parse errors, 3m36s and 3m35s, "Laya classifier loaded", 8 and 7 new events all with sectors.
+- ReliefWeb (G1) approved the app name on 30 Sep; it is in `.env` and the repo variable `RELIEFWEB_APPNAME`, which the ingest Action passes on. Check: the v2 API answered 200 and the ingestor parsed 20 disasters.
 
 ## Local hazards
 

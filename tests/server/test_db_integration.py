@@ -79,3 +79,17 @@ def test_date_count_matches_feed_count():
         assert len(feed) == count == dates.get(day)
 
     asyncio.run(body())
+
+
+def test_concurrent_migration_runs_do_not_collide():
+    # compose starts the API while `make seed` runs; both apply migrations at once.
+    async def body():
+        pool = await _fresh_pool()
+        await pool.execute("DELETE FROM schema_migrations")
+        try:
+            await asyncio.gather(db.run_migrations(pool), db.run_migrations(pool))
+        finally:
+            await db.run_migrations(pool)
+            await db.disconnect()
+
+    asyncio.run(body())

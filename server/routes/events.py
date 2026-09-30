@@ -7,7 +7,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from fastapi.encoders import jsonable_encoder
 
 from server import db, queries
@@ -19,7 +19,7 @@ from server.routes.telegram import notify_new_events
 from server.schemas import (
     DashboardStats,
     DatesResponse,
-    EventIn,
+    IngestBatch,
     IngestResponse,
 )
 from server.settings import get_settings
@@ -34,17 +34,8 @@ router = APIRouter()
     response_model=IngestResponse,
     dependencies=[Depends(require_api_key)],
 )
-async def ingest(
-    background: BackgroundTasks, payload: dict = Body(...)
-) -> IngestResponse:
-    raw = payload.get("events")
-    if not isinstance(raw, list):
-        from fastapi import HTTPException
-
-        raise HTTPException(status_code=400, detail="Expected { events: [...] }")
-
-    # Validate/default each event through the public contract before it hits the DB.
-    events = [EventIn.model_validate(e).model_dump() for e in raw]
+async def ingest(background: BackgroundTasks, payload: IngestBatch) -> IngestResponse:
+    events = [e.model_dump() for e in payload.events]
     result = await ingest_events(db.pool(), events)
 
     if result["inserted_ids"]:

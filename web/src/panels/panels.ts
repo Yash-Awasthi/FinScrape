@@ -855,20 +855,46 @@ export class SourceHealthPanel extends Panel {
     super({ id: "sources", title: "Source Health", w: 4, h: 5 });
   }
 
+  private last: HealthResponse | null = null;
+
   async load(): Promise<void> {
     try {
-      this.render(await api.health());
+      this.last = await api.health();
+      this.render(this.last, false);
     } catch {
-      this.setContent('<p class="empty">Health unavailable.</p>');
+      this.render(this.last, true);
     }
   }
 
-  private render(health: HealthResponse): void {
+  /** A failed fetch keeps the last good answer on screen, marked as such. */
+  private render(health: HealthResponse | null, failed: boolean): void {
+    const status = document.createElement("p");
+    status.setAttribute("role", "status");
+    status.className = "muted";
+    if (failed) {
+      status.textContent = health ? "Health unavailable, showing last known statuses. " : "Health unavailable. ";
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.textContent = "Retry";
+      retry.addEventListener("click", () => void this.load());
+      status.append(retry);
+    }
+    if (!health) {
+      this.setContent(status);
+      return;
+    }
     const sources = [...health.sources].sort((a, b) => {
       const rank = (s: string) => (s === "WARN" ? 0 : s === "STALE" || s === "EMPTY" ? 1 : 2);
       return rank(a.status) - rank(b.status) || a.source.localeCompare(b.source);
     });
     const db = health.db ? "" : '<li class="src-row"><span class="src-dot bad"></span><b>database</b><span class="muted">unreachable</span></li>';
+    if (!failed) {
+      const attention = sources.filter((s) => s.status !== "OK").length;
+      const newest = sources.map((s) => s.fetched_at).filter(Boolean).sort().at(-1) ?? null;
+      status.textContent = attention
+        ? `${plural(attention, "source")} need${attention === 1 ? "s" : ""} attention`
+        : `All ${plural(sources.length, "source")} live · last fetch ${timeAgo(newest)}`;
+    }
     if (!sources.length && !db) {
       this.setContent('<p class="empty">No sources have reported yet.</p>');
       return;
@@ -895,7 +921,9 @@ export class SourceHealthPanel extends Panel {
         document.querySelector<HTMLElement>('.panel[data-id="feed"]')?.scrollIntoView({ behavior: "smooth" });
       }
     });
-    this.setContent(list);
+    const wrap = document.createElement("div");
+    wrap.append(status, list);
+    this.setContent(wrap);
   }
 }
 

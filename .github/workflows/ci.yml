@@ -25,7 +25,7 @@ jobs:
           --health-cmd "pg_isready -U worldfin" --health-interval 5s
           --health-timeout 5s --health-retries 10
     env:
-      WORLDFIN_TEST_DATABASE_URL: postgresql://worldfin:worldfin@localhost:5432/worldfin_test
+      WORLDFIN_TEST_DATABASE_URL: postgresql://worldfin:worldfin@127.0.0.1:5432/worldfin_test
       WORLDFIN_REQUIRE_PG: "1"
     steps:
       - uses: actions/checkout@v7
@@ -39,15 +39,9 @@ jobs:
       # NEW_DIRS from the Makefile — the vendored finscrape/ tree carries pre-existing
       # lint debt and is out of scope by design (see pyproject [tool.ruff]).
       - name: Lint
-        run: |
-          uv run -p 3.13 ruff check server worker finscrape/scrapers/world \
-            finscrape/ingestors tests/server tests/test_world_phase2.py \
-            tests/test_worker_phase3.py tests/test_correlate_phase4.py
+        run: make lint
       - name: Format check
-        run: |
-          uv run -p 3.13 ruff format --check server worker finscrape/scrapers/world \
-            finscrape/ingestors tests/server tests/test_world_phase2.py \
-            tests/test_worker_phase3.py tests/test_correlate_phase4.py
+        run: make fmt-check
       - name: Typecheck
         run: uv run -p 3.13 pyright
       - name: Selfcheck
@@ -97,7 +91,7 @@ jobs:
           --health-cmd "pg_isready -U worldfin" --health-interval 5s
           --health-timeout 5s --health-retries 10
     env:
-      WORLDFIN_TEST_DATABASE_URL: postgresql://worldfin:worldfin@localhost:5432/worldfin_test
+      WORLDFIN_TEST_DATABASE_URL: postgresql://worldfin:worldfin@127.0.0.1:5432/worldfin_test
     defaults:
       run:
         working-directory: web

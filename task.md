@@ -77,10 +77,9 @@ the `ingest` Action, dispatched every 30 minutes by the Cloudflare cron Worker
 - The "Workers Builds: fin-scrape" check fails on every commit, master included; it
   belongs to another Cloudflare account (`bb494...`). Disconnect it or fix it there.
 - 30 Sep: qwen3.8-flash:free answered 429 "campaign allowance" on every call, so the
-  ingest Action now runs mimo first and deepseek as fallback. First run after the switch
-  (36672462394): zero 429s, one call fell to deepseek, 5 events in 4m49s. Both LLMs
-  still return malformed JSON now and then ("Expecting ',' delimiter"), which costs the
-  call; a tolerant parser would save it.
+  ingest Action runs mimo first and deepseek as fallback. After the 3000-token fix
+  (c200573f) two runs (36689858687, 36691543848) had zero 429s and zero JSON parse
+  errors in about 3.5 minutes each; a tolerant parser is not needed for now.
 - `world/times_of_israel` fails from GitHub runners (blocked there, fine locally).
 - About 4,600 heuristic-era rows were left unanalysed on purpose: re-running them costs
   about 4.5 hours of the shared LLM key for roughly 600 useful rows, and scenarios and
@@ -94,11 +93,10 @@ Claude is the teacher: it writes and reviews the labels; the owner does not revi
 2. Done, on 243 gold: no Laya 155 (63.8%), stock Laya 155 (63.8%), promoted LoRA 185
    (76.1%). Stock Laya gains energy and financials but pulls 26 `other` stories into a
    sector; the LoRA keeps most `other` right and lifts materials 5/16 to 15/16.
-3. Running: the owner moved stage 1 forward; `scripts/laya_train/stage1.ps1` started
-   by hand at 10:21 on 30 Sep (log `laya-ft\logs\stage1-20260930-1021.log`) and the
-   one-shot 22:00 task was deleted. It stops Docker Desktop, WSL, Ollama and the WorldFin
-   processes, keeps `laya-ft\stage1` only if it beats the stock model by `MIN_GAIN` cases,
-   and logs the verdict to `history.jsonl` (`"stage1": true`). Record it here.
+3. Running: relaunched detached at 16:18 on 30 Sep on mains power (the 10:21 start was
+   stopped at 11:20 so the teacher-round LoRA could have the GPU). Nothing was kept; `data\pretrain.json` (37,384 cases) is built, so a
+   rerun goes straight to training. Rerun with `Desktop\Laya stage 1.cmd` on mains power,
+   overnight (5-7 hours); it logs the verdict to `history.jsonl` (`"stage1": true`).
 4. Automatic after step 3: the daily LoRA trains from `stage1` when it was kept, and
    from the stock model otherwise. Read two nights of `history.jsonl`.
 5. Done: `laya._load` reloads when the weights file under `FINSCRAPE_LAYA_MODEL`
@@ -136,7 +134,35 @@ Claude is the teacher: it writes and reviews the labels; the owner does not revi
    not drop by more than 0.02. Earlier checkpoints: `laya-ft\current-prev-20260929`,
    `laya-ft\current-teacher-20260930`.
 8. The 30 Sep 03:30 daily run trained but was stopped before scoring (exit
-   0xC000013A); the task has "stop if going on batteries" set, the likely cause.
+   0xC000013A). No power event was logged; Windows logged ephemeral TCP port exhaustion at
+   03:49, the same minute. "Stop if going on batteries" is now off for this task only
+   (30 Sep); read the 1 Oct log to see whether scoring completes.
+9. Teacher round 2 (30 Sep, not promoted). The 3,000 events round 1 took were the newest;
+   the older production events (to June) plus one live source pass gave 3,120 new headlines
+   after the usual cleaning, and 2,352 after collapsing rewrites of the same story (token
+   overlap 0.4). Claude hand-labelled the 1,320 with a nonzero stored score or from the live
+   pass: 224 up, 138 down, 958 neutral; 4:1 into train (2,881) and holdout (601). The LoRA
+   (moves x3, stock base because stage 1 was stopped) scored, on 243 gold + 601 holdout:
+
+   | model | gold | holdout | balanced | up | down | neutral |
+   |---|---|---|---|---|---|---|
+   | current (`laya-20260930-0428`) | 200 | 484 | 0.684 | 47/90 | 35/58 | 370/399 |
+   | round 2 candidate | 194 | 477 | 0.729 | 66/90 | 32/58 | 360/399 |
+
+   It lost 13 sector cases and 3 down calls, so it was not promoted; the labels stay in
+   `laya-ft\data` for the nightly run. Down moves are still the weakest class.
+10. Down moves (30 Sep): repeating down cases x5 and up x3 on the same data, scored the same
+    way on 243 gold + 601 holdout:
+
+    | model | gold | holdout | balanced | up | down | neutral |
+    |---|---|---|---|---|---|---|
+    | current (`laya-20260930-0428`) | 200 | 484 | 0.684 | 47/90 | 35/58 | 370/399 |
+    | down x5, from stock | 194 | 476 | 0.730 | 60/90 | 34/58 | 374/399 |
+    | down x5, from current | 202 | 478 | 0.696 | 49/90 | 35/58 | 375/399 |
+
+    Neither was promoted: both lost sector cases (14 and 4) and neither caught one more down
+    move, so `daily.py` keeps x3 for both. Training from the current checkpoint cost fewer
+    sector cases. Heavier repeats do not help; the next try is more down-move labels.
 
 Checked and dropped (29 Sep): labelling headlines by which SPDR sector ETF moved most
 against SPY after them. Only 22 of 72 trading days from June to September had one
@@ -157,12 +183,5 @@ task "WorldFin Laya daily" runs it at 03:30; state, logs and `history.jsonl` liv
   labels arrive, were promotions real gains. Spot-check Claude's labels.
 
 ## Gated
-
-### G1. ReliefWeb source
-v1 is retired (410) and v2 rejects unapproved app names (403). Needs the owner to
-request an app name at https://apidoc.reliefweb.int/parameters#appname and set
-`RELIEFWEB_APPNAME` in `.env`; the source turns itself on after that.
-Checked 28 Sep 2026: `.env` has no `RELIEFWEB_APPNAME`, and the worker built no reliefweb source.
-Requested 28 Sep 2026 with the owner's NIT Raipur address; waiting on ReliefWeb's reply.
 
 G2–G5 were decided by the owner on 28 Sep 2026 and became items 9–11.

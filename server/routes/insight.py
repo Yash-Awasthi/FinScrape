@@ -38,8 +38,9 @@ _SCENARIO_COLUMNS = f"""
 # Newest id keys the cache — a new event is the only thing that can change the
 # answer inside the TTL — and the row count tells the key which window it is.
 _SCENARIO_HEAD = f"""
-    SELECT max(id) AS newest, count(*) AS considered
-    FROM (SELECT id FROM events WHERE {_ANALYSED} ORDER BY id DESC LIMIT $1) w
+    SELECT max(id) AS newest, count(*) AS considered,
+           sum(length(articles::text)) AS coverage
+    FROM (SELECT id, articles FROM events WHERE {_ANALYSED} ORDER BY id DESC LIMIT $1) w
 """
 
 # Clustering embeds every distinct subject through Ollama, so an uncached
@@ -180,11 +181,11 @@ async def scenarios(
     from finscrape.analysis.clusters import build_storylines
     from finscrape.scenarios import build_scenarios
 
-    # The cache key needs only the newest id and how many rows the window holds,
-    # so settle a hit before paying for 200 event rows and every scored outcome.
+    # Settle a hit before paying for 200 event rows. Coverage merges add articles
+    # to old rows without a new id, so their total size is part of the key.
     head = await db.pool().fetchrow(_SCENARIO_HEAD, window)
     newest, considered = (head["newest"] or 0), (head["considered"] or 0)
-    key = f"scenarios:{newest}:{considered}:{limit}"
+    key = f"scenarios:{newest}:{considered}:{head.get('coverage') or 0}:{limit}"
     hit = cache.peek(key)
     if hit is not cache.MISSING:
         return {"scenarios": hit, "events_considered": considered}

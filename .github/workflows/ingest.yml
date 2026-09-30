@@ -32,6 +32,7 @@ jobs:
       WORLDFIN_WORKER_MAX_ARTICLES: "6"
       WORLDFIN_ENABLE_CORRELATION: "true"
       FINSCRAPE_MARKET_TTL: "900"
+      RELIEFWEB_APPNAME: ${{ vars.RELIEFWEB_APPNAME }}
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.2.0

@@ -167,7 +167,7 @@ async function globe(): Promise<void> {
 
     const g = (Globe as any)()(host)
       .backgroundColor("rgba(0,0,0,0)")
-      .globeImageUrl("//unpkg.com/three-globe/example/img/earth-night.jpg")
+      .globeImageUrl("https://unpkg.com/three-globe/example/img/earth-night.jpg")
       .atmosphereColor("#16c784")
       .atmosphereAltitude(0.18)
       .pointsData(pts)

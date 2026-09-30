@@ -10,7 +10,7 @@ export class GlobeView {
 
   constructor(container: HTMLElement, onSelect: (e: EventOut) => void) {
     this.globe = new Globe(container)
-      .globeImageUrl("//unpkg.com/three-globe/example/img/earth-dark.jpg")
+      .globeImageUrl("https://unpkg.com/three-globe/example/img/earth-dark.jpg")
       .backgroundColor("#0b0e14")
       .pointLat("lat")
       .pointLng("lng")

@@ -41,3 +41,21 @@ def test_sector_keywords_come_from_the_headline_and_lede_only():
     body = "Italian bond spreads narrowed. " * 20 + "Markets were hit by the U.S.-Iran war."
     assert lede_tickers("Italy's Meloni government achieves political stability", body) == []
     assert "XOM" in lede_tickers("Iran closes Strait of Hormuz", body)
+
+
+def test_named_entity_keeps_only_a_ticker_that_belongs_to_it():
+    # 30 Sep production: the LLM gave unlisted flydubai "FZ" and Vanguard a fund's "VGI".
+    text = (
+        "FlyDubai flight diverted after in-flight pilot brawl. Vanguard warns on France. "
+        "ExxonMobil and Alibaba also named."
+    )
+    entities = [
+        {"name": "flydubai", "ticker": "FZ"},
+        {"name": "Vanguard", "ticker": "VGI"},
+        {"name": "ExxonMobil", "ticker": "XOM"},
+        {"name": "Alibaba", "ticker": "BABA"},
+    ]
+    assert grounded_tickers(["FZ", "VGI", "XOM", "BABA"], entities, [], text) == [
+        "XOM",
+        "BABA",
+    ]

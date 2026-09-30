@@ -1,7 +1,8 @@
 # WorldFin — Architecture (as built, Phases 0–4)
 
 How the system is wired today. Frontend (globe/panels) is Phase 5+; this reflects the
-backend + worker + correlation foundation. See [../PLAN.md](../PLAN.md) for the roadmap.
+backend + worker + correlation foundation. See [current tasks](../task.md) and
+[local readiness](LOCAL-READINESS.md) for the maintained workflow and verification.
 
 ## Services (docker-compose)
 
@@ -77,8 +78,8 @@ LLM is **BYOK or local Ollama**, shared with finscrape via env (`OPENAI_BASE_URL
 map above). Per article: scrape → freshness gate → `call_ai` (or council) → relevance gate → NLP
 enrich → ticker fusion → market data → heuristic score → divergence check → confidence fuse. The
 subsections below describe the pieces that changed in the 2026-08-16 analysis-layer hardening pass
-and the deliberation/quant follow-on that landed the same day; see [`../PLAN.md`](../PLAN.md) for
-the full change list.
+and the deliberation/quant follow-on that landed the same day; see
+[`../task.md`](../task.md) for current work.
 
 **Ticker resolution.** `finscrape/analysis/ticker_map.py` is the single company-name-to-ticker map;
 `finscrape/entity_map.py` is the separate sector/region-to-ticker map used for geopolitics headlines
