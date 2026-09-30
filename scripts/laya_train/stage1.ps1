@@ -26,7 +26,8 @@ Add-Type -AssemblyName System.Windows.Forms
 if ([System.Windows.Forms.SystemInformation]::PowerStatus.PowerLineStatus -ne "Online") { Stop-Early "the laptop is on battery; plug it in" }
 if ((Get-PSDrive C).Free -lt 10GB) { Stop-Early "less than 10 GB free on C:" }
 if (-not (Test-Path $Py)) { Stop-Early "CUDA venv missing at $Py" }
-& $Py -c "import torch, bitsandbytes; assert torch.cuda.is_available()" 2>$null
+# cmd swallows torch's stderr warnings, which PowerShell 5.1 would turn into errors.
+cmd /c "`"$Py`" -c `"import torch, bitsandbytes; assert torch.cuda.is_available()`" >nul 2>&1"
 if ($LASTEXITCODE -ne 0) { Stop-Early "torch cannot see the GPU or bitsandbytes is missing" }
 
 # Stay awake until this process exits; children inherit the lower priority.
@@ -43,22 +44,24 @@ Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
 
 try {
   if (-not (Test-Path "$Home2\data\pretrain.json")) {
-    & $Py -W ignore -u scripts\laya_train\build_pretrain.py "$Home2\data\pretrain.json" --extra "$Home2\data\train.json"
+    & $Py -W ignore -u scripts\laya_train\build_pretrain.py "$Home2\data\pretrain.json" --per-sector 6000 --extra "$Home2\data\train.json"
     if ($LASTEXITCODE -ne 0) { throw "build_pretrain failed" }
   }
   $Next = "$Home2\stage1-next"
   # Two minutes on the longest items: loss must fall and memory must fit, or stop now.
   "$(Get-Date -Format 'dd MMM HH:mm')  smoke test" | Set-Content -Encoding utf8 "$Home2\progress.txt"
-  & $Py -W ignore -u scripts\laya_train\train.py "$Home2\stage1-smoke" --data "$Home2\data\pretrain.json" --mode full --micro-batch 2 --balance-direction --smoke
+  & $Py -W ignore -u scripts\laya_train\train.py "$Home2\stage1-smoke" --data "$Home2\data\pretrain.json" --mode full --micro-batch 32 --balance-direction --no-distill --smoke
   $Smoke = $LASTEXITCODE
   Remove-Item -Recurse -Force "$Home2\stage1-smoke" -ErrorAction SilentlyContinue
   if ($Smoke -ne 0) { throw "smoke test failed; see the lines above" }
-  & $Py -W ignore -u scripts\laya_train\train.py $Next --data "$Home2\data\pretrain.json" --mode full --epochs 1 --micro-batch 2 --grad-accum 16 --balance-direction
+  & $Py -W ignore -u scripts\laya_train\train.py $Next --data "$Home2\data\pretrain.json" --mode full --epochs 3 --micro-batch 32 --grad-accum 1 --balance-direction --no-distill
   if ($LASTEXITCODE -ne 0) { throw "training failed" }
   Get-ChildItem $Next -Directory -Filter "epoch*" | Remove-Item -Recurse -Force
   "$(Get-Date -Format 'dd MMM HH:mm')  scoring stage1-next against the incumbent on CPU (about 25 min)" |
     Set-Content -Encoding utf8 "$Home2\progress.txt"
 
+  # Compare the raw models; the neutral discount is tuned later for the daily LoRA.
+  $env:FINSCRAPE_LAYA_NEUTRAL_SCALE = "1.0"
   @'
 import json, shutil, sys
 from datetime import UTC, datetime

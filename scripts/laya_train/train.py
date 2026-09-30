@@ -145,17 +145,24 @@ def fit_temperature(pairs: list[tuple[list[float], list[float]]]) -> float:
 
 
 def build_items(
-    model_dir: str, tok, cfg, data: Path, balance: bool = False, limit: int = 0
+    model_dir: str,
+    tok,
+    cfg,
+    data: Path,
+    balance: bool = False,
+    limit: int = 0,
+    distill: bool = True,
 ) -> list[dict]:
-    """Sector and direction items. A case missing its direction label is trained on
-    the starting model's own direction answer, so sector training does not drift it."""
+    """Sector and direction items. With `distill`, a case missing its direction label
+    is trained on the starting model's own answer so sector training does not drift
+    it; stage 1 turns that off, as the stock model's answers are mostly neutral."""
     cases = json.loads(data.read_text("utf-8"))["cases"]
     if limit:
         cases = cases[:: max(1, len(cases) // limit)][:limit]
     sector_q, direction_q = _QUESTIONS["sector"], _QUESTIONS["direction"]
     keys = list(sector_q["criteria"])
     directions = list(direction_q["criteria"])
-    base = Agent(model_dir, device="cuda")
+    base = Agent(model_dir, device="cuda") if distill else None
     items = []
     meter = Meter("building items", len(cases))
     for n, case in enumerate(cases):
@@ -177,7 +184,7 @@ def build_items(
                 items.append(it)
         if direction in directions:
             target = [1.0 if k == direction else 0.0 for k in directions]
-        elif sector:
+        elif sector and base:
             probs = base.predict(state, {"direction": direction_q})["answers"][
                 "direction"
             ]
@@ -189,6 +196,9 @@ def build_items(
         if it := item(tok, cfg, state, direction_q, target):
             if direction in directions:
                 it["label"] = direction
+            # A day's price move also carries unrelated news: half weight.
+            if case.get("source") == "fnspid-price":
+                it["w"] = 0.5
             items.append(it)
     del base
     torch.cuda.empty_cache()
@@ -198,7 +208,11 @@ def build_items(
         counts = Counter(it["label"] for it in items if "label" in it)
         for it in items:
             if "label" in it:
-                it["w"] = sum(counts.values()) / (len(counts) * counts[it["label"]])
+                it["w"] = (
+                    it.get("w", 1.0)
+                    * sum(counts.values())
+                    / (len(counts) * counts[it["label"]])
+                )
         print(
             "direction weights:",
             {
@@ -270,6 +284,9 @@ def main() -> None:
         "--smoke", action="store_true", help="overfit a tiny batch, then exit"
     )
     ap.add_argument("--save-every-min", type=float, default=45.0)
+    # Recomputing activations saves memory at ~30% speed; skip it when VRAM allows.
+    ap.add_argument("--no-grad-ckpt", action="store_true")
+    ap.add_argument("--no-distill", action="store_true")
     args = ap.parse_args()
 
     device = torch.device("cuda")
@@ -286,7 +303,7 @@ def main() -> None:
     # Building items runs the base model over every case (up to an hour on stage 1);
     # the cache lets a resumed run skip it and guarantees the same data order.
     cache, ckpt = out / "items.pt", out / "resume.pt"
-    key = f"{args.data.resolve()}|{args.data.stat().st_mtime_ns}|{args.balance_direction}|{model_dir}"
+    key = f"{args.data.resolve()}|{args.data.stat().st_mtime_ns}|{args.balance_direction}|{args.no_distill}|{model_dir}"
     cached = (
         torch.load(cache, weights_only=False)
         if cache.exists() and not args.smoke
@@ -303,6 +320,7 @@ def main() -> None:
             args.data,
             args.balance_direction,
             64 if args.smoke else 0,
+            not args.no_distill,
         )
         if not args.smoke:
             torch.save({"key": key, "items": all_items}, cache)
@@ -320,10 +338,11 @@ def main() -> None:
     model.load_state_dict(
         load_file(os.path.join(model_dir, "model.safetensors")), strict=True
     )
-    model.encoder.gradient_checkpointing_enable(
-        gradient_checkpointing_kwargs={"use_reentrant": False}
-    )
-    model.head_checkpointing = True
+    if not args.no_grad_ckpt:
+        model.encoder.gradient_checkpointing_enable(
+            gradient_checkpointing_kwargs={"use_reentrant": False}
+        )
+        model.head_checkpointing = True
     enc_lr = 2.5e-5
     if args.mode == "lora":
         from peft import LoraConfig, get_peft_model
@@ -428,6 +447,18 @@ def main() -> None:
             raise SystemExit("smoke test failed: loss did not fall")
         if peak > 0.95 * gpu_total:
             raise SystemExit("smoke test failed: would spill past GPU memory")
+        # Throughput on ordinary batches, for choosing batch size and epochs.
+        rng = random.Random(SEED)
+        torch.cuda.synchronize()
+        t = time.time()
+        for _ in range(10):
+            batch_loss(
+                rng.sample(train, min(args.micro_batch, len(train))), sigma_start
+            ).backward()
+            opt.step()
+            opt.zero_grad(set_to_none=True)
+        torch.cuda.synchronize()
+        print(f"smoke: {10 * args.micro_batch / (time.time() - t):.1f} items/s")
         print("SMOKE OK")
         return
 
@@ -470,9 +501,13 @@ def main() -> None:
                 )
                 vals += (-(b["target"].to(device) * lp).sum(-1)).tolist()
         model.train()
+        # Eval shapes fragment the allocator; release them before training resumes.
+        torch.cuda.empty_cache()
         return sum(vals) / len(vals)
 
     epoch0, first_start, total, steps = 0, 0, 0.0, 0
+    # Keep the epoch with the lowest held-out loss, not simply the last one.
+    best, best_val, best_epoch = out / "best.pt", math.inf, 0
     if ckpt.exists():
         # Load to CPU: a GPU copy of the 2.5 GB checkpoint would push training into
         # shared memory for the rest of the run.
@@ -487,6 +522,10 @@ def main() -> None:
             state["start"],
             state["total"],
             state["steps"],
+        )
+        best_val, best_epoch = (
+            state.get("best_val", math.inf),
+            state.get("best_epoch", 0),
         )
         del state
         gc.collect()
@@ -506,10 +545,13 @@ def main() -> None:
                 "start": start,
                 "total": total,
                 "steps": steps,
+                "best_val": best_val,
+                "best_epoch": best_epoch,
             },
             tmp,
         )
         os.replace(tmp, ckpt)
+        torch.cuda.empty_cache()
 
     meter = Meter(f"training ({args.mode})", len(train) * args.epochs)
     meter.base = (
@@ -580,9 +622,24 @@ def main() -> None:
             f"epoch {epoch + 1}/{args.epochs}: loss {total / steps:.4f} ({time.time() - t0:.0f}s)",
             flush=True,
         )
+        v = val_loss(len(calib))
+        if v < best_val:
+            best_val, best_epoch = v, epoch + 1
+            torch.save(
+                {k: t.detach().cpu() for k, t in model.state_dict().items()}, best
+            )
+        print(
+            f"epoch {epoch + 1} val loss {v:.4f} (best: epoch {best_epoch})", flush=True
+        )
+        with metrics.open("a", encoding="utf-8") as f:
+            f.write(
+                json.dumps({"epoch_end": epoch + 1, "val_loss": round(v, 4)}) + "\n"
+            )
         save_ckpt(epoch + 1, 0)
 
-    print(f"final val loss {val_loss(len(calib)):.4f}", flush=True)
+    if best_epoch and best_epoch != args.epochs:
+        model.load_state_dict(torch.load(best, map_location="cpu"))
+        print(f"using epoch {best_epoch}, val loss {best_val:.4f}", flush=True)
     model.eval()
     pairs = []
     with torch.no_grad():
@@ -604,8 +661,8 @@ def main() -> None:
     print("choice temperature:", round(temps[QTYPES["choice"]], 3))
 
     save(model, tok, cfg, out, temps)
-    cache.unlink(missing_ok=True)
-    ckpt.unlink(missing_ok=True)
+    for f in (cache, ckpt, best):
+        f.unlink(missing_ok=True)
     print("saved", out)
     PROGRESS.write_text(
         f"{time.strftime('%d %b %H:%M')}  training done: {out}\n", "utf-8"
