@@ -64,3 +64,5 @@ jobs:
           FINSCRAPE_LAYA: ${{ vars.LAYA_RELEASE != '' && '1' || '0' }}
           FINSCRAPE_LAYA_MODEL: ${{ vars.LAYA_RELEASE != '' && format('{0}/laya-model', github.workspace) || '' }}
         run: uv run --no-sync python -m worker.main --once
+      - name: Alert if events stopped or the database is near its cap
+        run: uv run --no-sync python scripts/check_prod.py

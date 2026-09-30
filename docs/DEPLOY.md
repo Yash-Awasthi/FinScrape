@@ -11,7 +11,7 @@ The live stack runs **$0/month, no credit card** across four free services + a f
 | Layer | Service | Notes |
 |---|---|---|
 | Web (landing + SPA) | **Cloudflare Pages** (`winfin`) | static, no sleep; landing `/`, app `/app/` |
-| API | **Render** free web service (`winfin-api`, Singapore) | Docker `Dockerfile.api` → Supabase; sleeps after 15 min idle |
+| API | **Render** free web service (`winfin-api`, Singapore) | Docker `Dockerfile.api` → Supabase; kept warm by a 10-minute ping |
 | Database | **Supabase** Postgres (Seoul, `bfzkjwucytbtnmzomtvt`) | session pooler, port 5432; RLS on every table so the Data API exposes nothing |
 | Worker | **GitHub Actions** (`.github/workflows/ingest.yml`), dispatched at :13/:43 by the Cloudflare cron Worker `winfin-ingest-cron` (`ops/ingest-cron`) | `python -m worker.main --once`; GitHub's own schedule stays as a fallback but fires only every 3–6 hours |
 | LLM | **TokenHarbor** free models, primary + fallback (`FINSCRAPE_MODEL_FALLBACK`) | Primary `deepseek-v4.1-flash:free`, fallback `mimo-v2.6-flash:free` (owner's choice, 30 Sep). OpenAI chat API at `https://tokenharbor.ai/v1`. Heuristic fallback covers a full outage |
@@ -35,8 +35,12 @@ The API reads `$PORT` (Render injects it; `settings.port` aliases `WORLDFIN_PORT
 - **Worker:** runs every 30 min automatically; `gh workflow run ingest.yml` to fire now.
 - **Ingest cron:** `cd ops/ingest-cron && npx wrangler deploy`; its `GH_TOKEN` secret is a fine-grained PAT (this repo, Actions read and write), set with `npx wrangler secret put GH_TOKEN`.
 
+## Keep-warm, alerts, backups
+- The cron Worker also pings `/health` every 10 minutes, so Render never sleeps.
+- Each ingest run ends with `scripts/check_prod.py`: it fails the run (GitHub emails the owner) when no event landed for 3 hours or the database passes 400 MB.
+- `backup.yml` dumps production nightly, encrypted with `BACKUP_KEY` (GitHub secret and local `.env`), as a 14-day artifact. Restore: `gh run download <run> -n worldfin-<run>`, then `openssl enc -d -aes-256-cbc -pbkdf2 -pass env:BACKUP_KEY -in worldfin.dump.enc -out worldfin.dump` and `pg_restore -d <url> --no-owner worldfin.dump`.
+
 ## Known free-tier limits
-- Render free **sleeps after 15 min idle** → first hit after idle ~30–50 s (cold start). A keep-warm GH cron ping fixes it (uses free Actions minutes).
 - Worker updates the dashboard on **refresh**, not live WS push (cross-process WS needs Redis — deferred).
 - GitHub cron can be delayed/skipped under load (~"every 30 min", not exact).
 - Supabase free: 500 MB database, paused after a week without activity (the ingest cron keeps it active); TokenHarbor free models have usage caps — the heuristic fallback absorbs LLM exhaustion.

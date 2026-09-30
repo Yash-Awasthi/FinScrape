@@ -4,5 +4,5 @@
   "main": "index.js",
   "compatibility_date": "2026-09-20",
   "workers_dev": false,
-  "triggers": { "crons": ["13,43 * * * *"] }
+  "triggers": { "crons": ["13,43 * * * *", "*/10 * * * *"] }
 }

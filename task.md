@@ -70,6 +70,8 @@ the `ingest` Action, dispatched every 30 minutes by the Cloudflare cron Worker
 - Owner: rotate the Supabase password, Render key, TokenHarbor key and the GitHub PAT
   pasted into a chat, and the Nexus Neon password; then update Render env and GitHub secrets.
 - Owner: delete the Neon project after a clean week on Supabase (from 29 Sep).
+- Owner: put `RENDER_API_KEY` in `.env` (then `make llm MODEL=deepseek-v4.1-flash:free`), or
+  set `FINSCRAPE_MODEL` and `FINSCRAPE_MODEL_FALLBACK` on Render by hand; the API still runs mimo first.
 - Owner: email digest needs `RESEND_PROXY_URL` and `FINSCRAPE_DIGEST_TO`; then add a
   scheduled Action for `python -m worker.digest daily`.
 - GitGuardian flags the local-only compose default password (`worldfin`, Postgres

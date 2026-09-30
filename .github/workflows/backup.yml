@@ -1,0 +1,29 @@
+name: backup
+
+# Supabase free keeps no backups; a nightly dump, encrypted with BACKUP_KEY (also in the
+# owner's .env) because artifacts of a public repo are readable, is kept for 14 days.
+on:
+  schedule:
+    - cron: "17 21 * * *"
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Dump production with pg_dump 17 and encrypt it
+        env:
+          WORLDFIN_DATABASE_URL: ${{ secrets.WORLDFIN_DATABASE_URL }}
+          BACKUP_KEY: ${{ secrets.BACKUP_KEY }}
+        run: |
+          docker run --rm -e URL="$WORLDFIN_DATABASE_URL" postgres:17 \
+            sh -c 'pg_dump "$URL" -Fc --no-owner' > worldfin.dump
+          test -s worldfin.dump
+          openssl enc -aes-256-cbc -pbkdf2 -pass env:BACKUP_KEY -in worldfin.dump -out worldfin.dump.enc
+          ls -lh worldfin.dump.enc
+      - uses: actions/upload-artifact@v7
+        with:
+          name: worldfin-${{ github.run_id }}
+          path: worldfin.dump.enc
+          retention-days: 14
