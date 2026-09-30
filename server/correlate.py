@@ -1,10 +1,10 @@
 """Correlation & clustering engine — Python port of worldmonitor `analysis-core.ts`.
 
-Independent reimplementation from the spec in PLAN.md Appendix A (no WM source copied).
+Independent reimplementation (no worldmonitor source copied).
 Detects when one story corroborates across independent source-types inside a window,
 and flags news↔market divergence — "before it's news".
 
-Each detector is a pure function so it can be unit-tested against the Appendix A
+Each detector is a pure function so it can be unit-tested against its
 formulas. `analyze_correlations` orchestrates: extract topics → run detectors in order
 (each gated by a dedup `seen` set) → keep the FIRST signal per type → drop confidence
 < 0.6. First call (no prev_snapshot) emits nothing, just returns the snapshot.

@@ -4,9 +4,8 @@ About eight minutes. WorldFin reads world news, decides which tickers and sector
 each story moves, and keeps score of whether its calls came true.
 
 Live: landing https://winfin.pages.dev, dashboard https://winfin.pages.dev/app/.
-Open the API health page (https://winfin-api.onrender.com/health) a minute before
-you start: the free Render instance sleeps after 15 idle minutes and takes 30-50 s
-to wake. Offline, `make demo` serves the same dashboard on a seeded dataset (see
+The API is pinged every 10 minutes, so it should already be awake; if the first
+page load stalls, open https://winfin-api.onrender.com/health and wait for it. Offline, `make demo` serves the same dashboard on a seeded dataset (see
 the README quickstart).
 
 ## 1. Landing page (1 min)

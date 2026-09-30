@@ -1,4 +1,4 @@
-"""Events ingest + feed + stats + dates. Root-cause bug fixes per PLAN.md Appendix B:
+"""Events ingest + feed + stats + dates. Root-cause bug fixes:
 deterministic content_hash dedup, one UTC day-bounds convention, last_update=MAX(created_at).
 """
 

@@ -125,6 +125,11 @@ def twitter(
         text = re.sub(r"https?://\S+", "", str(text)).strip()
         if int(label) in mapping and norm(text) not in skip and len(norm(text)) >= 15:
             cases.append({"subject": text, column: mapping[int(label)], "source": name})
+    if column == "direction":
+        # Two in three rows are neutral; cap them at the larger move class.
+        by = {d: [c for c in cases if c[column] == d] for d in SENTIMENT.values()}
+        cap = max(len(by["positive"]), len(by["negative"]))
+        cases = by["positive"] + by["negative"] + by["neutral"][:cap]
     print(f"{name}: {len(cases)}", flush=True)
     return cases
 

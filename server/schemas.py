@@ -1,8 +1,7 @@
 """Public API contract (Pydantic v2). Drives the OpenAPI docs at /docs.
 
 These are the wire shapes. `EventIn` mirrors finscrape FinEvent (ingest accepts a
-FinEvent.to_dict()); `EventOut` adds server-assigned id/geo/created_at. Endpoint
-shapes follow PLAN.md Appendix B.
+FinEvent.to_dict()); `EventOut` adds server-assigned id/geo/created_at.
 """
 
 from __future__ import annotations

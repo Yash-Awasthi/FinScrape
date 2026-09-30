@@ -1,50 +1,41 @@
-# 🌐 WorldFin — Free Geopolitical Market Intelligence
+# 🌐 WorldFin — Geopolitical Market Advisory
 
 > **See what moves markets — before it's news.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.13+-3776AB.svg)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com)
-[![Tests](https://img.shields.io/badge/Tests-737+-brightgreen.svg)](#testing)
-[![Cost](https://img.shields.io/badge/Cost-$0%2Fmonth-brightgreen.svg)](#deploy-it-free)
+[![Python](https://img.shields.io/badge/Python-3.13-3776AB.svg)](https://python.org)
+[![Cost](https://img.shields.io/badge/Cost-$0%2Fmonth-brightgreen.svg)](docs/DEPLOY.md)
 [![Live](https://img.shields.io/badge/Live-Dashboard-blue.svg)](https://winfin.pages.dev/app/)
 
-**WorldFin** is a free, open-source alternative to AlphaSense ($12k-$120k/year), MarketReader, and Reflexivity. It ingests geopolitics + world news, resolves **which tickers and sectors** each event moves, judges the **first- and second-order** market impact on a **live globe**, and **proves the calls were right** over time.
+WorldFin reads world and geopolitical news every 30 minutes, works out which sectors
+and tickers each event moves, turns related events into scenarios with a calibrated
+probability and an instruction (invest, pull out, observe), and scores every call
+against the market move that followed.
+
+**Live:** [landing](https://winfin.pages.dev) · [dashboard](https://winfin.pages.dev/app/) ·
+[API docs](https://winfin-api.onrender.com/docs)
 
 ---
 
-## 🆚 Why WorldFin?
+## ✨ What it does
 
-| | WorldFin | AlphaSense | MarketReader | Reflexivity |
-|---|---|---|---|---|
-| **Price** | **$0/month** | $12k-$120k/year | Enterprise | Enterprise |
-| **Open Source** | ✅ MIT | ❌ | ❌ | ❌ |
-| **Live Globe** | ✅ | ❌ | ❌ | ❌ |
-| **Accuracy Backtesting** | ✅ Hit-rate + equity curve | ❌ | ❌ | ❌ |
-| **Multi-Agent Council** | ✅ 7 agents + judge | ❌ | ❌ | ❌ |
-| **Geopolitical Focus** | ✅ Primary | Secondary | Secondary | Secondary |
-| **Self-Hosted** | ✅ Docker | ❌ | ❌ | ❌ |
-| **Free LLM** | ✅ Ollama / freemodel | ❌ | ❌ | ❌ |
+| | |
+|---|---|
+| 🌍 **Live globe and feed** | Every event geolocated and coloured by verdict (INVEST / PULL_OUT / OBSERVE / CAUTIOUS) |
+| 🧭 **Scenarios** | Related events clustered into scenarios with probability, sector tilt and exposed tickers (`/api/scenarios`) |
+| 🎯 **Sectors and tickers** | Sector from a chain of Laya (a small fine-tuned classifier), the LLM and keywords; tickers only when the article backs them |
+| 📊 **Track record** | Every call re-scored against the window after the event: hit rate by verdict, reliability, Brier score (`/api/accuracy`) |
+| 🔗 **Correlations** | Fires when independent source types corroborate one story |
+| 🤖 **Council** | Optional analyst personas debate an event; a judge reads the transcript (`/api/ai/council`) |
+| 💬 **Sentiment, alerts** | Reddit posts per ticker, Telegram alerts, alert rules |
+| 🏥 **Source health** | Per-source and per-feed freshness, shown on the dashboard |
 
----
-
-## ✨ Features
-
-| Feature | Description |
-|---------|-------------|
-| 🌍 **Live Globe** | Every event geolocated, colored by verdict (INVEST / PULL_OUT / OBSERVE / CAUTIOUS) |
-| 🎯 **Ticker Resolution** | Word-boundary matched company→ticker map + sector/region map for geopolitics |
-| 🤖 **7-Agent Council** | Analyst personas debate with rebuttal rounds; judge model reads full transcript |
-| 📊 **Accuracy Proof** | Backtested hit-rate, by-verdict breakdown, equity-curve sparkline, Brier score |
-| 🔗 **Correlation Engine** | Fires when 3+ source-types corroborate; flags news↔market divergence |
-| 💬 **Social Sentiment** | Bullish and bearish Reddit posts per ticker, read by RSS each ingest run |
-| 📱 **Telegram Alerts** | Subscribe to INVEST/PULL_OUT signals via Telegram bot |
-| 🔄 **Prompt A/B** | Test prompt variants with accuracy-by-variant comparison |
-| 🏥 **Source Health** | Per-source freshness monitoring with circuit breakers |
+Sources: 32 world RSS feeds, the GDELT 15-minute events export, USGS earthquakes and
+ReliefWeb disasters, all keyless ([docs/DATA_SOURCES.md](docs/DATA_SOURCES.md)).
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick start
 
 Needs Docker and git. No LLM key is required: the demo loads a seeded dataset, and
 the worker falls back to keyword analysis until a model is configured.
@@ -57,13 +48,12 @@ make demo                     # build, start postgres + api + worker + web, seed
 ```
 
 Without `make`: `docker compose up -d --build`, then `docker compose exec api python -m server.seed`.
-Stop with `make down` (`docker compose down`); add `-v` to drop the database.
-Port taken? Set `WORLDFIN_API_HOST_PORT` (8010) or `WORLDFIN_PG_HOST_PORT` (5433) in `.env`;
-the web port is 8080.
+Stop with `make down`; add `-v` to drop the database. Port taken? Set
+`WORLDFIN_API_HOST_PORT` (8010) or `WORLDFIN_PG_HOST_PORT` (5433) in `.env`.
 
-To analyse live news with a model, set `OPENAI_BASE_URL`, `OPENAI_API_KEY` and
-`FINSCRAPE_MODEL` in `.env` (any OpenAI-compatible endpoint; a host Ollama is
-`http://host.docker.internal:11434/v1` from inside compose) and run `docker compose up -d`.
+To analyse live news, set `OPENAI_BASE_URL`, `OPENAI_API_KEY` and `FINSCRAPE_MODEL` in
+`.env` (any OpenAI-compatible endpoint; a host Ollama is `http://host.docker.internal:11434/v1`
+from inside compose) and run `docker compose up -d`.
 
 ### No Docker?
 
@@ -76,119 +66,33 @@ uv run python -m worker.main --once             # one ingest cycle
 cd web && npm ci && npm run dev                 # dashboard at :8080, proxies /api to :8010
 ```
 
-See **[docs/DEMO.md](docs/DEMO.md)** for the scripted 5-minute walkthrough.
+[docs/DEMO.md](docs/DEMO.md) is a scripted 5-minute walkthrough;
+[docs/LOCAL-READINESS.md](docs/LOCAL-READINESS.md) covers isolated test databases.
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ How it runs
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    GITHUB ACTIONS (Worker)                       │
-│  scrape → LLM → resolve → ingest → correlate → backtest         │
-├─────────────────────────────────────────────────────────────────┤
-│                    DATA LAYER                                    │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
-│  │ 14 RSS Feeds│  │ 11 Stealth │  │ Keyless APIs│            │
-│  │ (world +    │  │ Scrapers   │  │ (USGS/GDELT │            │
-│  │  finance)   │  │ (Yahoo/    │  │ /ReliefWeb/ │            │
-│  │             │  │  Reuters/  │  │ CoinGecko)  │            │
-│  └──────┬──────┘  │  Bloomberg)│  └──────┬──────┘            │
-│         │         └──────┬─────┘         │                     │
-│         └────────────────┼───────────────┘                     │
-│                          ▼                                      │
-│              ┌──────────────────────┐                           │
-│              │   finscrape Brain    │                           │
-│              │  • LLM extraction   │                           │
-│              │  • Entity resolution │                           │
-│              │  • 7-agent council  │                           │
-│              │  • Accuracy tracking │                           │
-│              └──────────┬───────────┘                           │
-├─────────────────────────┼───────────────────────────────────────┤
-│                    NEON POSTGRES                                 │
-│  events · correlations · accuracy · source_health · ai_cache    │
-├─────────────────────────┼───────────────────────────────────────┤
-│                    FASTAPI (Render)                              │
-│  REST + WS + /docs · Ingest/Dedup · Correlation · Accuracy     │
-├─────────────────────────┼───────────────────────────────────────┤
-│                    VITE SPA (Cloudflare Pages)                  │
-│  globe.gl · Panel Grid · Signal Feed · Accuracy Dashboard      │
-└─────────────────────────┴───────────────────────────────────────┘
+Cloudflare cron Worker ──(every 30 min)──▶ GitHub Action "ingest"
+                                              │  fetch → LLM → Laya sector → tickers
+                                              │  → dedup/merge → correlate → backtest
+                                              ▼
+                                      Supabase Postgres ◀── FastAPI on Render ◀── SPA on Cloudflare Pages
 ```
 
----
+- **Worker** (`worker/`): `python -m worker.main --once` in a GitHub Action; the Action
+  restores the Laya checkpoint from a GitHub release and fails (emailing the owner) if no
+  event landed for 3 hours.
+- **API** (`server/`): FastAPI, REST and WebSocket, migrations on start.
+- **Web** (`web/`): Vite SPA with globe.gl; landing at `/`, dashboard at `/app/`.
+- **Engine** (`finscrape/`): scrapers, LLM analysis, sector chain, scenarios, backtest.
+- **LLM**: any OpenAI-compatible endpoint. Production runs `deepseek-v4.1-flash:free` with
+  `mimo-v2.6-flash:free` as fallback; `make llm MODEL=... URL=... KEY=...` switches it
+  everywhere.
 
-## 🤖 Multi-Agent Council
-
-The council is WorldFin's explainability layer:
-
-```
-                    ┌─────────────────┐                     │   8 Analysts    │
-                    │  (in parallel)  │
-                    └────────┬────────┘
-                             │
-                    ┌────────▼────────┐
-                    │  Round 1: Blind │
-                    │  Independent    │
-                    │  Scoring        │
-                    └────────┬────────┘
-                             │
-                    ┌────────▼────────┐
-                    │  Round 2+: Rebut│
-                    │  See others'    │
-                    │  reasoning      │
-                    └────────┬────────┘
-                             │
-                    ┌────────▼────────┐
-                    │  Judge Model    │
-                    │  Reads full     │
-                    │  transcript     │
-                    └────────┬────────┘
-                             │
-                    ┌────────▼────────┐
-                    │  Final Verdict  │
-                    │  -5...+5 score  │
-                    │  + rationale    │
-                    └─────────────────┘
-```
-
-**Agents:** Analyst (1.5), Contrarian (1.0), Risk (1.2), Momentum (0.8), Fundamentals (1.0), Scout (0.7), Reviewer (1.4)
-
-**Real numbers, not invented ones:** RSI14, SMA20/50, ATR%, 5-day return, % off 52-week high are computed and handed to every agent as ground truth. Conflicting numbers get flagged and discounted.
-
-**Standalone package:** The council is also available as an independent library — [`pip install worldfin-council`](finscrape/council/README.md). Zero dependencies, bring your own LLM client via the `AiClient` protocol.
-
-**Interactive demo:** See the council in action — [🌐 Open Council Dashboard](web/council.html) (mock data, runs in browser).
-
----
-
-## 📊 Accuracy Backtesting
-
-Every call is tracked against realized market moves:
-
-```
-Signal: INVEST XOM (+3.2)    →  XOM moved +4.1% in 5 days  ✅ Hit
-Signal: PULL_OUT TSLA (-2.8) →  TSLA moved -1.2% in 5 days  ✅ Hit
-Signal: OBSERVE AAPL (+0.5)  →  AAPL moved +3.8% in 5 days  ❌ Miss
-```
-
-**Metrics:** hit-rate, by-verdict breakdown, equity curve, Brier score, confidence calibration.
-
----
-
-## 💰 Deploy Free ($0/month)
-
-The entire stack runs on free tiers:
-
-| Service | Provider | Cost |
-|---------|----------|------|
-| Web | Cloudflare Pages | $0 |
-| API | Render (free tier) | $0 |
-| Database | Neon Postgres | $0 |
-| Worker | GitHub Actions | $0 |
-| LLM | freemodel.dev / Ollama | $0 |
-
-Full recipe in **[docs/DEPLOY.md](docs/DEPLOY.md)**.
+Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · deploy and operations:
+[docs/DEPLOY.md](docs/DEPLOY.md), [docs/RUNBOOK.md](docs/RUNBOOK.md).
 
 ---
 
@@ -199,86 +103,42 @@ All via env (`.env.example`). Key ones:
 | Var | Purpose |
 |-----|---------|
 | `WORLDFIN_DATABASE_URL` | Postgres DSN |
-| `OPENAI_BASE_URL` + `OPENAI_API_KEY` | LLM backend (Ollama / freemodel) |
-| `OPENROUTER_API_KEY` + `FINSCRAPE_MODEL` | BYOK LLM alternative |
-| `FINSCRAPE_HEURISTIC_FALLBACK` | Ingest with heuristics when LLM unavailable |
-| `WORLDFIN_ENABLE_COUNCIL` | Multi-agent explainability |
-| `FINSCRAPE_COUNCIL_ROUNDS` | Council debate rounds (default: 1) |
-| `TELEGRAM_BOT_TOKEN` | Outbound alerts |
-| `TELEGRAM_WEBHOOK_SECRET` | Required for inbound bot commands; pass the same value to `setWebhook(secret_token=…)`. Unset means `/api/telegram/webhook` ignores every update. |
+| `OPENAI_BASE_URL`, `OPENAI_API_KEY`, `FINSCRAPE_MODEL` | LLM endpoint, key and model |
+| `FINSCRAPE_MODEL_FALLBACK` | Second model tried when the first fails |
+| `FINSCRAPE_HEURISTIC_FALLBACK` | Ingest with keyword analysis when every model fails |
+| `FINSCRAPE_LAYA`, `FINSCRAPE_LAYA_MODEL` | Laya sector classifier on/off and checkpoint path |
+| `RELIEFWEB_APPNAME` | Approved ReliefWeb app name; the source is off without it |
+| `WORLDFIN_ENABLE_COUNCIL` | Council endpoint |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` | Telegram alerts and bot commands |
 
 ---
 
 ## 🧪 Testing
 
 ```bash
-make test                      # pytest; DB tests need WORLDFIN_TEST_DATABASE_URL
-# or
-pytest tests/ -v               # Full suite
-pytest tests/test_debate.py    # Council debate tests
-pytest tests/test_accuracy.py  # Accuracy backtesting tests
+make ci          # ruff, format, pyright, selfcheck, pytest, web typecheck/test/build, Playwright
+make test        # pytest; DB tests need WORLDFIN_TEST_DATABASE_URL naming a *_test database
+make e2e-live    # the built SPA against the real API and a seeded, empty *_test database
 ```
 
-**Coverage:** Council debate, judge model, accuracy calibration, ticker resolution, entity mapping, prompt injection defenses, correlation engine.
+About 1,190 pytest cases, 69 vitest cases and 6 Playwright specs; CI runs all of them.
 
 ---
 
-## 📈 Live Market Dashboard
-
-Real-time market visualization with:
-- Live price ticker with real-time updates
-- Candlestick chart (CSS-only)
-- Market sentiment gauge
-- News feed with sentiment-colored borders
-- Technical indicators (RSI, MACD, Bollinger, VWAP)
-- 8-agent council consensus visualization
-- Alert feed with triggered alerts
-- Dark financial terminal aesthetic
-
-**Open:** [dashboard.html](web/dashboard.html) (runs in browser, no server needed)
-
----
-
-## 📂 Project Structure
+## 📂 Layout
 
 ```
-fin-scrape/
-├── finscrape/                 # Intelligence engine
-│   ├── scrapers/world/        # 14 RSS feeds + keyless APIs
-│   ├── analysis/              # LLM extraction, ticker resolution, NLP
-│   ├── agents/                # 7-agent council + judge
-│   ├── models/                # Pydantic data models
-│   └── accuracy.py            # Hit-rate tracking
-├── server/                    # FastAPI service
-│   ├── routes/                # API endpoints
-│   ├── ingest.py              # Content-hash dedup
-│   ├── correlate.py           # Cross-source correlation
-│   └── ws.py                  # WebSocket hub
-├── worker/                    # APScheduler ingest worker
-├── web/                       # Vite SPA (globe.gl + panels)
-├── tests/                     # 737 tests
-└── docs/                      # Architecture, deploy, demo, security
+finscrape/     engine: scrapers/world, ingestors, analysis (LLM, Laya, tickers), scenarios, council
+server/        FastAPI app, routes, migrations, seed
+worker/        ingest cycle, sources, correlation, backtest
+web/           Vite SPA (landing + dashboard)
+scripts/       llm.py (switch LLM), check_prod.py, db_backup.py, laya_train/ (fine-tuning)
+ops/ingest-cron/  Cloudflare cron Worker that dispatches ingest and keeps the API warm
+docs/          architecture, deploy, runbook, data sources, demo, security
 ```
 
----
-
-## 🗺️ Roadmap
-
-- [ ] **Phase 14:** Options flow analysis + earnings call tone
-- [ ] **Phase 15:** Custom financial NER fine-tuned on SEC filings
-- [ ] **Phase 16:** Paper trading integration (Alpaca/IBKR)
-- [ ] **Phase 17:** Discord/Slack alert channels
-- [ ] **Phase 18:** Mobile app (React Native)
-
-See **[task.md](task.md)** for current work and owner-gated items, and
-**[plan.md](plan.md)** for audit follow-ups. For verified local setup and check
-results, see **[docs/LOCAL-READINESS.md](docs/LOCAL-READINESS.md)**.
-
----
-
-## 🤝 Contributing
-
-Contributions welcome! Open an issue or PR. See **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** for the codebase layout.
+`dashboard/` and [SETUP_WINDOWS.md](SETUP_WINDOWS.md) belong to the older standalone app.
+Current work is in [task.md](task.md); the handover log is [notes.md](notes.md).
 
 ---
 
@@ -286,14 +146,6 @@ Contributions welcome! Open an issue or PR. See **[docs/ARCHITECTURE.md](docs/AR
 
 [MIT](LICENSE) — WorldFin is market intelligence, **not financial advice**.
 
----
-
-## 🙏 Acknowledgments
-
-Built on the shoulders of giants:
-- [globe.gl](https://github.com/vasturiano/globe.gl) — 3D globe visualization
-- [FastAPI](https://fastapi.tiangolo.com) — Modern Python web framework
-- [spaCy](https://spacy.io) — Industrial-strength NLP
-- [Ollama](https://ollama.ai) — Local LLM inference
-- [Neon](https://neon.tech) — Serverless Postgres
-- [Cloudflare Pages](https://pages.cloudflare.com) — Free static hosting
+Built on [globe.gl](https://github.com/vasturiano/globe.gl), [FastAPI](https://fastapi.tiangolo.com),
+[spaCy](https://spacy.io), [Laya](https://pypi.org/project/laya/), [Supabase](https://supabase.com)
+and [Cloudflare Pages](https://pages.cloudflare.com).

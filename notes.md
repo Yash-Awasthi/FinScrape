@@ -53,6 +53,9 @@ every event, not holdings). Laya runs in the ingest Action (item 11); ReliefWeb 
 
 ## Closed
 
+History was rewritten on 30 Sep 2026 into 32 dated checkpoints (later commits follow them), so the commit hashes quoted below no longer exist on GitHub. The old history is in the local bundle `../fin-scrape-history-backup-20260930.bundle` (`git clone` it or `git fetch` from it to look one up).
+
+
 - Worker re-sent every article to the LLM each cycle; now skips seen URLs (c9158d9e).
 - RSS cap starved all but the fastest feeds; feeds interleave before the cap (c9158d9e).
 - Same-story merges reached SQLite only; now copied to Postgres (c9158d9e).
@@ -110,6 +113,8 @@ every event, not holdings). Laya runs in the ingest Action (item 11); ReliefWeb 
 - ReliefWeb (G1) approved the app name on 30 Sep; it is in `.env` and the repo variable `RELIEFWEB_APPNAME`, which the ingest Action passes on. Check: the v2 API answered 200 and the ingestor parsed 20 disasters.
 - Production LLM switched to deepseek primary, mimo fallback, by the owner's choice; `make llm` (scripts/llm.py) now sets model, endpoint, key and fallback for the Actions and Render (PR #25). Check: ingest run 36707277494 on deepseek, 7 events, zero 429s. Render still needs `RENDER_API_KEY` in `.env` or the two vars set by hand.
 - Keep-warm, alerting and backups (PR #26): the cron Worker pings `/health` every 10 min; each ingest run fails (GitHub emails the owner) if no event landed for 3 h or the database passes 400 MB; `backup.yml` stores an encrypted nightly dump for 14 days. Check: backup run 36708726005 (3.1 MB) decrypted and listed 52 tables with pg_restore; ingest check read 30 MB, newest event fresh.
+- Docs refreshed 30 Sep: README rewritten to the current product and stack; ARCHITECTURE, RUNBOOK (production section), DATA_SOURCES, CONTRIBUTING, DEPLOYMENT (now the API table), DEMO, FRONTEND_DESIGN and `.env.example` updated; stale plans (PLAN_TOMORROW, WORKLOG, RESEARCH_NEXT, COUNCIL_EXTRACTION_PLAN, RISKS) deleted, and code docstrings no longer cite PLAN.md appendices. Git history keeps the deleted files.
+- Master CI had failed on every push since the `trivy-action@0.28.0` tag vanished; pinned to v0.36.0, and the scan's eight HIGH findings fixed (OpenSSL upgraded from Debian, pip and its vendored msgpack and setuptools dropped from the runtime image). Check: master CI green on all four jobs.
 
 ## Local hazards
 

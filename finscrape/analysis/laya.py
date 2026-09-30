@@ -39,6 +39,8 @@ _MAX_CHARS = 2000  # headline + lede carry the decision; bodies only add latency
 CONFIDENT = 0.55
 # Below this even as a last resort the pick is noise, and "other" is the honest label.
 _FLOOR = 0.35
+# Tuned by scripts/laya_train/tune_neutral.py on the current checkpoint (holdout 0.638 to 0.716).
+NEUTRAL_SCALE = float(os.environ.get("FINSCRAPE_LAYA_NEUTRAL_SCALE", "0.3"))
 
 _SECTOR_CRITERIA = {
     "technology": "software, semiconductors, internet platforms, cyber security",
@@ -152,6 +154,19 @@ def _pick(answer: Any) -> tuple[str, float]:
     return label, p
 
 
+def _discount_neutral(answer: Any) -> Any:
+    """Scale down "neutral" before picking: training labels are mostly neutral, so the
+    raw argmax under-calls moves. NEUTRAL_SCALE is tuned on the holdout."""
+    if not isinstance(answer, dict) or NEUTRAL_SCALE == 1.0:
+        return answer
+    probs = next((answer[k] for k in ("probabilities", "probs", "scores") if isinstance(answer.get(k), dict)), None)
+    if not probs or "neutral" not in probs:
+        return answer
+    scaled = {k: float(v) * (NEUTRAL_SCALE if k == "neutral" else 1.0) for k, v in probs.items()}
+    total = sum(scaled.values()) or 1.0
+    return {"probabilities": {k: v / total for k, v in scaled.items()}}
+
+
 def classify(title: str, text: str) -> LayaView | None:
     """Sector and direction for one article, or None when Laya is not installed."""
     state = f"{title}. {text}"[:_MAX_CHARS] if title else text[:_MAX_CHARS]
@@ -168,7 +183,7 @@ def classify(title: str, text: str) -> LayaView | None:
             return None
     answers = (result or {}).get("answers") or {}
     sector, sector_p = _pick(answers.get("sector"))
-    direction, direction_p = _pick(answers.get("direction"))
+    direction, direction_p = _pick(_discount_neutral(answers.get("direction")))
     return LayaView(sector, sector_p, direction, direction_p)
 
 

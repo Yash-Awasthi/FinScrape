@@ -1,213 +1,58 @@
-# Contributing to fin-scrape
+# Contributing to WorldFin
 
-AI-powered financial intelligence with 7-agent council system.
-
-## Quick Start
-
-For the current WorldFin API and `web/` dashboard, follow
-[Local readiness and setup](docs/LOCAL-READINESS.md). The commands and stack
-description below refer to the legacy application; current quality gates are
-defined by the root `Makefile` and `.github/workflows/ci.yml`.
+## Setup
 
 ```bash
-# Clone and setup
-git clone https://github.com/Yash-Awasthi/fin-scrape.git
-cd fin-scrape
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-
-# Run tests
-python -m pytest tests/ -v
-
-# Start API server
-uvicorn finscrape.api.main:app --reload
+git clone https://github.com/Yash-Awasthi/fin-scrape.git && cd fin-scrape
+uv sync -p 3.13 --group server --group dev
+cd web && npm ci && cd ..
 ```
 
-## Tech Stack
+Run the app with `make demo` (Docker) or the no-Docker steps in the [README](README.md).
+Database tests need `WORLDFIN_TEST_DATABASE_URL` pointing at a database whose name ends in
+`_test`; they truncate tables. [docs/LOCAL-READINESS.md](docs/LOCAL-READINESS.md) shows how
+to start a throwaway Postgres for them.
 
-| Component | Technology | Version |
-|-----------|------------|---------|
-| Language | Python | 3.10+ |
-| Framework | FastAPI | 0.100+ |
-| NLP | spaCy | 3.0+ |
-| ML | scikit-learn | 1.0+ |
-| Testing | pytest | 7.0+ |
-| Package | Poetry | 1.0+ |
+## Layout
 
-## Project Structure
+| Path | What |
+|---|---|
+| `finscrape/` | engine: world feeds and ingestors, LLM analysis, Laya sector chain, tickers, scenarios, council, backtest |
+| `server/` | FastAPI app, routes, SQL migrations, seed data |
+| `worker/` | ingest cycle, sources, correlation, retention |
+| `web/` | Vite SPA: landing (`/`) and dashboard (`/app/`) |
+| `scripts/` | `llm.py`, `check_prod.py`, `db_backup.py`, `laya_train/` |
+| `tests/` | pytest (`tests/server/` needs Postgres) |
 
-```
-finscrape/
-├── agents/              # Agent implementations
-│   ├── council.py       # 7-agent council
-│   ├── judge.py         # Council judge
-│   └── personas.py      # Agent personas
-├── services/            # Business logic
-│   ├── content_extractor.py
-│   ├── content_scorer.py
-│   └── backtesting_engine.py
-├── council/             # Standalone council package
-│   ├── mandates.py      # Investment mandates
-│   ├── backtesting.py   # Backtesting framework
-│   └── confidence_scorer.py
-└── api/                 # FastAPI endpoints
-tests/
-├── test_council.py
-├── test_services.py
-└── test_api.py
-```
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) explains the data flow.
 
-## Development Guidelines
+## Checks
 
-### Council Agent Development
+`make ci` runs what CI runs:
 
-Agents are the core of fin-scrape:
+| Gate | Command |
+|---|---|
+| Lint and format (new code, `NEW_DIRS` in the Makefile) | `make lint fmt-check` |
+| Types | `make typecheck` |
+| Schema self-check | `make selfcheck` |
+| Tests | `make test` |
+| Web | `cd web && npm run typecheck && npm run test && npm run build && npx playwright test` |
+| Real API in a browser | `make e2e-live` (empty `*_test` database on 127.0.0.1) |
 
-```python
-# finscrape/agents/base.py
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
+The vendored `finscrape/absorbed/` tree and older `finscrape/` modules carry lint debt and
+are outside `NEW_DIRS` on purpose.
 
-@dataclass
-class AgentVerdict:
-    agent_name: str
-    sentiment: float  # -1.0 (bearish) to 1.0 (bullish)
-    confidence: float  # 0.0 to 1.0
-    reasoning: str
-    key_factors: list[str]
+## Working rules
 
-class BaseAgent(ABC):
-    def __init__(self, name: str, persona: str):
-        self.name = name
-        self.persona = persona
-    
-    @abstractmethod
-    def analyze(self, data: dict) -> AgentVerdict:
-        """Analyze data and return verdict."""
-        pass
-```
+- A bug fix comes with the test that failed before it.
+- Fix a shared function once rather than guarding each caller.
+- Comments state only what the code cannot show: an invariant, or why the obvious approach fails.
+- Advisory features (scenarios, predictions, sector and ticker impact, the council) are the
+  product; do not remove them in a clean-up without asking.
 
-### Service Development
+## Commits and pull requests
 
-Services are **pure functions** — no database, no async, just analysis:
-
-```python
-# Good: Pure function
-def score_content(article: dict, criteria: dict) -> float:
-    """Score article relevance based on criteria."""
-    score = 0.0
-    for keyword in criteria.get('keywords', []):
-        if keyword.lower() in article['text'].lower():
-            score += criteria['weight']
-    return min(1.0, score)
-
-# Bad: Service with side effects
-async def score_and_store(db: Session, article_id: int) -> float:
-    article = await db.get(article_id)
-    return score_content(article, {})
-```
-
-### Financial Accuracy
-
-When implementing financial concepts:
-
-```python
-# Use standard financial formulas
-def calculate_sharpe_ratio(returns: list[float], risk_free: float = 0.02) -> float:
-    """Calculate annualized Sharpe ratio."""
-    if len(returns) < 2:
-        return 0.0
-    
-    mean_return = sum(returns) / len(returns)
-    std_return = (sum((r - mean_return) ** 2 for r in returns) / (len(returns) - 1)) ** 0.5
-    
-    if std_return == 0:
-        return 0.0
-    
-    return (mean_return - risk_free) / std_return
-```
-
-### Code Style
-
-```python
-# Follow PEP 8 + ruff defaults
-# - Line length: 88
-# - Quote style: double quotes
-# - Import sorting: isort compatible
-
-# Type hints are required
-def calculate_var(
-    returns: list[float],
-    confidence: float = 0.95,
-    method: str = 'historical'
-) -> float:
-    """Calculate Value at Risk."""
-    ...
-
-# Docstrings for public functions
-def detect_anomalies(
-    values: list[float],
-    z_threshold: float = 2.0
-) -> list[dict]:
-    """Detect statistical anomalies using z-score method.
-    
-    Args:
-        values: List of metric values
-        z_threshold: Standard deviations for anomaly (default 2.0)
-        
-    Returns:
-        List of anomaly dicts with index, value, z_score
-    """
-```
-
-### Testing
-
-```bash
-# Run all tests
-python -m pytest tests/ -v
-
-# Run specific test file
-python -m pytest tests/test_council.py -v
-
-# Run with coverage
-python -m pytest tests/ --cov=finscrape --cov-report=html
-
-# Run only unit tests
-python -m pytest tests/unit/ -v
-```
-
-### Backtesting
-
-When adding backtesting features:
-
-```python
-# Use standard metrics
-def compute_metrics(returns: list[float], benchmark: list[float] = None) -> dict:
-    """Compute performance metrics."""
-    return {
-        'total_return': calculate_total_return(returns),
-        'sharpe_ratio': calculate_sharpe_ratio(returns),
-        'max_drawdown': calculate_max_drawdown(returns),
-        'win_rate': calculate_win_rate(returns),
-        'alpha': calculate_alpha(returns, benchmark) if benchmark else None,
-    }
-```
-
-## Pull Request Checklist
-
-- [ ] Tests pass (`python -m pytest tests/ -v`)
-- [ ] Type hints on all public functions
-- [ ] Financial formulas documented
-- [ ] No database calls in service functions
-- [ ] README updated if new feature
-
-## Commit Messages
-
-```
-feat: add confidence scorer for council
-fix: correct Sharpe ratio calculation
-council: add quant analyst persona
-test: add backtesting edge cases
-docs: update API documentation
-```
+- One logical change per commit: a subject line in plain prose, then a short body saying why.
+- Open pull requests from a branch into `master`; merging to `master` deploys the API.
+- CI must be green. The "Workers Builds: fin-scrape" check belongs to another Cloudflare
+  account and can be ignored.

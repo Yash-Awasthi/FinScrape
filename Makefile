@@ -1,4 +1,4 @@
-# WorldFin developer commands. See PLAN.md.
+# WorldFin developer commands. `make help` lists them.
 # Python tasks run via uv pinned to 3.13 (spacy has no 3.14 wheel yet) with the
 # server + dev groups so FastAPI/asyncpg/ruff are present.
 .DEFAULT_GOAL := help

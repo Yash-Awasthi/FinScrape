@@ -1,8 +1,7 @@
 """WebSocket hub for the live feed.
 
-In-process broadcast (single API replica). Redis pub/sub fan-out for multi-replica
-is Phase 8 — `get_settings().redis_enabled` is the seam. Messages: init / new_events
-/ ai_updated / pong (PLAN.md Appendix B).
+In-process broadcast (single API replica); Redis pub/sub fan-out runs when
+`get_settings().redis_enabled`. Messages: init / new_events / ai_updated / pong.
 """
 
 from __future__ import annotations

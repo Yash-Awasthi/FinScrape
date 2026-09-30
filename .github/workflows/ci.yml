@@ -125,7 +125,7 @@ jobs:
       - name: Build API image
         run: docker build -f Dockerfile.api -t fin-scrape-api:scan .
       - name: Trivy scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: fin-scrape-api:scan
           format: table

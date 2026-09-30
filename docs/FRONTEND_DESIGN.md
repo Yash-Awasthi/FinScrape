@@ -52,15 +52,8 @@
 - Failure posture: a dead upstream removes nothing — the card shows the last known
   price with a stale marker. Never blank the screen on a network blip.
 
-## Backend modes (same SPA, same contract)
+## Backend
 
-| | Production (`server/`) | Local (`finscrape/serve.py`) |
-|---|---|---|
-| DB | Neon Postgres (asyncpg) | SQLite (`data/finscrape.db`) |
-| Events/suggestions | SQL over Postgres | SQL over SQLite, same shapes |
-| Quotes | same `exchanges.py` layer | same layer |
-| Static | Cloudflare Pages / nginx | FastAPI serves `web/dist` |
-| Run | Render / docker | `python main.py serve --port 8080` |
-
-Run the whole thing locally: `npm --prefix web run build`, then
-`python main.py serve` → **http://localhost:8080**.
+One backend: the FastAPI `server/` over Postgres (Supabase in production, docker compose or
+a native Postgres locally). The standalone SQLite mode is retired. Locally, `npm run dev` in
+`web/` serves the SPA on :8080 and proxies `/api` to the API on :8010.

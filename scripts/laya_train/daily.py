@@ -56,8 +56,10 @@ House rules: crypto counts as financials; airlines, defence, ship orders and fre
 industrials; central banks, rates and sanctions on finance as financials; attacks on oil
 infrastructure or shipping lanes for crude as energy. War, terror plots, troop moves and
 generic sanctions with no named industry are other, as is personal finance advice.
-Also give the direction the news pushes the affected prices: positive, negative or neutral
-(neutral for other).
+Also give the direction the news pushes the affected prices: positive or negative, even
+when the push is small or uncertain; commit to the likelier side. Use neutral only when
+the sector is other, or the news has no plausible effect on any price (a routine
+announcement, a scheduled event with no surprise, effects that clearly cancel out).
 Reply with only a JSON object mapping each id to "sector,direction"."""
 
 # Price alerts and quake reports arrive by the hundred with one shape; a few teach Laya

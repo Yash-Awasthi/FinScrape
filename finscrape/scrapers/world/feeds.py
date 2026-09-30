@@ -1,12 +1,12 @@
 """World / geopolitics feed registry — the `Feed` shape + a seed set.
 
-Resolves PLAN.md open-investigation #4 (Feed shape). Each Feed carries the
+Each Feed carries the
 non-copyrightable facts we need for trust scoring: source `tier` and
 `propaganda_risk`. URLs are public RSS endpoints (facts), NOT copied from
 worldmonitor source (AGPL). This is a representative SEED subset across tiers;
 extend toward the full set as needed — nothing here is load-bearing on count.
 
-Tiers (matches PLAN.md Appendix A SourceType): wire | gov | intel | mainstream
+Tiers (the correlation engine's source types): wire | gov | intel | mainstream
 | market | tech | other.
 """
 

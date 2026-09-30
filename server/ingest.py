@@ -1,5 +1,5 @@
 """Event ingestion + deterministic dedup — the root-cause fix for the live ~4× dup
-and count-mismatch bugs (PLAN.md Appendix B).
+and count-mismatch bugs.
 
 The dedup linchpin is a deterministic `content_hash` = normalized subject + canonical
 first-article URL + UTC day, enforced by a UNIQUE constraint with ON CONFLICT DO

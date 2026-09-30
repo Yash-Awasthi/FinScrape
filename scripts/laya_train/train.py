@@ -40,6 +40,31 @@ from finscrape.analysis.laya import _QUESTIONS  # noqa: E402
 
 BASE = "convaiinnovations/laya"
 SEED = 20260929
+PROGRESS = Path(os.environ.get("LAYA_FT_HOME", Path.home() / "laya-ft")) / "progress.txt"
+
+
+class Meter:
+    """Prints and rewrites PROGRESS about once a minute with rate and ETA."""
+
+    def __init__(self, phase: str, total: int):
+        self.phase, self.total, self.t0, self.last = phase, max(total, 1), time.time(), 0.0
+
+    def __call__(self, done: int, extra: str = "", force: bool = False) -> None:
+        now = time.time()
+        if not force and now - self.last < 60:
+            return
+        self.last = now
+        rate = done / max(now - self.t0, 1e-9)
+        eta = (self.total - done) / rate if rate else 0.0
+        gpu = torch.cuda.max_memory_reserved() / 2**30 if torch.cuda.is_available() else 0
+        line = (
+            f"{time.strftime('%d %b %H:%M')}  {self.phase} {done}/{self.total}"
+            f" ({100 * done / self.total:.1f}%)  {rate:.2f}/s"
+            f"  eta {eta / 3600:.1f}h (~{time.strftime('%H:%M', time.localtime(now + eta))})"
+            f"  gpu {gpu:.1f}G {extra}"
+        )
+        print(line, flush=True)
+        PROGRESS.write_text(line + "\n", "utf-8")
 
 
 def item(tok, cfg, state: str, q: dict, target: list[float]) -> dict | None:
@@ -114,7 +139,9 @@ def build_items(model_dir: str, tok, cfg, data: Path) -> list[dict]:
     directions = list(direction_q["criteria"])
     base = Agent(model_dir, device="cuda")
     items = []
-    for case in cases:
+    meter = Meter("building items", len(cases))
+    for n, case in enumerate(cases):
+        meter(n)
         state, sector, direction = (
             case["subject"],
             case.get("sector"),
@@ -257,15 +284,22 @@ def main() -> None:
         f"{args.mode}: {sum(p.numel() for p in enc + head) / 1e6:.1f}M trainable params",
         flush=True,
     )
-    opt = torch.optim.AdamW(
-        [{"params": enc, "lr": enc_lr}, {"params": head, "lr": 1e-4}], weight_decay=0.01
-    )
+    groups = [{"params": enc, "lr": enc_lr}, {"params": head, "lr": 1e-4}]
+    if args.mode == "full":
+        # fp32 Adam state for 421M params spills past 8 GB into shared memory,
+        # which ran stage 1 several times slower; 8-bit state fits.
+        import bitsandbytes as bnb
+
+        opt = bnb.optim.AdamW8bit(groups, weight_decay=0.01)
+    else:
+        opt = torch.optim.AdamW(groups, weight_decay=0.01)
     updates = max(1, len(train) // (args.micro_batch * args.grad_accum)) * args.epochs
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=updates, eta_min=1e-6)
     scaler = torch.amp.GradScaler("cuda")
     group, sigma_start, sigma_end = 4, 0.4, 0.1
 
     t0 = time.time()
+    meter = Meter(f"training ({args.mode})", len(train) * args.epochs)
     for epoch in range(args.epochs):
         random.Random(SEED + epoch).shuffle(train)
         sigma = sigma_start + (sigma_end - sigma_start) * epoch / max(
@@ -322,6 +356,10 @@ def main() -> None:
                 sched.step()
                 opt.zero_grad(set_to_none=True)
             total += loss.item() * args.grad_accum
+            meter(
+                epoch * len(train) + start + len(b["ids"]),
+                f"epoch {epoch + 1}/{args.epochs} loss {total / steps:.4f}",
+            )
         print(
             f"epoch {epoch + 1}/{args.epochs}: loss {total / steps:.4f} ({time.time() - t0:.0f}s)",
             flush=True,
@@ -358,6 +396,7 @@ def main() -> None:
     out = Path(args.output_dir)
     save(model, tok, cfg, out, temps)
     print("saved", out)
+    PROGRESS.write_text(f"{time.strftime('%d %b %H:%M')}  training done: {out}\n", "utf-8")
 
 
 if __name__ == "__main__":
