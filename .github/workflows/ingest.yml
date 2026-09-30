@@ -19,15 +19,13 @@ jobs:
     timeout-minutes: 20
     env:
       WORLDFIN_DATABASE_URL: ${{ secrets.WORLDFIN_DATABASE_URL }}
-      # Free models via TokenHarbor (OpenAI chat API). Heuristic fallback (below) still
-      # covers any LLM outage so events always land.
-      OPENAI_BASE_URL: https://tokenharbor.ai/v1
+      # Endpoint, model and key are set by `make llm` (scripts/llm.py); the heuristic
+      # fallback below still covers any LLM outage so events always land.
+      OPENAI_BASE_URL: ${{ vars.OPENAI_BASE_URL }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       FINSCRAPE_WIRE_API: chat
-      # qwen3.8-flash:free scored best on sectors but has answered 429 "campaign
-      # allowance" on every call since 30 Sep; mimo is 96% valid JSON. See docs/DEPLOY.md.
-      FINSCRAPE_MODEL: mimo-v2.6-flash:free
-      FINSCRAPE_MODEL_FALLBACK: deepseek-v4.1-flash:free
+      FINSCRAPE_MODEL: ${{ vars.FINSCRAPE_MODEL }}
+      FINSCRAPE_MODEL_FALLBACK: ${{ vars.FINSCRAPE_MODEL_FALLBACK }}
       FINSCRAPE_HEURISTIC_FALLBACK: "true"
       WORLDFIN_WORKER_MAX_ARTICLES: "6"
       WORLDFIN_ENABLE_CORRELATION: "true"

@@ -19,11 +19,11 @@ jobs:
     timeout-minutes: 60
     env:
       WORLDFIN_DATABASE_URL: ${{ secrets.WORLDFIN_DATABASE_URL }}
-      OPENAI_BASE_URL: https://tokenharbor.ai/v1
+      OPENAI_BASE_URL: ${{ vars.OPENAI_BASE_URL }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       FINSCRAPE_WIRE_API: chat
-      FINSCRAPE_MODEL: mimo-v2.6-flash:free
-      FINSCRAPE_MODEL_FALLBACK: deepseek-v4.1-flash:free
+      FINSCRAPE_MODEL: ${{ vars.FINSCRAPE_MODEL }}
+      FINSCRAPE_MODEL_FALLBACK: ${{ vars.FINSCRAPE_MODEL_FALLBACK }}
       FINSCRAPE_AI_TIMEOUT: "60"
       FINSCRAPE_LAYA: "0"
     steps:

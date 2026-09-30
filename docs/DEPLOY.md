@@ -14,7 +14,7 @@ The live stack runs **$0/month, no credit card** across four free services + a f
 | API | **Render** free web service (`winfin-api`, Singapore) | Docker `Dockerfile.api` → Supabase; sleeps after 15 min idle |
 | Database | **Supabase** Postgres (Seoul, `bfzkjwucytbtnmzomtvt`) | session pooler, port 5432; RLS on every table so the Data API exposes nothing |
 | Worker | **GitHub Actions** (`.github/workflows/ingest.yml`), dispatched at :13/:43 by the Cloudflare cron Worker `winfin-ingest-cron` (`ops/ingest-cron`) | `python -m worker.main --once`; GitHub's own schedule stays as a fallback but fires only every 3–6 hours |
-| LLM | **TokenHarbor** free models, primary + fallback (`FINSCRAPE_MODEL_FALLBACK`) | Worker: `mimo-v2.6-flash:free` → `deepseek-v4.1-flash:free` (qwen's free allowance ran out on 30 Sep). API (someone is waiting): `mimo-v2.6-flash:free` → `deepseek-v4.1-flash:free`. OpenAI chat API at `https://tokenharbor.ai/v1`. Heuristic fallback covers a full outage |
+| LLM | **TokenHarbor** free models, primary + fallback (`FINSCRAPE_MODEL_FALLBACK`) | Primary `deepseek-v4.1-flash:free`, fallback `mimo-v2.6-flash:free` (owner's choice, 30 Sep). OpenAI chat API at `https://tokenharbor.ai/v1`. Heuristic fallback covers a full outage |
 
 ## Environment
 
@@ -54,5 +54,11 @@ Measured 29 Sep 2026 on the 56-headline sector gold set with the real analysis p
 These are **temporary throwaway account keys** — kept in **GitHub → Settings → Secrets** and
 **Render → Environment** only (never in the repo, never in the database).
 
-To switch LLM provider, update `OPENAI_API_KEY` (+ `OPENAI_BASE_URL`/`FINSCRAPE_MODEL`/`FINSCRAPE_WIRE_API`) in the
-GitHub secret, the Render env and `.github/workflows/ingest.yml`. No code change needed.
+To switch model, endpoint or key, run one command (any subset of the four):
+
+    make llm MODEL=deepseek-v4.1-flash:free URL=https://tokenharbor.ai/v1 KEY=sk-... FALLBACK=mimo-v2.6-flash:free
+
+It sets the GitHub variables (`FINSCRAPE_MODEL`, `OPENAI_BASE_URL`, `FINSCRAPE_MODEL_FALLBACK`)
+and the `OPENAI_API_KEY` secret that the ingest and reanalyse Actions read, then the same
+env vars on the Render API and redeploys it. Render needs `RENDER_API_KEY` in `.env`;
+without it the command prints the values to paste into the Render dashboard.
