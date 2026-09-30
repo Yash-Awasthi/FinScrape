@@ -58,17 +58,17 @@ Facts about the owner's setup that the items below rely on (as of 28 Sep 2026):
 Live on Cloudflare Pages (`winfin.pages.dev`), Render (`winfin-api`), Supabase and
 the `ingest` Action, dispatched every 30 minutes by the Cloudflare cron Worker
 `winfin-ingest-cron` (`ops/ingest-cron`). PRs #6-#11 merged.
-- The cron Worker needs its `GH_TOKEN` secret (fine-grained PAT, this repo, Actions
-  read and write): `cd ops/ingest-cron && npx wrangler secret put GH_TOKEN`. Until
-  then GitHub's own schedule fires every 3-6 hours.
+- The cron Worker's `GH_TOKEN` secret was set on 29 Sep (fine-grained PAT, this repo,
+  Actions read and write); replace it with `npx wrangler secret put GH_TOKEN` in
+  `ops/ingest-cron` when it expires or is rotated.
 - Ingest watched twice on 29 Sep (runs dispatched by hand): qwen timed out 3 and 8
   times; the second run handed 4 calls to mimo, and 1 of 5 new events fell to the
   heuristic when both failed. GDELT export: 0 429s. Reddit RSS returned the same 100
   posts (spanning 3 days) both times, so sentiment fills slowly. Correlations: 0 so
   far; they need tier-tagged events from several sources in one 24-hour window.
   Re-check once the cron has run for a day.
-- Owner: rotate the Supabase password, Render key and TokenHarbor key pasted into a
-  chat, and the Nexus Neon password; then update Render env and GitHub secrets.
+- Owner: rotate the Supabase password, Render key, TokenHarbor key and the GitHub PAT
+  pasted into a chat, and the Nexus Neon password; then update Render env and GitHub secrets.
 - Owner: delete the Neon project after a clean week on Supabase (from 29 Sep).
 - Owner: email digest needs `RESEND_PROXY_URL` and `FINSCRAPE_DIGEST_TO`; then add a
   scheduled Action for `python -m worker.digest daily`.
@@ -76,13 +76,66 @@ the `ingest` Action, dispatched every 30 minutes by the Cloudflare cron Worker
   bound to 127.0.0.1); mark it a false positive in the dashboard.
 - The "Workers Builds: fin-scrape" check fails on every commit, master included; it
   belongs to another Cloudflare account (`bb494...`). Disconnect it or fix it there.
+- 30 Sep: qwen3.8-flash:free returns HTTP 429 "used this campaign's own allowance"
+  on every call; mimo carried the run (8 events inserted). If it persists past a day,
+  make mimo the primary to save the wasted call per article.
 - `world/times_of_israel` fails from GitHub runners (blocked there, fine locally).
 - About 4,600 heuristic-era rows were left unanalysed on purpose: re-running them costs
   about 4.5 hours of the shared LLM key for roughly 600 useful rows, and scenarios and
   the backtest already skip them.
 
-### 11. Laya: stage 1 and the daily loop (parked by the owner, 29 Sep)
-The current promoted checkpoint stays in use; the 03:30 task keeps running unattended.
+### 11. Laya: stage 1 and the daily loop
+Claude is the teacher: it writes and reviews the labels; the owner does not review them.
+1. Done: the gold set has 243 cases, 187 of them production event subjects from June to
+   September 2026, none in train or holdout. Production has few communications and
+   real-estate stories (3 and 8 cases).
+2. Done, on 243 gold: no Laya 155 (63.8%), stock Laya 155 (63.8%), promoted LoRA 185
+   (76.1%). Stock Laya gains energy and financials but pulls 26 `other` stories into a
+   sector; the LoRA keeps most `other` right and lifts materials 5/16 to 15/16.
+3. Scheduled: the one-shot task "WorldFin Laya stage 1 (once)" runs
+   `scripts/laya_train/stage1.ps1` at 22:00 on 30 Sep (laptop must be on mains; it
+   will not start on battery). It stops Docker Desktop, WSL, Ollama and the WorldFin
+   processes, keeps `laya-ft\stage1` only if it beats the stock model by `MIN_GAIN`
+   cases, and logs the verdict to `history.jsonl` (`"stage1": true`). Read it on 1 Oct,
+   then delete the one-shot task.
+4. Automatic after step 3: the daily LoRA trains from `stage1` when it was kept, and
+   from the stock model otherwise. Read two nights of `history.jsonl`.
+5. Done: `laya._load` reloads when the weights file under `FINSCRAPE_LAYA_MODEL`
+   changes, so a promotion needs no restart.
+6. Production: the API on Render keeps `FINSCRAPE_LAYA=0` (512 MB). The ingest Action
+   runs Laya on CPU: it installs CPU-only torch, restores the checkpoint from the
+   release named by the repo variable `LAYA_RELEASE` (cached per tag), and runs without
+   Laya when the variable is unset. `scripts/laya_train/publish.py` creates the release
+   and sets the variable; `daily.py` calls it on every promotion. First release:
+   `laya-20260930-0019`. Watch the next two ingest runs for the download, run time
+   and Laya-chosen sectors.
+7. Done (30 Sep): teacher round. 3,537 fresh headlines (3,000 production events and
+   one live pass over every worker source), 1,412 left after dropping duplicates,
+   known subjects, 870 crypto price alerts and 93 quake reports (a dozen and four
+   kept). Claude labelled all 1,412 with sector and direction (the first direction
+   labels) and reviewed the 256 earlier `claude -p` labels: 32 were wrong (12.5%),
+   mostly war and politics pushed into a sector and ship orders marked energy; the
+   daily prompt now carries those rules and asks for direction. Split 4:1 into train
+   (1,825) and holdout (337). Scores on 243 gold + 337 holdout, sector through the
+   production chain:
+
+   | model | gold | holdout | direction (283) |
+   |---|---|---|---|
+   | stock | 155 | 203 | 129 |
+   | previous LoRA | 185 | 244 | 130 |
+   | teacher LoRA (promoted) | 194 | 268 | 227 |
+
+   Always answering neutral gets 214 of the 283 direction cases, so the direction
+   gain over that baseline is 13 cases; direction gold beyond the holdout is still
+   missing. The previous checkpoint is kept at `laya-ft\current-prev-20260929`.
+8. The 30 Sep 03:30 daily run trained but was stopped before scoring (exit
+   0xC000013A); the task has "stop if going on batteries" set, the likely cause.
+
+Checked and dropped (29 Sep): labelling headlines by which SPDR sector ETF moved most
+against SPY after them. Only 22 of 72 trading days from June to September had one
+clear sector, 16 of them energy, and each day carries about 130 headlines, so a daily
+move cannot be pinned on one story.
+
 Built (7fb3bcba): `scripts/laya_train/` has `train.py` (LoRA or full),
 `build_pretrain.py` (FNSPID and two Twitter finance sets) and `daily.py` (Claude
 labels the headlines Laya is unsure of via `claude -p`, a LoRA candidate trains, and
@@ -93,16 +146,32 @@ task "WorldFin Laya daily" runs it at 03:30; state, logs and `history.jsonl` liv
   72.9% on 70 gold + holdout cases, promoted, and `.env` now sets
   `FINSCRAPE_LAYA_MODEL`. That was a one-case gain, so promotion now needs at least
   2 more correct cases (`MIN_GAIN`).
-- The owner runs stage 1 from `Desktop\laya-stage1.txt` and reports the
-  `STOCK x% STAGE1 y%` line. Record it; if stage 1 loses, delete `laya-ft\stage1`
-  so the daily LoRA starts from the stock model again.
 - Read `history.jsonl` and the latest `logs\daily-*.log`: did runs happen, did
   labels arrive, were promotions real gains. Spot-check Claude's labels.
-- A promoted model loads only in new processes. Make `finscrape.analysis.laya`
-  reload when `current\` changes, or restart the API and worker on promotion.
-- Grow the gold set towards 250 and have the owner review it, then drop its
-  provisional mark; at 56 cases a one-headline gap is 1.8 points.
-- Direction has no gold at all; label a direction set and measure it.
+
+### 12. Crypto alerts flood the event list
+870 of the latest 3,000 production events are CoinGecko price alerts, and the older
+ones lost their sign and decimal point ("bitcoin cash bch dropped 98 in 24h" for
+-9.8%). Find where subjects are stripped of punctuation, fix it with a test, and cap
+alerts per cycle so geopolitical events are not crowded out.
+
+### 13. Demo readiness (owner's session prompt, 30 Sep)
+Work these after items 11 and 12, top to bottom, one commit each:
+1. Check `accuracy_outcomes` is fully re-scored (commit 2a92ceb2) and the 7-day
+   `scripts/reanalyse.py` run finished; rerun either if partial.
+2. Track record: report `/api/accuracy` by verdict and source; find why conflict news
+   mostly becomes PULL_OUT (prompt or thresholds), fix with a test, and agree with the
+   owner the hit rate the landing page claims.
+3. Leave the heuristic-era rows unless re-analysis is cheap at mimo speed.
+4. One-command local start (compose or `make up`) with a seeded demo dataset when no
+   LLM key is set; verify from a clean clone in a temp directory and fix the README.
+5. Playwright demo pass at 1440x900 and 390x844 on the landing page and `/app/`:
+   screenshot every panel, fix anything broken, empty or stuck, zero console errors,
+   redeploy Pages and Render.
+6. Watch two ingest runs (qwen to mimo fallback, GDELT 429s, LLM reasoning on new
+   events, and now Laya).
+7. Write `docs/DEMO.md`: what to click, what each panel proves, honest limits.
+8. List the owner's leftovers (key rotations, Neon deletion, Resend keys).
 
 ## Gated
 

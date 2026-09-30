@@ -50,14 +50,33 @@ costs the news moves most:
 {criteria}
 - other: no sector clearly affected (domestic politics, crime, sport, disasters with
   no market angle, diplomacy with no named industry).
-House rules: crypto counts as financials; airlines and defence as industrials; central
-banks, rates and sanctions on finance as financials; attacks on oil infrastructure or
-shipping lanes for crude as energy.
-Reply with only a JSON object mapping each id to its sector string."""
+House rules: crypto counts as financials; airlines, defence, ship orders and freight as
+industrials; central banks, rates and sanctions on finance as financials; attacks on oil
+infrastructure or shipping lanes for crude as energy. War, terror plots, troop moves and
+generic sanctions with no named industry are other, as is personal finance advice.
+Also give the direction the news pushes the affected prices: positive, negative or neutral
+(neutral for other).
+Reply with only a JSON object mapping each id to "sector,direction"."""
+
+# Price alerts and quake reports arrive by the hundred with one shape; a few teach Laya
+# everything they can.
+TEMPLATED = re.compile(
+    r"\b(surged|dropped) [+-]?[\d.]+%? in 24h$|^m ?[\d.]+ earthquake", re.IGNORECASE
+)
 
 
 def norm(s: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^\w\s]", "", s.lower())).strip()
+
+
+def parse_label(raw: object) -> tuple[str, str]:
+    """("sector", "direction") from a "sector,direction" reply; unknown parts come back empty."""
+    sector, _, direction = str(raw).partition(",")
+    sector, direction = sector.strip().lower(), direction.strip().lower()
+    return (
+        sector if sector in TAXONOMY else "",
+        direction if direction in ("positive", "negative", "neutral") else "",
+    )
 
 
 def load(path: Path) -> list[dict]:
@@ -89,7 +108,7 @@ def harvest(known: set[str]) -> list[str]:
     out, seen = [], set(known)
     for t in titles:
         n = norm(t)
-        if len(n) >= 15 and n not in seen:
+        if len(n) >= 15 and n not in seen and not TEMPLATED.search(t.strip()):
             seen.add(n)
             out.append(re.sub(r"\s+", " ", t).strip())
     return out
@@ -101,6 +120,7 @@ def use_model(path: Path | None) -> None:
 
     laya._predict = Agent(str(path)).predict if path else Router().predict
     laya._unavailable = False
+    laya._stamp = None
 
 
 def pick_unsure(headlines: list[str]) -> list[str]:
@@ -133,27 +153,37 @@ def claude_labels(headlines: list[str]) -> list[dict]:
             labels = json.loads(match.group(0)) if match else {}
         except json.JSONDecodeError:
             labels = {}
-        cases += [
-            {"subject": h, "sector": labels[str(j)], "source": "claude"}
-            for j, h in enumerate(chunk)
-            if labels.get(str(j)) in TAXONOMY
-        ]
+        for j, h in enumerate(chunk):
+            sector, direction = parse_label(labels.get(str(j), ""))
+            if sector:
+                case = {"subject": h, "sector": sector, "source": "claude"}
+                cases.append(case | ({"direction": direction} if direction else {}))
     return cases
 
 
-def accuracy(cases: list[dict]) -> float:
+def hits(cases: list[dict]) -> tuple[int, int]:
+    """Sector hits through the production chain, and raw direction hits on the cases
+    that carry a direction label."""
     nlp = FinancialNLP()
-    hits = 0
+    sector = direction = 0
     for c in cases:
         s = c["subject"]
+        view = laya.classify(s, "")
         got = laya.choose_sector(
             "",
-            laya.classify(s, ""),
+            view,
             nlp.analyze(s, "").sector,
             tickers=resolve_company_tickers(s),
         )
-        hits += got == c["sector"]
-    return hits / len(cases)
+        sector += got == c["sector"]
+        direction += bool(
+            c.get("direction") and view and view.direction == c["direction"]
+        )
+    return sector, direction
+
+
+def accuracy(cases: list[dict]) -> float:
+    return hits(cases)[0] / len(cases)
 
 
 def main() -> None:
@@ -208,11 +238,11 @@ def main() -> None:
         shutil.rmtree(epoch_dir)
 
     test = gold + holdout
-    old = accuracy(test)
+    old, old_dir = hits(test)
     use_model(candidate)
-    new = accuracy(test)
-    # One headline either way is noise on a test set this small.
-    promoted = round((new - old) * len(test)) >= MIN_GAIN
+    new, new_dir = hits(test)
+    # One headline either way is noise; a sector gain may not cost direction.
+    promoted = new - old >= MIN_GAIN and old_dir - new_dir < MIN_GAIN
     if promoted:
         shutil.rmtree(CURRENT, ignore_errors=True)
         shutil.move(str(candidate), str(CURRENT))
@@ -220,14 +250,23 @@ def main() -> None:
         if "FINSCRAPE_LAYA_MODEL" not in env.read_text("utf-8"):
             with env.open("a", encoding="utf-8") as f:
                 f.write(f"\nFINSCRAPE_LAYA_MODEL={CURRENT}\n")
+        from publish import publish
+
+        try:
+            print("published", publish(CURRENT), flush=True)
+        except (subprocess.CalledProcessError, OSError) as exc:
+            print("publish failed; ingest keeps the previous checkpoint:", exc)
     else:
         shutil.rmtree(candidate, ignore_errors=True)
     line = {
         "date": stamp,
         "labelled": len(labelled),
         "test_cases": len(test),
-        "incumbent": round(old, 4),
-        "candidate": round(new, 4),
+        "incumbent": round(old / len(test), 4),
+        "candidate": round(new / len(test), 4),
+        "direction_cases": sum(bool(c.get("direction")) for c in test),
+        "incumbent_direction": old_dir,
+        "candidate_direction": new_dir,
         "promoted": promoted,
     }
     with (HOME / "history.jsonl").open("a", encoding="utf-8") as f:

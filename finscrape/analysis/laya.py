@@ -85,11 +85,25 @@ class LayaView:
 _lock = threading.Lock()
 _predict: Any = None
 _unavailable = False
+_stamp: float | None = None  # mtime of the loaded _MODEL weights
+
+
+def _weights_mtime() -> float | None:
+    try:
+        return os.stat(os.path.join(_MODEL, "model.safetensors")).st_mtime
+    except OSError:  # absent mid-promotion (daily.py swaps the directory)
+        return None
 
 
 def _load() -> Any:
-    """Return a `predict(state, questions)` callable, or None when no runtime loads."""
-    global _predict, _unavailable
+    """Return a `predict(state, questions)` callable, or None when no runtime loads.
+
+    A promoted checkpoint replaces the weights under _MODEL; the next call picks it up.
+    """
+    global _predict, _unavailable, _stamp
+    if _stamp is not None and _weights_mtime() not in (None, _stamp):
+        logger.info("Laya checkpoint changed, reloading")
+        _predict, _stamp = None, None
     if _predict is not None or _unavailable:
         return _predict
     if os.environ.get("FINSCRAPE_LAYA", "").lower() in ("0", "false", "no", "off"):
@@ -103,6 +117,7 @@ def _load() -> Any:
         elif _MODEL:
             from laya import Agent
 
+            _stamp = _weights_mtime()
             _predict = Agent(_MODEL).predict
         else:
             from laya import Router

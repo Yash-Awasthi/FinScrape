@@ -35,6 +35,33 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
       - run: uv python install 3.13
+      # The locked torch pulls ~3 GB of CUDA wheels on Linux; Laya needs only the CPU build.
+      - name: Install dependencies with CPU-only Laya
+        run: |
+          uv sync -p 3.13 --group server
+          uv pip install -p .venv torch --index-url https://download.pytorch.org/whl/cpu
+          uv pip install -p .venv "laya>=0.3.20"
+      # vars.LAYA_RELEASE names the release holding the promoted checkpoint
+      # (scripts/laya_train/publish.py); unset runs without Laya.
+      - name: Restore Laya checkpoint
+        id: laya
+        if: vars.LAYA_RELEASE != ''
+        uses: actions/cache@v4
+        with:
+          path: laya-model
+          key: ${{ vars.LAYA_RELEASE }}
+      - name: Download Laya checkpoint
+        if: vars.LAYA_RELEASE != '' && steps.laya.outputs.cache-hit != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p laya-model
+          gh release download "${{ vars.LAYA_RELEASE }}" -p laya.tar -O - | tar -x -C laya-model
       - name: Run one ingest cycle
-        run: uv run -p 3.13 --group server python -m worker.main --once
+        env:
+          FINSCRAPE_LAYA: ${{ vars.LAYA_RELEASE != '' && '1' || '0' }}
+          FINSCRAPE_LAYA_MODEL: ${{ vars.LAYA_RELEASE != '' && format('{0}/laya-model', github.workspace) || '' }}
+        run: uv run --no-sync python -m worker.main --once

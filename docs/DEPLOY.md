@@ -24,6 +24,9 @@ The live stack runs **$0/month, no credit card** across four free services + a f
 - `FINSCRAPE_HEURISTIC_FALLBACK=true` (worker — ingest never stalls if the LLM is down)
 
 API-only: `WORLDFIN_ENV=production` (refuses the default key and CORS `*`), `WORLDFIN_CORS_ORIGINS=https://winfin.pages.dev`, `FINSCRAPE_API_KEY`, `WORLDFIN_RUN_MIGRATIONS=true`, `WORLDFIN_ENABLE_COUNCIL=true`, `FINSCRAPE_LAYA=0` (the image carries no Laya).
+
+Ingest Action only: the repo variable `LAYA_RELEASE` names the GitHub release holding the Laya checkpoint (`laya.tar`); the job installs CPU-only torch, caches the checkpoint per tag and sets `FINSCRAPE_LAYA_MODEL`. Publish a new checkpoint with `python scripts/laya_train/publish.py` (the daily Laya job does this on promotion); unset the variable to run without Laya.
+
 The API reads `$PORT` (Render injects it; `settings.port` aliases `WORLDFIN_PORT`/`PORT`).
 
 ## Redeploy

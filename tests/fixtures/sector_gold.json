@@ -1,5 +1,5 @@
 {
- "_note": "Provisional labels written from the headline alone; the owner has not reviewed them yet.",
+ "_note": "Labels written from the headline alone and reviewed against the house rules in scripts/laya_train/daily.py. Cases from 57 on are production event subjects from June to September 2026.",
  "cases": [
   {
    "subject": "iran closes strait of hormuz",
@@ -273,13 +273,948 @@
   },
   {
    "subject": "houthi strike on riyadh and yemen displacement surge",
-   "sector": "energy",
-   "reason": "attack on the largest oil exporter"
+   "sector": "other",
+   "reason": "missile strike on a city, no oil site named"
   },
   {
    "subject": "us strikes on alleged drug boats",
    "sector": "other",
    "reason": "military action, no market sector"
+  },
+  {
+   "subject": "rain rain dropped 84 in 24h",
+   "sector": "financials",
+   "reason": "crypto token move"
+  },
+  {
+   "subject": "bitway btw surged 369 in 24h",
+   "sector": "financials",
+   "reason": "crypto token move"
+  },
+  {
+   "subject": "avalanche avax surged 191 in 24h",
+   "sector": "financials",
+   "reason": "crypto token move"
+  },
+  {
+   "subject": "aave aave surged 122 in 24h",
+   "sector": "financials",
+   "reason": "crypto token move"
+  },
+  {
+   "subject": "world liberty financial wlfi dropped 184 in 24h",
+   "sector": "financials",
+   "reason": "crypto token move"
+  },
+  {
+   "subject": "solana sol surged 114 in 24h",
+   "sector": "financials",
+   "reason": "crypto token move"
+  },
+  {
+   "subject": "trump says us is taking partial control of venezuela vast oil reserves",
+   "sector": "energy",
+   "reason": "control of Venezuelan oil reserves"
+  },
+  {
+   "subject": "us widens war on drug cartels with dozens of arrests more deadly strikes at sea",
+   "sector": "other",
+   "reason": "drug cartel enforcement"
+  },
+  {
+   "subject": "world news in brief new intensity to russian attacks on ukraine yemen gaza and colombia updates",
+   "sector": "other",
+   "reason": "war news roundup"
+  },
+  {
+   "subject": "trumps comments on a united ireland may have targeted audience across the atlantic",
+   "sector": "other",
+   "reason": "domestic politics"
+  },
+  {
+   "subject": "kentucky doctors are warning that insurance cuts and inflation are driving physicians out of the state and patients are",
+   "sector": "healthcare",
+   "reason": "physician supply and insurance cuts"
+  },
+  {
+   "subject": "five dead after amazon cargo plane crashes at miami airport",
+   "sector": "industrials",
+   "reason": "air freight crash"
+  },
+  {
+   "subject": "canada installs large lake ontario sign in latest jab at us",
+   "sector": "other",
+   "reason": "diplomatic spat"
+  },
+  {
+   "subject": "lindsay clancy trial declared mistrial but defense wins appeal delay",
+   "sector": "other",
+   "reason": "crime trial"
+  },
+  {
+   "subject": "saudi led coalition says houthi missiles drones target three cities",
+   "sector": "other",
+   "reason": "missile attack on cities, no oil infrastructure named"
+  },
+  {
+   "subject": "guterres urges leaders to invest in peace as conflicts deepen",
+   "sector": "other",
+   "reason": "UN diplomacy"
+  },
+  {
+   "subject": "tv presenter among 11 sentenced to death in egypt drugs case",
+   "sector": "other",
+   "reason": "crime"
+  },
+  {
+   "subject": "is mecca pact a counterweight to israel or simply a muslim nato",
+   "sector": "other",
+   "reason": "alliance diplomacy"
+  },
+  {
+   "subject": "japan increased defence budget will escalate security deficit kcna commentary",
+   "sector": "industrials",
+   "reason": "defence budget"
+  },
+  {
+   "subject": "m47 earthquake 107 km se of vilyuchinsk russia",
+   "sector": "other",
+   "reason": "earthquake with no market angle"
+  },
+  {
+   "subject": "turkey israel syria clash risks spilling into aegean for greece",
+   "sector": "other",
+   "reason": "regional conflict"
+  },
+  {
+   "subject": "questions mount over what an ai slowdown would look like",
+   "sector": "technology",
+   "reason": "AI investment cycle"
+  },
+  {
+   "subject": "here why the bank of canada is worried about the rise of private credit winnipeg free press",
+   "sector": "financials",
+   "reason": "private credit and central bank"
+  },
+  {
+   "subject": "iran and oman hold talks on managing strait of hormuz",
+   "sector": "energy",
+   "reason": "Hormuz shipping lane"
+  },
+  {
+   "subject": "OpenAI cancels GPT-6.1 Astra release over safety concerns",
+   "sector": "technology",
+   "reason": "AI model release"
+  },
+  {
+   "subject": "greek cypriots rally to stop turkish trnc pipeline",
+   "sector": "energy",
+   "reason": "gas pipeline"
+  },
+  {
+   "subject": "the fruit of patience how regional shifts ripened turkeys path to kurdish reconciliation",
+   "sector": "other",
+   "reason": "domestic politics"
+  },
+  {
+   "subject": "2 killed in first known strike on alleged drug boat in months in eastern pacific southcom",
+   "sector": "other",
+   "reason": "drug boat strike"
+  },
+  {
+   "subject": "Department of War invests in Strategic Minerals tungsten project",
+   "sector": "materials",
+   "reason": "tungsten mining"
+  },
+  {
+   "subject": "defiant zelenskyy says ukraine will not surrender to russia",
+   "sector": "other",
+   "reason": "war statement"
+  },
+  {
+   "subject": "Russia launches deadly daytime attack on Kyiv",
+   "sector": "other",
+   "reason": "attack on a city"
+  },
+  {
+   "subject": "singapore electricity retailers up offerings to meet higher demand amid middle east conflict",
+   "sector": "utilities",
+   "reason": "electricity retail demand"
+  },
+  {
+   "subject": "what countries do business with iran and who buying its oil",
+   "sector": "energy",
+   "reason": "buyers of Iranian oil"
+  },
+  {
+   "subject": "Manipur expands cross-border conflict at Kamjong",
+   "sector": "other",
+   "reason": "local conflict"
+  },
+  {
+   "subject": "bbc reviews gaza journalists over possible terrorist ties",
+   "sector": "other",
+   "reason": "media controversy"
+  },
+  {
+   "subject": "ai staff genuinely frightened for humanitys future exanthropic researcher tells bbc",
+   "sector": "technology",
+   "reason": "AI lab safety"
+  },
+  {
+   "subject": "us crude prices extend losses as oil market remains in limbo",
+   "sector": "energy",
+   "reason": "crude price"
+  },
+  {
+   "subject": "nowhere is safe un experts detail ukraine wars toll and russias reach beyond its borders",
+   "sector": "other",
+   "reason": "war toll"
+  },
+  {
+   "subject": "un committee raises racial discrimination concerns over israeli threats of gaza level destruction in lebanon",
+   "sector": "other",
+   "reason": "UN human rights"
+  },
+  {
+   "subject": "venezuela inks energy deals with multinational firms",
+   "sector": "energy",
+   "reason": "oil and gas deals"
+  },
+  {
+   "subject": "norways new king remembers my dear father in first speech",
+   "sector": "other",
+   "reason": "royal speech"
+  },
+  {
+   "subject": "Hilton debuts Motto hotel in Japan",
+   "sector": "consumer",
+   "reason": "hotel and travel"
+  },
+  {
+   "subject": "at sco summit in kyrgyzstan guterres calls for more representative global governance",
+   "sector": "other",
+   "reason": "UN diplomacy"
+  },
+  {
+   "subject": "bank set to hold interest rates but needs to be ready to act on inflation",
+   "sector": "financials",
+   "reason": "interest rates"
+  },
+  {
+   "subject": "shein aims for almost 27bn valuation in stock market debut",
+   "sector": "consumer",
+   "reason": "retailer IPO"
+  },
+  {
+   "subject": "russian attacks kill at least three in ukraine zelensky says u s talks on war are expected",
+   "sector": "other",
+   "reason": "war casualties"
+  },
+  {
+   "subject": "india bop likely to post usd 60 65 bn surplus in fy27 despite wider cad hdfc bank",
+   "sector": "financials",
+   "reason": "balance of payments and currency"
+  },
+  {
+   "subject": "truck carrying military explosives catches fire in hudson valley",
+   "sector": "other",
+   "reason": "accident"
+  },
+  {
+   "subject": "iceland votes against restarting talks on joining eu",
+   "sector": "other",
+   "reason": "domestic politics"
+  },
+  {
+   "subject": "ed sheeran admits mistakes at first show since macklemore controversy",
+   "sector": "other",
+   "reason": "entertainment gossip"
+  },
+  {
+   "subject": "US and China lower tariffs on goods",
+   "sector": "industrials",
+   "reason": "tariffs"
+  },
+  {
+   "subject": "trump downplays warnings of ai risks citing rivalry with china",
+   "sector": "technology",
+   "reason": "AI policy"
+  },
+  {
+   "subject": "statement in context of g20 finance ministers and central bank governors meetings on 31 august and 1 september in ashev",
+   "sector": "financials",
+   "reason": "G20 finance ministers"
+  },
+  {
+   "subject": "israeli strikes kill two gaza officials",
+   "sector": "other",
+   "reason": "conflict strike"
+  },
+  {
+   "subject": "saudi arabia resumes yanbu oil exports after pipeline repair",
+   "sector": "energy",
+   "reason": "oil export pipeline"
+  },
+  {
+   "subject": "argentina government moves to enforce falkland islands oil sanctions darlington and stockton times",
+   "sector": "energy",
+   "reason": "oil sanctions"
+  },
+  {
+   "subject": "fintech meets cdfi tellus and central bank of kansas city team up on fdic insured deposit account",
+   "sector": "financials",
+   "reason": "deposit banking"
+  },
+  {
+   "subject": "SpaceX Starship reaches orbit despite engine failure",
+   "sector": "industrials",
+   "reason": "aerospace launch"
+  },
+  {
+   "subject": "terrorist propaganda is outpacing global efforts to stop it un report finds",
+   "sector": "other",
+   "reason": "UN report on propaganda"
+  },
+  {
+   "subject": "gold extends rally as government debt concerns mount",
+   "sector": "materials",
+   "reason": "gold price"
+  },
+  {
+   "subject": "india china talks ahead of xi delhi visit groundwork for brics summit",
+   "sector": "other",
+   "reason": "diplomacy"
+  },
+  {
+   "subject": "zelenskyy urges stronger pressure on russia warns wars impact is spreading beyond ukraine",
+   "sector": "other",
+   "reason": "war statement"
+  },
+  {
+   "subject": "senior u s military leaders faced polygraphs in leak probe of weapons stockpiles",
+   "sector": "other",
+   "reason": "military leak probe"
+  },
+  {
+   "subject": "aid reaches hundreds of thousands in gaza amid severe food insecurity",
+   "sector": "other",
+   "reason": "humanitarian aid"
+  },
+  {
+   "subject": "video magnitude 5 9 earthquake strikes eastern japan injures several disrupts tokyo train service",
+   "sector": "other",
+   "reason": "earthquake disrupting trains, no market angle"
+  },
+  {
+   "subject": "labour urged to introduce oil and gas levy in 2027",
+   "sector": "energy",
+   "reason": "oil and gas levy"
+  },
+  {
+   "subject": "countries must increase ai regulation to avoid existential risks türk",
+   "sector": "technology",
+   "reason": "AI regulation"
+  },
+  {
+   "subject": "new contract aims to keep space forces multibilliondollar projects on budget",
+   "sector": "industrials",
+   "reason": "space force contracts"
+  },
+  {
+   "subject": "why the un general assembly still matters",
+   "sector": "other",
+   "reason": "UN diplomacy"
+  },
+  {
+   "subject": "rescuers dig through ukraine mall wreckage as zelensky condemns despicable russian strike",
+   "sector": "other",
+   "reason": "war strike"
+  },
+  {
+   "subject": "turkish police detain dozens in raids on gay bars and homes of lgbtq activists",
+   "sector": "other",
+   "reason": "policing"
+  },
+  {
+   "subject": "fact check team could the us venezuela oil deal help shortages and price spikes",
+   "sector": "energy",
+   "reason": "Venezuela oil deal and fuel prices"
+  },
+  {
+   "subject": "conflict of interest flagged in vp linked firm businessworld online",
+   "sector": "other",
+   "reason": "political scandal"
+  },
+  {
+   "subject": "syria says israeli strike near damascus violation of international law",
+   "sector": "other",
+   "reason": "conflict strike"
+  },
+  {
+   "subject": "us warns of rapid escalation in middle east war",
+   "sector": "other",
+   "reason": "war escalation warning"
+  },
+  {
+   "subject": "carney calls trumps fresh tariffs a miscalculation after trade talks collapse",
+   "sector": "industrials",
+   "reason": "tariffs"
+  },
+  {
+   "subject": "Five men released on bail over UK base terror plot",
+   "sector": "other",
+   "reason": "terror plot"
+  },
+  {
+   "subject": "b2gold discovers new highgrade goose gold zone",
+   "sector": "materials",
+   "reason": "gold mining discovery"
+  },
+  {
+   "subject": "Senator Hawley demands Congress ban abortion drug",
+   "sector": "healthcare",
+   "reason": "abortion drug ban"
+  },
+  {
+   "subject": "labcorp settles with alaska over breach affecting residents",
+   "sector": "healthcare",
+   "reason": "lab testing company breach settlement"
+  },
+  {
+   "subject": "europe targeted by spiralling campaign of sabotage and russia is the chief suspect",
+   "sector": "other",
+   "reason": "sabotage campaign"
+  },
+  {
+   "subject": "crude oil prices pressured by diplomatic hopes in the middle east",
+   "sector": "energy",
+   "reason": "crude price"
+  },
+  {
+   "subject": "defence force ships transit contested taiwan strait",
+   "sector": "other",
+   "reason": "naval transit"
+  },
+  {
+   "subject": "betting on autonomous aircraft",
+   "sector": "industrials",
+   "reason": "autonomous aircraft"
+  },
+  {
+   "subject": "jolly slams corrupt homeowners insurance system after news organizations report",
+   "sector": "financials",
+   "reason": "homeowners insurance"
+  },
+  {
+   "subject": "Canada trade war raises protein powder prices",
+   "sector": "consumer",
+   "reason": "food prices from trade war"
+  },
+  {
+   "subject": "whatsapp chat used to send cash for crime and extremism",
+   "sector": "other",
+   "reason": "crime"
+  },
+  {
+   "subject": "burnham to visit kyiv on first foreign trip and reaffirm uk support for ukraine",
+   "sector": "other",
+   "reason": "diplomatic visit"
+  },
+  {
+   "subject": "human rights chief türk renews call for end to spiralling sudan war",
+   "sector": "other",
+   "reason": "UN human rights"
+  },
+  {
+   "subject": "lockheeds skunk works plans to build four more of its multirole combat drones",
+   "sector": "industrials",
+   "reason": "defence contractor drones"
+  },
+  {
+   "subject": "swedish party blocs tied after sunday vote projections say",
+   "sector": "other",
+   "reason": "election"
+  },
+  {
+   "subject": "ukrainians captured 250 russian soldiers during operation vivaldi ukraine battlefield update day 1 677",
+   "sector": "other",
+   "reason": "deportation"
+  },
+  {
+   "subject": "syria israel hold us mediated talks in jordan to ease tensions",
+   "sector": "other",
+   "reason": "battlefield update"
+  },
+  {
+   "subject": "surge in displacement following fighting in southwest yemen",
+   "sector": "other",
+   "reason": "displacement"
+  },
+  {
+   "subject": "six dead 130 missing after indonesian ferry capsizes in java sea",
+   "sector": "other",
+   "reason": "ferry disaster"
+  },
+  {
+   "subject": "explosion at bolivia military base kills at least 10",
+   "sector": "other",
+   "reason": "accident"
+  },
+  {
+   "subject": "zelenskiy says ukraine not behind nord stream blasts",
+   "sector": "energy",
+   "reason": "gas pipeline sabotage"
+  },
+  {
+   "subject": "state of the union 2026 quotes and initiatives",
+   "sector": "other",
+   "reason": "domestic politics"
+  },
+  {
+   "subject": "space transportation policy calls for integration with air traffic control modernization",
+   "sector": "industrials",
+   "reason": "aerospace and air traffic control"
+  },
+  {
+   "subject": "wfp will halve west bank food assistance as it faces possible new cuts in gaza",
+   "sector": "other",
+   "reason": "food aid cut"
+  },
+  {
+   "subject": "china probes use of formaldehyde to keep cabbages fresh",
+   "sector": "consumer",
+   "reason": "food safety"
+  },
+  {
+   "subject": "iran authorities say one dead after ship struck in hormuz",
+   "sector": "energy",
+   "reason": "ship struck in Hormuz"
+  },
+  {
+   "subject": "Gold-backed bank lending tops billions in India",
+   "sector": "financials",
+   "reason": "gold-backed bank lending"
+  },
+  {
+   "subject": "in a divided us the left and right unite to oppose ai data centers",
+   "sector": "technology",
+   "reason": "AI data centres"
+  },
+  {
+   "subject": "change agent army secretary resigns",
+   "sector": "other",
+   "reason": "political resignation"
+  },
+  {
+   "subject": "footage of tibet floods isnt being shown in china and we know little about victims there",
+   "sector": "other",
+   "reason": "flood"
+  },
+  {
+   "subject": "be wary of a possible oil shock even as gdp growth excels cea",
+   "sector": "energy",
+   "reason": "oil shock"
+  },
+  {
+   "subject": "Iranian national sentenced for smuggling US technology",
+   "sector": "other",
+   "reason": "smuggling conviction"
+  },
+  {
+   "subject": "russia to close german cultural centers amid deepening tensions with europe over supporting ukraine",
+   "sector": "other",
+   "reason": "diplomatic spat"
+  },
+  {
+   "subject": "volkswagen plans defense future for struggling german factory",
+   "sector": "industrials",
+   "reason": "defence manufacturing"
+  },
+  {
+   "subject": "some airlines will struggle to survive if oil prices stay high warns ryanair",
+   "sector": "industrials",
+   "reason": "airlines and fuel costs"
+  },
+  {
+   "subject": "officials say mediators are still working with iran and the us on a possible deal 710am kurv",
+   "sector": "other",
+   "reason": "diplomacy"
+  },
+  {
+   "subject": "father leaves 7yearold son alone on mount fuji to continue hike",
+   "sector": "other",
+   "reason": "human interest"
+  },
+  {
+   "subject": "slavery is not a thing of the past un supports call for reparations",
+   "sector": "other",
+   "reason": "UN diplomacy"
+  },
+  {
+   "subject": "world news us administration plans sanctions against icc",
+   "sector": "other",
+   "reason": "sanctions on a court"
+  },
+  {
+   "subject": "privacyfocused communication app aims for military customers and beyond",
+   "sector": "technology",
+   "reason": "communication software"
+  },
+  {
+   "subject": "russia struck train near poland border shortly after boris johnson and top european officials passed through",
+   "sector": "other",
+   "reason": "war strike"
+  },
+  {
+   "subject": "us sanctions turkish bank in bid to pressure iran",
+   "sector": "financials",
+   "reason": "sanctions on a bank"
+  },
+  {
+   "subject": "türkiye hürkuş trainer aircraft enters military inventory",
+   "sector": "industrials",
+   "reason": "military aircraft"
+  },
+  {
+   "subject": "Nvidia releases AI agent safety platform",
+   "sector": "technology",
+   "reason": "AI software"
+  },
+  {
+   "subject": "chancellor headroom to halve because of iran war inflation and weak growth",
+   "sector": "financials",
+   "reason": "public finances and inflation"
+  },
+  {
+   "subject": "rising gas prices frustrate voters trump says it an inexpensive price to pay for the iran war",
+   "sector": "energy",
+   "reason": "gasoline prices"
+  },
+  {
+   "subject": "not just banks 3 trading stocks to watch after the fed rate hike",
+   "sector": "financials",
+   "reason": "Fed rate hike"
+  },
+  {
+   "subject": "women and girls pay high price in dr congo ebola outbreak",
+   "sector": "healthcare",
+   "reason": "Ebola outbreak"
+  },
+  {
+   "subject": "illegal gold mining continues in indonesia aceh despite government crackdown pledge",
+   "sector": "materials",
+   "reason": "gold mining"
+  },
+  {
+   "subject": "shares bonds rally as markets await fed signals yen jumps",
+   "sector": "financials",
+   "reason": "bonds and currencies"
+  },
+  {
+   "subject": "sudan air attack destroys food aid for families in south kordofan",
+   "sector": "other",
+   "reason": "war attack on aid"
+  },
+  {
+   "subject": "wheat futures fall on black sea export hopes hellenic shipping news worldwide",
+   "sector": "materials",
+   "reason": "wheat"
+  },
+  {
+   "subject": "27 killed as russian strike damages dozens of homes in ukraine",
+   "sector": "other",
+   "reason": "war strike"
+  },
+  {
+   "subject": "how the strait of hormuz crisis forced asia to rewrite its oil and gas energy strategy peak oil news and message boar",
+   "sector": "energy",
+   "reason": "oil and gas strategy"
+  },
+  {
+   "subject": "chipmaker cxmt sues pentagon over chinese military company label",
+   "sector": "technology",
+   "reason": "chipmaker"
+  },
+  {
+   "subject": "army to spend 2b to build nuclear microreactors at 5 bases as us seeks to ramp up nuclear power",
+   "sector": "utilities",
+   "reason": "nuclear power"
+  },
+  {
+   "subject": "putin left reeling as russia afipsky refinery is hit by ukraine drone strikes",
+   "sector": "energy",
+   "reason": "refinery strike"
+  },
+  {
+   "subject": "oil ship disabled by strait of hormuz attack as mediators seek negotiated end to war",
+   "sector": "energy",
+   "reason": "oil tanker attack"
+  },
+  {
+   "subject": "volatile treasuries push imbs toward bank insurer deals",
+   "sector": "financials",
+   "reason": "treasuries and insurers"
+  },
+  {
+   "subject": "iran currency hits new record low as us prepares to announce more sanctions",
+   "sector": "financials",
+   "reason": "currency"
+  },
+  {
+   "subject": "iran discovers new gas field in southern fars province says oil minister paknejad",
+   "sector": "energy",
+   "reason": "gas field"
+  },
+  {
+   "subject": "iran linked attack knocks out british power plant could they do that here",
+   "sector": "utilities",
+   "reason": "power plant outage"
+  },
+  {
+   "subject": "colorado hail problem is not just a roof problem it changing what kind of insurance homeowners can get live insurance",
+   "sector": "financials",
+   "reason": "homeowners insurance"
+  },
+  {
+   "subject": "cyber attack shut down united kingdom power plant telegraph",
+   "sector": "utilities",
+   "reason": "power plant outage"
+  },
+  {
+   "subject": "messerschmitt the forgotten wwii german aviation powerhouse",
+   "sector": "other",
+   "reason": "history"
+  },
+  {
+   "subject": "ebola responders grapple with widening outbreak in dr congo",
+   "sector": "healthcare",
+   "reason": "Ebola outbreak"
+  },
+  {
+   "subject": "money sent home by migrants nearly doubles in a decade",
+   "sector": "financials",
+   "reason": "remittances"
+  },
+  {
+   "subject": "commission approves 52 million romanian state aid for cattle farmers facing increased fuel and fertiliser prices",
+   "sector": "materials",
+   "reason": "fertiliser prices"
+  },
+  {
+   "subject": "ai datacentres pose growing threat to electricity systems worldwide",
+   "sector": "utilities",
+   "reason": "electricity demand"
+  },
+  {
+   "subject": "caucasian knot grain crisis in southern russia",
+   "sector": "materials",
+   "reason": "grain"
+  },
+  {
+   "subject": "arab news saudi arabia acwa signs water deal to support syria rebuilding",
+   "sector": "utilities",
+   "reason": "water deal"
+  },
+  {
+   "subject": "japan s korean shares bounce as chipmaker shares rally",
+   "sector": "technology",
+   "reason": "chipmaker shares"
+  },
+  {
+   "subject": "u s targets cuban nickel and steel state enterprises in latest sanctions effort",
+   "sector": "materials",
+   "reason": "sanctions on nickel and steel producers"
+  },
+  {
+   "subject": "update today could mean end of mortgage rate cut say brokers",
+   "sector": "real_estate",
+   "reason": "mortgage rates"
+  },
+  {
+   "subject": "big australian sees a copper future on ai energy boom",
+   "sector": "materials",
+   "reason": "copper demand"
+  },
+  {
+   "subject": "bangladesh electricity crisis lingering lng crisis may drag power cut woes bangladesh power saving measures august",
+   "sector": "utilities",
+   "reason": "power cuts"
+  },
+  {
+   "subject": "ebola deaths top 2000 as scientists race to develop vaccine",
+   "sector": "healthcare",
+   "reason": "Ebola outbreak and vaccine"
+  },
+  {
+   "subject": "commission accelerates iris² deployment with enhanced security and expanded satellites network",
+   "sector": "communications",
+   "reason": "satellite network"
+  },
+  {
+   "subject": "chinese telecoms kept footholds in us despite crackdowns probe finds",
+   "sector": "communications",
+   "reason": "telecom operators"
+  },
+  {
+   "subject": "baystreet ca china rare earth strategy is forcing a u s manufacturing revolution",
+   "sector": "materials",
+   "reason": "rare earths"
+  },
+  {
+   "subject": "trump cuts who off from gavi vaccine alliance funding",
+   "sector": "healthcare",
+   "reason": "vaccine funding"
+  },
+  {
+   "subject": "us consumers shift grocery spending amid surging prices",
+   "sector": "consumer",
+   "reason": "grocery spending"
+  },
+  {
+   "subject": "rusal faces scrutiny over possible alumina diversion",
+   "sector": "materials",
+   "reason": "alumina"
+  },
+  {
+   "subject": "ebola vaccine candidate begins human trial",
+   "sector": "healthcare",
+   "reason": "vaccine trial"
+  },
+  {
+   "subject": "us mortgage rate climbs to nearly oneyear high",
+   "sector": "real_estate",
+   "reason": "mortgage rates"
+  },
+  {
+   "subject": "brent tops 100 as tesla and alphabet drag stocks lower",
+   "sector": "energy",
+   "reason": "Brent above 100"
+  },
+  {
+   "subject": "beshear reverses medicaid and senior meal cuts",
+   "sector": "healthcare",
+   "reason": "Medicaid cuts"
+  },
+  {
+   "subject": "from lithium to nickel how the un is helping countries make the most of critical minerals",
+   "sector": "materials",
+   "reason": "critical minerals"
+  },
+  {
+   "subject": "us defense contractors face budget gridlock",
+   "sector": "industrials",
+   "reason": "defence contractors' budget"
+  },
+  {
+   "subject": "social housing construction misses target",
+   "sector": "real_estate",
+   "reason": "housing construction"
+  },
+  {
+   "subject": "burnham proposes electricity bill tax cut",
+   "sector": "utilities",
+   "reason": "electricity bills"
+  },
+  {
+   "subject": "european commission alleges construction chemicals price collusion",
+   "sector": "materials",
+   "reason": "construction chemicals"
+  },
+  {
+   "subject": "sugarproducing region warns pest infestation worsens",
+   "sector": "materials",
+   "reason": "sugar crop"
+  },
+  {
+   "subject": "iranian strikes renew regional water supply worries",
+   "sector": "utilities",
+   "reason": "water supply"
+  },
+  {
+   "subject": "abu dhabi property transactions surge to dh117 billion",
+   "sector": "real_estate",
+   "reason": "property transactions"
+  },
+  {
+   "subject": "zachary lane regional medical center seeks hospital partner",
+   "sector": "healthcare",
+   "reason": "hospital deal"
+  },
+  {
+   "subject": "consumer sentiment rises as prices ease",
+   "sector": "consumer",
+   "reason": "consumer sentiment"
+  },
+  {
+   "subject": "spain tourism revenue rises on higher visitor spending",
+   "sector": "consumer",
+   "reason": "tourism spending"
+  },
+  {
+   "subject": "us consumer inflation rises slowly in june",
+   "sector": "financials",
+   "reason": "inflation and rates"
+  },
+  {
+   "subject": "road to housing act boosts housing affordability",
+   "sector": "real_estate",
+   "reason": "housing affordability law"
+  },
+  {
+   "subject": "us housing reform becomes law",
+   "sector": "real_estate",
+   "reason": "housing law"
+  },
+  {
+   "subject": "netflix sets operation safed sagar premiere",
+   "sector": "communications",
+   "reason": "streaming media"
+  },
+  {
+   "subject": "commission refers romania over pharmacy payment delays",
+   "sector": "healthcare",
+   "reason": "pharmacy payments"
+  },
+  {
+   "subject": "global fertility rates fall amid economic and housing barriers",
+   "sector": "other",
+   "reason": "demographics, housing only named as a cause"
+  },
+  {
+   "subject": "european commission seeks housing rule simplification views",
+   "sector": "real_estate",
+   "reason": "housing supply rules"
+  },
+  {
+   "subject": "russia and ukraine intensify drone strikes on power grid",
+   "sector": "utilities",
+   "reason": "power grid strikes"
+  },
+  {
+   "subject": "Large-cap pharma reports positive late-stage trial result",
+   "sector": "healthcare",
+   "reason": "drug trial"
+  },
+  {
+   "subject": "Tesla recalls vehicles over software defect; deliveries cut",
+   "sector": "consumer",
+   "reason": "car recall"
+  },
+  {
+   "subject": "hamas uses gaza hospital for torture interrogation of palestinians idf says",
+   "sector": "other",
+   "reason": "conflict, the hospital is a location"
+  },
+  {
+   "subject": "iran cannot have in any way shape or form a nuclear weapon trump reiterates u number one goal",
+   "sector": "other",
+   "reason": "nuclear diplomacy"
+  },
+  {
+   "subject": "climate first bank launches new flagship consumer checking account",
+   "sector": "financials",
+   "reason": "bank account product"
   }
  ]
 }
