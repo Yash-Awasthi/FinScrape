@@ -2,6 +2,7 @@
 # keep the result only if it beats the current stage 1 (else stock) on sector or direction.
 # Progress and ETA: laya-ft\progress.txt, shown live by Desktop\Laya progress.cmd.
 # Started from Desktop\Laya stage 1.cmd; the verdict lands in laya-ft\history.jsonl.
+# Rerunning after a crash or reboot resumes from the last checkpoint (every 45 min).
 
 $ErrorActionPreference = "Stop"
 $Repo = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
@@ -13,6 +14,20 @@ Start-Transcript -Path "$Home2\logs\stage1-$(Get-Date -Format yyyyMMdd-HHmm).log
 $env:PYTHONIOENCODING = "utf8"
 $env:HF_HUB_DISABLE_PROGRESS_BARS = "1"
 $env:PYTORCH_CUDA_ALLOC_CONF = "expandable_segments:True"
+
+function Stop-Early($Why) {
+  Write-Host "NOT STARTED: $Why"
+  "$(Get-Date -Format 'dd MMM HH:mm')  stage 1 not started: $Why" | Set-Content -Encoding utf8 "$Home2\progress.txt"
+  Stop-Transcript
+  exit 1
+}
+# Preflight: fail in seconds, before anything is stopped or disabled.
+Add-Type -AssemblyName System.Windows.Forms
+if ([System.Windows.Forms.SystemInformation]::PowerStatus.PowerLineStatus -ne "Online") { Stop-Early "the laptop is on battery; plug it in" }
+if ((Get-PSDrive C).Free -lt 10GB) { Stop-Early "less than 10 GB free on C:" }
+if (-not (Test-Path $Py)) { Stop-Early "CUDA venv missing at $Py" }
+& $Py -c "import torch, bitsandbytes; assert torch.cuda.is_available()" 2>$null
+if ($LASTEXITCODE -ne 0) { Stop-Early "torch cannot see the GPU or bitsandbytes is missing" }
 
 # Stay awake until this process exits; children inherit the lower priority.
 Add-Type -Namespace Laya -Name Power -MemberDefinition '[DllImport("kernel32.dll")] public static extern uint SetThreadExecutionState(uint f);'
@@ -32,6 +47,12 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "build_pretrain failed" }
   }
   $Next = "$Home2\stage1-next"
+  # Two minutes on the longest items: loss must fall and memory must fit, or stop now.
+  "$(Get-Date -Format 'dd MMM HH:mm')  smoke test" | Set-Content -Encoding utf8 "$Home2\progress.txt"
+  & $Py -W ignore -u scripts\laya_train\train.py "$Home2\stage1-smoke" --data "$Home2\data\pretrain.json" --mode full --micro-batch 2 --balance-direction --smoke
+  $Smoke = $LASTEXITCODE
+  Remove-Item -Recurse -Force "$Home2\stage1-smoke" -ErrorAction SilentlyContinue
+  if ($Smoke -ne 0) { throw "smoke test failed; see the lines above" }
   & $Py -W ignore -u scripts\laya_train\train.py $Next --data "$Home2\data\pretrain.json" --mode full --epochs 1 --micro-batch 2 --grad-accum 16 --balance-direction
   if ($LASTEXITCODE -ne 0) { throw "training failed" }
   Get-ChildItem $Next -Directory -Filter "epoch*" | Remove-Item -Recurse -Force
