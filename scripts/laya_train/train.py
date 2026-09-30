@@ -18,6 +18,7 @@ import os
 import random
 import sys
 import time
+from collections import Counter
 from pathlib import Path
 
 import torch
@@ -40,14 +41,21 @@ from finscrape.analysis.laya import _QUESTIONS  # noqa: E402
 
 BASE = "convaiinnovations/laya"
 SEED = 20260929
-PROGRESS = Path(os.environ.get("LAYA_FT_HOME", Path.home() / "laya-ft")) / "progress.txt"
+PROGRESS = (
+    Path(os.environ.get("LAYA_FT_HOME", Path.home() / "laya-ft")) / "progress.txt"
+)
 
 
 class Meter:
     """Prints and rewrites PROGRESS about once a minute with rate and ETA."""
 
     def __init__(self, phase: str, total: int):
-        self.phase, self.total, self.t0, self.last = phase, max(total, 1), time.time(), 0.0
+        self.phase, self.total, self.t0, self.last = (
+            phase,
+            max(total, 1),
+            time.time(),
+            0.0,
+        )
 
     def __call__(self, done: int, extra: str = "", force: bool = False) -> None:
         now = time.time()
@@ -56,7 +64,9 @@ class Meter:
         self.last = now
         rate = done / max(now - self.t0, 1e-9)
         eta = (self.total - done) / rate if rate else 0.0
-        gpu = torch.cuda.max_memory_reserved() / 2**30 if torch.cuda.is_available() else 0
+        gpu = (
+            torch.cuda.max_memory_reserved() / 2**30 if torch.cuda.is_available() else 0
+        )
         line = (
             f"{time.strftime('%d %b %H:%M')}  {self.phase} {done}/{self.total}"
             f" ({100 * done / self.total:.1f}%)  {rate:.2f}/s"
@@ -98,6 +108,7 @@ def collate(items: list[dict], pad_id: int) -> dict:
         target[i, :k] = torch.tensor(it["target"])
     qtype = torch.tensor([it["qtype"] for it in items])
     return {
+        "w": torch.tensor([it.get("w", 1.0) for it in items]),
         "ids": ids,
         "att": att,
         "mpos": mpos,
@@ -130,7 +141,9 @@ def fit_temperature(pairs: list[tuple[list[float], list[float]]]) -> float:
     return float(torch.clamp(log_t.exp(), 0.1, 10.0).item())
 
 
-def build_items(model_dir: str, tok, cfg, data: Path) -> list[dict]:
+def build_items(
+    model_dir: str, tok, cfg, data: Path, balance: bool = False
+) -> list[dict]:
     """Sector and direction items. A case missing its direction label is trained on
     the starting model's own direction answer, so sector training does not drift it."""
     cases = json.loads(data.read_text("utf-8"))["cases"]
@@ -169,9 +182,26 @@ def build_items(model_dir: str, tok, cfg, data: Path) -> list[dict]:
         else:
             continue
         if it := item(tok, cfg, state, direction_q, target):
+            if direction in directions:
+                it["label"] = direction
             items.append(it)
     del base
     torch.cuda.empty_cache()
+    if balance:
+        # Weight hard direction labels so each class carries equal total loss,
+        # instead of repeating the rarer ones.
+        counts = Counter(it["label"] for it in items if "label" in it)
+        for it in items:
+            if "label" in it:
+                it["w"] = sum(counts.values()) / (len(counts) * counts[it["label"]])
+        print(
+            "direction weights:",
+            {
+                k: round(sum(counts.values()) / (len(counts) * v), 2)
+                for k, v in counts.items()
+            },
+            flush=True,
+        )
     return items
 
 
@@ -230,6 +260,7 @@ def main() -> None:
     # hundred headlines, and each daily run starts again from the stock weights.
     ap.add_argument("--mode", choices=["lora", "full"], default="lora")
     ap.add_argument("--lora-r", type=int, default=16)
+    ap.add_argument("--balance-direction", action="store_true")
     args = ap.parse_args()
 
     device = torch.device("cuda")
@@ -240,7 +271,7 @@ def main() -> None:
     cfg = json.loads(Path(model_dir, "rl_agent_config.json").read_text())
     tok = AutoTokenizer.from_pretrained(os.path.join(model_dir, "tokenizer"))
 
-    all_items = build_items(model_dir, tok, cfg, args.data)
+    all_items = build_items(model_dir, tok, cfg, args.data, args.balance_direction)
     order = list(range(len(all_items)))
     random.Random(SEED).shuffle(order)
     n_calib = max(10, len(all_items) // 10)
@@ -294,8 +325,17 @@ def main() -> None:
     else:
         opt = torch.optim.AdamW(groups, weight_decay=0.01)
     updates = max(1, len(train) // (args.micro_batch * args.grad_accum)) * args.epochs
-    sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=updates, eta_min=1e-6)
-    scaler = torch.amp.GradScaler("cuda")
+    warmup = max(1, updates // 30)
+    sched = torch.optim.lr_scheduler.SequentialLR(
+        opt,
+        [
+            torch.optim.lr_scheduler.LinearLR(opt, 0.01, 1.0, warmup),
+            torch.optim.lr_scheduler.CosineAnnealingLR(
+                opt, T_max=updates - warmup, eta_min=1e-6
+            ),
+        ],
+        [warmup],
+    )
     group, sigma_start, sigma_end = 4, 0.4, 0.1
 
     t0 = time.time()
@@ -310,7 +350,7 @@ def main() -> None:
         for start in range(0, len(train), args.micro_batch):
             b = collate(train[start : start + args.micro_batch], tok.pad_token_id)
             mask = b["mmask"].to(device)
-            with torch.autocast("cuda", dtype=torch.float16):
+            with torch.autocast("cuda", dtype=torch.bfloat16):
                 logits, act = model(
                     b["ids"].to(device),
                     b["att"].to(device),
@@ -340,19 +380,21 @@ def main() -> None:
                     (r - r.mean(0, keepdim=True)).std() + 1e-6
                 )
             logp = -(((z - logits.unsqueeze(0)) ** 2) * mask).sum(-1) / (2 * sigma**2)
+            w = b["w"].to(device)
             loss_ce = (
-                -(target * torch.log_softmax(logits.masked_fill(~mask, -1e4), -1))
-                .sum(-1)
-                .mean()
-            )
-            loss = (-(adv * logp).mean() + loss_ce) / args.grad_accum + 0.0 * act.sum()
-            scaler.scale(loss).backward()
+                -(target * torch.log_softmax(logits.masked_fill(~mask, -1e4), -1)).sum(
+                    -1
+                )
+                * w
+            ).mean()
+            loss = (
+                -(adv * logp * w).mean() + loss_ce
+            ) / args.grad_accum + 0.0 * act.sum()
+            loss.backward()
             steps += 1
             if steps % args.grad_accum == 0 or start + args.micro_batch >= len(train):
-                scaler.unscale_(opt)
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-                scaler.step(opt)
-                scaler.update()
+                opt.step()
                 sched.step()
                 opt.zero_grad(set_to_none=True)
             total += loss.item() * args.grad_accum
@@ -379,7 +421,7 @@ def main() -> None:
         for start in range(0, len(calib), 8):
             chunk = calib[start : start + 8]
             b = collate(chunk, tok.pad_token_id)
-            with torch.autocast("cuda", dtype=torch.float16):
+            with torch.autocast("cuda", dtype=torch.bfloat16):
                 logits, _ = model(
                     b["ids"].to(device),
                     b["att"].to(device),
@@ -396,7 +438,9 @@ def main() -> None:
     out = Path(args.output_dir)
     save(model, tok, cfg, out, temps)
     print("saved", out)
-    PROGRESS.write_text(f"{time.strftime('%d %b %H:%M')}  training done: {out}\n", "utf-8")
+    PROGRESS.write_text(
+        f"{time.strftime('%d %b %H:%M')}  training done: {out}\n", "utf-8"
+    )
 
 
 if __name__ == "__main__":

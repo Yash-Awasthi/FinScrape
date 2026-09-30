@@ -28,11 +28,11 @@ Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
 
 try {
   if (-not (Test-Path "$Home2\data\pretrain.json")) {
-    & $Py -W ignore -u scripts\laya_train\build_pretrain.py "$Home2\data\pretrain.json"
+    & $Py -W ignore -u scripts\laya_train\build_pretrain.py "$Home2\data\pretrain.json" --extra "$Home2\data\train.json"
     if ($LASTEXITCODE -ne 0) { throw "build_pretrain failed" }
   }
   $Next = "$Home2\stage1-next"
-  & $Py -W ignore -u scripts\laya_train\train.py $Next --data "$Home2\data\pretrain.json" --mode full --epochs 1 --micro-batch 2 --grad-accum 16
+  & $Py -W ignore -u scripts\laya_train\train.py $Next --data "$Home2\data\pretrain.json" --mode full --epochs 1 --micro-batch 2 --grad-accum 16 --balance-direction
   if ($LASTEXITCODE -ne 0) { throw "training failed" }
   Get-ChildItem $Next -Directory -Filter "epoch*" | Remove-Item -Recurse -Force
   "$(Get-Date -Format 'dd MMM HH:mm')  scoring stage1-next against the incumbent on CPU (about 25 min)" |

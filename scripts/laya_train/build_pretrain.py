@@ -19,6 +19,7 @@ import csv
 import io
 import json
 import os
+import random
 import re
 import sys
 from collections import Counter
@@ -58,6 +59,17 @@ TOPIC = {
     16: "other",
 }
 SENTIMENT = {0: "negative", 1: "positive", 2: "neutral"}
+UP, FLAT = 0.02, 0.005  # abnormal move over the publication day
+# Rating and target changes say their own direction; the day's price move mostly
+# reflects whatever else happened (earnings, the market).
+SAYS_UP = re.compile(
+    r"\bupgrades?\b|\braises? (?:price target|pt)\b|\bbeats?\b.*\best|trading higher|shares (?:rise|jump|surge|climb|gain)",
+    re.IGNORECASE,
+)
+SAYS_DOWN = re.compile(
+    r"\bdowngrades?\b|\blowers? (?:price target|pt)\b|\bmiss(?:es)?\b.*\best|trading lower|shares (?:fall|drop|slide|sink|tumble)",
+    re.IGNORECASE,
+)
 
 
 def norm(s: str) -> str:
@@ -105,12 +117,85 @@ def fnspid(per_sector: int, max_rows: int, skip: set[str]) -> list[dict]:
                 continue
             seen.add(n)
             counts[sector] += 1
-            cases.append({"subject": title, "sector": sector, "source": "fnspid"})
+            cases.append(
+                {
+                    "subject": title,
+                    "sector": sector,
+                    "source": "fnspid",
+                    "_ticker": row["Stock_symbol"].upper(),
+                    "_date": (row.get("Date") or "")[:10],
+                }
+            )
             if i >= max_rows or all(
                 counts[s] >= per_sector for s in set(sector_of.values())
             ):
                 break
     print("fnspid:", dict(counts), flush=True)
+    names = {r.Symbol: r.Security for r in sp.itertuples()}
+    return market_direction(cases, names)
+
+
+def market_direction(cases: list[dict], names: dict[str, str]) -> list[dict]:
+    """Label FNSPID headlines that name their company with the stock's move over the
+    publication day, net of SPY: above +UP positive, below -UP negative, inside FLAT
+    neutral, else unlabelled. Market-wide lists ("52-week highs") never name one."""
+    import yfinance as yf
+
+    def names_company(c: dict) -> bool:
+        first = re.sub(r"[^\w]", "", names.get(c["_ticker"], "").split(" ")[0]).lower()
+        return (len(first) > 2 and first in c["subject"].lower()) or bool(
+            re.search(rf"b{re.escape(c['_ticker'])}b", c["subject"])
+        )
+
+    # A day with several stories on one stock (earnings plus analyst notes) cannot say
+    # which of them moved it, so only a stock's lone story that day is labelled.
+    per_day = Counter((c["_ticker"], c["_date"]) for c in cases)
+    todo = []
+    for c in cases:
+        up, down = SAYS_UP.search(c["subject"]), SAYS_DOWN.search(c["subject"])
+        if bool(up) != bool(down):
+            c["direction"] = "positive" if up else "negative"
+        elif (
+            not up
+            and c["_date"]
+            and per_day[c["_ticker"], c["_date"]] == 1
+            and names_company(c)
+        ):
+            todo.append(c)
+    if todo:
+        dates = pd.to_datetime([c["_date"] for c in todo])
+        close = yf.download(
+            sorted({c["_ticker"] for c in todo} | {"SPY"}),
+            start=dates.min() - pd.Timedelta(days=7),
+            end=dates.max() + pd.Timedelta(days=7),
+            auto_adjust=True,
+            progress=False,
+        )["Close"]
+        for c, day in zip(todo, dates):
+            # Last close before the day to the first close after it: whole-day news
+            # effect whatever hour the story ran.
+            before, after = (
+                close.index[close.index < day],
+                close.index[close.index > day],
+            )
+            if c["_ticker"] not in close or not len(before) or not len(after):
+                continue
+            a, b = close.loc[before[-1]], close.loc[after[0]]
+            move = b[c["_ticker"]] / a[c["_ticker"]] - b["SPY"] / a["SPY"]
+            if pd.isna(move):  # no price that day
+                continue
+            if abs(move) >= UP:
+                c["direction"] = "positive" if move > 0 else "negative"
+            elif abs(move) <= FLAT:
+                c["direction"] = "neutral"
+    for c in cases:
+        c.pop("_ticker", None)
+        c.pop("_date", None)
+    print(
+        "fnspid market direction:",
+        dict(Counter(c.get("direction") for c in cases)),
+        flush=True,
+    )
     return cases
 
 
@@ -125,11 +210,6 @@ def twitter(
         text = re.sub(r"https?://\S+", "", str(text)).strip()
         if int(label) in mapping and norm(text) not in skip and len(norm(text)) >= 15:
             cases.append({"subject": text, column: mapping[int(label)], "source": name})
-    if column == "direction":
-        # Two in three rows are neutral; cap them at the larger move class.
-        by = {d: [c for c in cases if c[column] == d] for d in SENTIMENT.values()}
-        cap = max(len(by["positive"]), len(by["negative"]))
-        cases = by["positive"] + by["negative"] + by["neutral"][:cap]
     print(f"{name}: {len(cases)}", flush=True)
     return cases
 
@@ -139,6 +219,8 @@ def main() -> None:
     ap.add_argument("out", type=Path)
     ap.add_argument("--per-sector", type=int, default=2500)
     ap.add_argument("--max-rows", type=int, default=3_000_000)
+    # Teacher-labelled files (e.g. data/train.json) to fold in; never the holdout.
+    ap.add_argument("--extra", type=Path, nargs="*", default=[])
     args = ap.parse_args()
     skip = excluded()
     cases = (
@@ -146,6 +228,23 @@ def main() -> None:
         + twitter("twitter-financial-news-sentiment", "direction", SENTIMENT, skip)
         + fnspid(args.per_sector, args.max_rows, skip)
     )
+    for path in args.extra:
+        extra = [
+            c
+            for c in json.loads(path.read_text("utf-8"))["cases"]
+            if norm(c["subject"]) not in skip
+        ]
+        cases += [c | {"source": c.get("source") or path.stem} for c in extra]
+        print(f"{path.name}: {len(extra)}", flush=True)
+    # Most direction rows are neutral; drop neutral direction labels beyond the larger
+    # move class so the model is not taught that nothing moves prices.
+    moves = Counter(c.get("direction") for c in cases)
+    neutral = [c for c in cases if c.get("direction") == "neutral"]
+    random.Random(0).shuffle(neutral)
+    for c in neutral[max(moves["positive"], moves["negative"]) :]:
+        del c["direction"]
+    cases = [c for c in cases if c.get("sector") or c.get("direction")]
+    print("direction:", dict(Counter(c.get("direction") for c in cases)), flush=True)
     args.out.write_text(json.dumps({"cases": cases}, ensure_ascii=False), "utf-8")
     print(len(cases), "cases ->", args.out)
 

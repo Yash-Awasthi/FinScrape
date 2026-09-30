@@ -20,7 +20,9 @@ GRID = [round(0.1 * i, 1) for i in range(2, 11)]
 
 def recall(rows: list[tuple[str, dict]], scale: float) -> float:
     laya.NEUTRAL_SCALE = scale
-    return d.balanced_recall([(t, laya._pick(laya._discount_neutral(a))[0]) for t, a in rows])
+    return d.balanced_recall(
+        [(t, laya._pick(laya._discount_neutral(a))[0]) for t, a in rows]
+    )
 
 
 def main() -> None:
@@ -37,7 +39,9 @@ def main() -> None:
     print(f"{model.name}: {len(rows)} cases")
     for s in GRID:
         print(f"  scale {s}: fit {recall(fit, s):.3f}  check {recall(check, s):.3f}")
-    print(f"best {best}: check half {recall(check, 1.0):.3f} -> {recall(check, best):.3f}")
+    print(
+        f"best {best}: check half {recall(check, 1.0):.3f} -> {recall(check, best):.3f}"
+    )
 
 
 if __name__ == "__main__":
