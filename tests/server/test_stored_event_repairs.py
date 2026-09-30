@@ -1,4 +1,4 @@
-"""Stored CoinGecko alerts lost their sign and decimal point to an old subject normalizer."""
+"""Repairs to stored events: lost crypto alert punctuation and placeholder tickers."""
 
 from __future__ import annotations
 
@@ -54,3 +54,32 @@ def test_stripped_crypto_subjects_get_sign_and_decimal_back():
         "Bitcoin Cash (BCH) dropped -9.8% in 24h",
         "iran army surged 12 in 24h",
     ]
+
+
+@pytest.mark.skipif(
+    not pg_reachable(), reason="no Postgres at WORLDFIN_TEST_DATABASE_URL"
+)
+def test_placeholder_tickers_are_removed_from_stored_events():
+    from server import db
+
+    sql = Path("server/migrations/0010_placeholder_tickers.sql").read_text()
+
+    async def body():
+        pool = await fresh_pool("events")
+        for i, tickers in enumerate([["LMT", "N/A", "NONE"], ["—"], ["BRK-B"]]):
+            await pool.execute(
+                "INSERT INTO events (content_hash, subject, event_type, verdict,"
+                " tickers, timestamp) VALUES ($1, 's', 'other', 'OBSERVE', $2, now())",
+                f"t{i}",
+                tickers,
+            )
+        await pool.execute(sql)
+        try:
+            return [
+                r["tickers"]
+                for r in await pool.fetch("SELECT tickers FROM events ORDER BY id")
+            ]
+        finally:
+            await db.disconnect()
+
+    assert asyncio.run(body()) == [["LMT"], [], ["BRK-B"]]

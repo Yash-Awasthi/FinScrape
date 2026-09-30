@@ -20,7 +20,7 @@ class TestConfigDefaults:
 
     def test_default_max_tokens(self):
         cfg = Config.from_env()
-        assert cfg.ai_max_tokens == 800
+        assert cfg.ai_max_tokens == 3000
 
     def test_default_max_articles(self):
         cfg = Config.from_env()

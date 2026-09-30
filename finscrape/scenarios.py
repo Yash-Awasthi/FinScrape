@@ -16,6 +16,7 @@ from collections.abc import Callable
 from typing import Any
 
 from finscrape.analysis.sectors import normalize as normalize_sectors
+from finscrape.analysis.validator import clean_tickers
 
 # How much one member steers its scenario. An event graded high-magnitude and
 # high-actionability moves the advice more than a footnote does, and low
@@ -62,21 +63,14 @@ def _sectors_of(event: dict[str, Any]) -> list[str]:
 
 def _tickers_of(event: dict[str, Any]) -> list[str]:
     """Member tickers plus any ticker named on an affected entity."""
-    out: list[str] = []
-    seen: set[str] = set()
-    for raw in event.get("tickers") or []:
-        symbol = str(raw).upper().strip()
-        if symbol and symbol not in seen:
-            seen.add(symbol)
-            out.append(symbol)
-    for entity in event.get("affected_entities") or []:
-        if not isinstance(entity, dict):
-            continue
-        symbol = str(entity.get("ticker") or "").upper().strip()
-        if symbol and symbol not in seen:
-            seen.add(symbol)
-            out.append(symbol)
-    return out
+    raw = list(event.get("tickers") or []) + [
+        e.get("ticker")
+        for e in event.get("affected_entities") or []
+        if isinstance(e, dict)
+    ]
+    # Stored rows predate clean_tickers' placeholder check, so apply it here too.
+    symbols = clean_tickers([str(t or "").upper().strip() for t in raw])
+    return list(dict.fromkeys(symbols))
 
 
 def _analyzed_p(event: dict[str, Any]) -> float | None:

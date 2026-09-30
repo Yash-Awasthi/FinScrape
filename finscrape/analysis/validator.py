@@ -566,6 +566,12 @@ def check_number_conflicts(reasoning: str, facts: dict) -> list[str]:
     return conflicts
 
 
+# Symbols like RELIANCE.NS or BRK-B, not indices (^GSPC); the LLM writes N/A, NONE or a dash for
+# entities that are not listed.
+_TICKER_SHAPE = re.compile(r"[A-Z0-9][A-Z0-9.=-]{0,14}")
+_PLACEHOLDERS = frozenset({"NA", "NONE", "NULL", "TBD", "UNKNOWN", "PRIVATE", "UNLISTED"})
+
+
 def clean_tickers(tickers: list[str], text: str = "") -> list[str]:
     """Remove noise tickers using the stopword list.
 
@@ -577,7 +583,8 @@ def clean_tickers(tickers: list[str], text: str = "") -> list[str]:
     # Indices (^GSPC) are benchmarks, not positions anyone can take.
     return [
         t for t in tickers
-        if not t.startswith("^")
+        if _TICKER_SHAPE.fullmatch(t.upper())
+        and t.upper() not in _PLACEHOLDERS
         and (t.upper() in protected or t.upper() not in TICKER_STOPWORDS)
     ]
 

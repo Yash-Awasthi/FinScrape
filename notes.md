@@ -100,6 +100,8 @@ every event, not holdings). Laya (item 11) is parked; ReliefWeb (G1) is gated.
 - uv.lock was gitignored, so CI and ingest resolved fresh and broke on regex 2026.9.29 (no wheels); the lock is committed now (PR #14). Check: CI green, a dispatched ingest run succeeded.
 - Crypto alerts: the ingestor has not been registered since June, and the last alert (from the old Neon-era writer) landed on 28 Sep; subjects keep punctuation since 841b2d35. Migration 0009 gives the 934 stored alerts their sign and decimal back ("dropped 98" becomes "dropped -9.8%"). No per-cycle cap: nothing emits alerts any more.
 - Demo readiness (30 Sep list) re-checked: `/api/accuracy` 323 decisive calls, 59.4% (PULL_OUT 176/294, INVEST 16/29), matching the 29 Sep re-score; since the -3 PULL_OUT rule, 30 of 321 new events are PULL_OUT (26% before). The owner keeps the live hit rate on the landing page. The 54 heuristic rows from the qwen 429s go through the new `reanalyse` Action (`gh workflow run reanalyse.yml -f days=7`).
+- Scenario cards showed `N/A` and `—` exposure chips: the LLM writes placeholders as the ticker of unlisted entities. `clean_tickers` checks ticker shape, scenarios reuse it, migration 0010 cleans stored rows (PR #20). Live: no placeholder chips on `/api/scenarios`, 0 of the latest 500 events carry one (10 before).
+- The `reanalyse` Action's first run upgraded the 54 heuristic rows from the qwen 429s: 40 updated, 10 rejected, 4 failed (5m26s). Production Playwright pass at 1440x900 and 390x844 on `/` and `/app/`: zero console errors.
 
 ## Local hazards
 

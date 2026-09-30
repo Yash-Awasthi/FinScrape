@@ -337,7 +337,8 @@ def _call_openai_proxy(prompt: str, system_prompt: str, model: str | None = None
                     {"role": "user",   "content": prompt},
                 ],
                 "temperature":     float(os.getenv("FINSCRAPE_AI_TEMP", "0.1")),
-                "max_tokens":      800,
+                # Reasoning models (mimo) spend 800 tokens thinking and return no JSON.
+                "max_tokens":      int(os.getenv("FINSCRAPE_AI_MAX_TOKENS", "3000")),
                 "response_format": {"type": "json_object"},
                 "format":          "json",  # Ollama-native; ignored by other providers
             },

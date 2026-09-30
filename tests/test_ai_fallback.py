@@ -46,3 +46,23 @@ def test_an_explicit_model_never_falls_back(monkeypatch):
     monkeypatch.setenv("FINSCRAPE_MODEL_FALLBACK", "backup")
     assert ai_client.call_ai("prompt", "system", model="pinned") is None
     assert set(asked) == {"pinned"}
+
+
+def test_chat_call_leaves_reasoning_models_room_for_the_json(monkeypatch):
+    """At 800 tokens mimo spent the budget reasoning and returned empty content."""
+    sent = {}
+
+    class Reply:
+        status_code = 200
+
+        def json(self):
+            return {"choices": [{"message": {"content": '{"relevant": true}'}}]}
+
+    def post(url, headers, json, timeout):
+        sent.update(json)
+        return Reply()
+
+    monkeypatch.setattr(ai_client.requests, "post", post)
+    monkeypatch.delenv("FINSCRAPE_AI_MAX_TOKENS", raising=False)
+    assert ai_client._call_openai_proxy("p", "s") == {"relevant": True}
+    assert sent["max_tokens"] >= 3000

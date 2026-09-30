@@ -77,7 +77,10 @@ the `ingest` Action, dispatched every 30 minutes by the Cloudflare cron Worker
 - The "Workers Builds: fin-scrape" check fails on every commit, master included; it
   belongs to another Cloudflare account (`bb494...`). Disconnect it or fix it there.
 - 30 Sep: qwen3.8-flash:free answered 429 "campaign allowance" on every call, so the
-  ingest Action now runs mimo first and deepseek as fallback.
+  ingest Action now runs mimo first and deepseek as fallback. First run after the switch
+  (36672462394): zero 429s, one call fell to deepseek, 5 events in 4m49s. Both LLMs
+  still return malformed JSON now and then ("Expecting ',' delimiter"), which costs the
+  call; a tolerant parser would save it.
 - `world/times_of_israel` fails from GitHub runners (blocked there, fine locally).
 - About 4,600 heuristic-era rows were left unanalysed on purpose: re-running them costs
   about 4.5 hours of the shared LLM key for roughly 600 useful rows, and scenarios and
@@ -105,8 +108,9 @@ Claude is the teacher: it writes and reviews the labels; the owner does not revi
    release named by the repo variable `LAYA_RELEASE` (cached per tag), and runs without
    Laya when the variable is unset. `scripts/laya_train/publish.py` creates the release
    and sets the variable; `daily.py` calls it on every promotion. First release:
-   `laya-20260930-0019`. Watch the next two ingest runs for the download, run time
-   and Laya-chosen sectors.
+   `laya-20260930-0019`. Watched 30 Sep with `laya-20260930-0428`: the first run
+   downloaded it (cache miss, 4m24s), the next restored it from cache (4m49s); both
+   logged "Laya classifier loaded" and stored sectors for every new event.
 7. Done (30 Sep): teacher round. 3,537 fresh headlines (3,000 production events and
    one live pass over every worker source), 1,412 left after dropping duplicates,
    known subjects, 870 crypto price alerts and 93 quake reports (a dozen and four

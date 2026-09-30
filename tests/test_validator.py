@@ -152,6 +152,19 @@ class TestCleanTickers:
     def test_empty_list(self):
         assert clean_tickers([]) == []
 
+    def test_drops_llm_placeholders_for_unlisted_entities(self):
+        tickers = ["N/A", "NONE", "—", "", "null", "RELIANCE.NS", "BRK-B", "LMT"]
+        assert clean_tickers(tickers) == ["RELIANCE.NS", "BRK-B", "LMT"]
+
+    def test_scenario_exposure_skips_placeholder_entity_tickers(self):
+        from finscrape.scenarios import _tickers_of
+
+        event = {
+            "tickers": ["LMT", "N/A"],
+            "affected_entities": [{"name": "Milrem", "ticker": "—"}, {"name": "GD", "ticker": "gd"}],
+        }
+        assert _tickers_of(event) == ["LMT", "GD"]
+
     def test_case_insensitive(self):
         # clean_tickers uppercases before checking stopwords
         tickers = ["aapl", "a", "tsla"]

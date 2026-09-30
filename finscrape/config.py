@@ -17,7 +17,7 @@ class Config:
     openai_api_key: str = "proxy"
     ai_model: str = "auto"
     ai_temperature: float = 0.1
-    ai_max_tokens: int = 800
+    ai_max_tokens: int = 3000
     ai_timeout: int = 60
     ai_max_retries: int = 1
     ai_retry_base_delay: float = 2.0
@@ -54,7 +54,7 @@ class Config:
             openai_api_key=os.getenv("OPENAI_API_KEY", "proxy"),
             ai_model=os.getenv("FINSCRAPE_MODEL", "auto"),
             ai_temperature=float(os.getenv("FINSCRAPE_AI_TEMP", "0.1")),
-            ai_max_tokens=int(os.getenv("FINSCRAPE_AI_MAX_TOKENS", "800")),
+            ai_max_tokens=int(os.getenv("FINSCRAPE_AI_MAX_TOKENS", "3000")),
             ai_timeout=int(os.getenv("FINSCRAPE_AI_TIMEOUT", "60")),
             ai_max_retries=int(os.getenv("FINSCRAPE_AI_MAX_RETRIES", "1")),
             ai_retry_base_delay=float(os.getenv("FINSCRAPE_AI_RETRY_DELAY", "2.0")),
