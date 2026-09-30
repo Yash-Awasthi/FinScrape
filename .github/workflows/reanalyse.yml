@@ -1,0 +1,36 @@
+name: reanalyse
+
+# Upgrades heuristic-fallback events to an LLM analysis once the LLM answers again
+# (scripts/reanalyse.py). Run by hand: gh workflow run reanalyse.yml -f days=7
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: Look back this many days
+        default: "7"
+
+concurrency:
+  group: reanalyse
+  cancel-in-progress: false
+
+jobs:
+  reanalyse:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      WORLDFIN_DATABASE_URL: ${{ secrets.WORLDFIN_DATABASE_URL }}
+      OPENAI_BASE_URL: https://tokenharbor.ai/v1
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      FINSCRAPE_WIRE_API: chat
+      FINSCRAPE_MODEL: mimo-v2.6-flash:free
+      FINSCRAPE_MODEL_FALLBACK: deepseek-v4.1-flash:free
+      FINSCRAPE_AI_TIMEOUT: "60"
+      FINSCRAPE_LAYA: "0"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+      - run: uv python install 3.13
+      - run: uv sync -p 3.13 --group server
+      - run: uv run --no-sync python -u scripts/reanalyse.py --days "${{ inputs.days }}" --workers 4

@@ -43,6 +43,8 @@ GOLD = ROOT / "tests" / "fixtures" / "sector_gold.json"
 MAX_LABELS = 150
 BATCH = 50
 MIN_GAIN = 2  # more test cases right than the current model
+MOVE_REPEAT = 3
+DIRECTION_SLACK = 0.02  # balanced recall a sector gain may cost
 
 PROMPT = """You label news headlines for a market-sector classifier.
 For each headline in the JSON object on stdin (id -> headline), pick the one sector whose revenues or
@@ -161,11 +163,24 @@ def claude_labels(headlines: list[str]) -> list[dict]:
     return cases
 
 
-def hits(cases: list[dict]) -> tuple[int, int]:
-    """Sector hits through the production chain, and raw direction hits on the cases
-    that carry a direction label."""
+def balanced_recall(pairs: list[tuple[str, str]]) -> float:
+    """Mean per-class recall over (truth, prediction) pairs. Three in four labels are
+    neutral, so plain hit counts reward a model that never calls a move."""
+    classes = {t for t, _ in pairs}
+    if not classes:
+        return 0.0
+    return sum(
+        sum(g == t for tt, g in pairs if tt == t) / sum(tt == t for tt, _ in pairs)
+        for t in classes
+    ) / len(classes)
+
+
+def hits(cases: list[dict]) -> tuple[int, float]:
+    """Sector hits through the production chain, and balanced direction recall on the
+    cases that carry a direction label."""
     nlp = FinancialNLP()
-    sector = direction = 0
+    sector = 0
+    pairs = []
     for c in cases:
         s = c["subject"]
         view = laya.classify(s, "")
@@ -176,10 +191,9 @@ def hits(cases: list[dict]) -> tuple[int, int]:
             tickers=resolve_company_tickers(s),
         )
         sector += got == c["sector"]
-        direction += bool(
-            c.get("direction") and view and view.direction == c["direction"]
-        )
-    return sector, direction
+        if c.get("direction"):
+            pairs.append((c["direction"], view.direction if view else ""))
+    return sector, balanced_recall(pairs)
 
 
 def accuracy(cases: list[dict]) -> float:
@@ -215,6 +229,12 @@ def main() -> None:
     if args.dry_run:
         return
 
+    # Three in four direction labels are neutral; repeating the moves keeps the LoRA
+    # from learning to never call one (balanced recall 0.58 plain, 0.65 at x3).
+    weighted = DATA / "train-weighted.json"
+    moves = [c for c in train if c.get("direction") in ("positive", "negative")]
+    dump(weighted, train + moves * (MOVE_REPEAT - 1))
+
     candidate = RUNS / stamp
     base = ["--base", str(HOME / "stage1")] if (HOME / "stage1").exists() else []
     subprocess.run(
@@ -224,7 +244,7 @@ def main() -> None:
             str(HERE / "train.py"),
             str(candidate),
             "--data",
-            str(train_path),
+            str(weighted),
             "--mode",
             "lora",
             "--epochs",
@@ -242,7 +262,7 @@ def main() -> None:
     use_model(candidate)
     new, new_dir = hits(test)
     # One headline either way is noise; a sector gain may not cost direction.
-    promoted = new - old >= MIN_GAIN and old_dir - new_dir < MIN_GAIN
+    promoted = new - old >= MIN_GAIN and new_dir >= old_dir - DIRECTION_SLACK
     if promoted:
         shutil.rmtree(CURRENT, ignore_errors=True)
         shutil.move(str(candidate), str(CURRENT))
@@ -265,8 +285,8 @@ def main() -> None:
         "incumbent": round(old / len(test), 4),
         "candidate": round(new / len(test), 4),
         "direction_cases": sum(bool(c.get("direction")) for c in test),
-        "incumbent_direction": old_dir,
-        "candidate_direction": new_dir,
+        "incumbent_direction": round(old_dir, 4),
+        "candidate_direction": round(new_dir, 4),
         "promoted": promoted,
     }
     with (HOME / "history.jsonl").open("a", encoding="utf-8") as f:

@@ -18,3 +18,11 @@ def test_parse_label():
     assert daily.parse_label(" Other , Neutral ") == ("other", "neutral")
     assert daily.parse_label("energy") == ("energy", "")
     assert daily.parse_label("oil,up") == ("", "")
+
+
+def test_balanced_recall_does_not_reward_always_neutral():
+    truth = ["neutral"] * 8 + ["positive", "negative"]
+    always_neutral = [(t, "neutral") for t in truth]
+    assert round(daily.balanced_recall(always_neutral), 3) == 0.333
+    assert daily.balanced_recall([(t, t) for t in truth]) == 1.0
+    assert daily.balanced_recall([]) == 0.0

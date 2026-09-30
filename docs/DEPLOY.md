@@ -14,13 +14,13 @@ The live stack runs **$0/month, no credit card** across four free services + a f
 | API | **Render** free web service (`winfin-api`, Singapore) | Docker `Dockerfile.api` → Supabase; sleeps after 15 min idle |
 | Database | **Supabase** Postgres (Seoul, `bfzkjwucytbtnmzomtvt`) | session pooler, port 5432; RLS on every table so the Data API exposes nothing |
 | Worker | **GitHub Actions** (`.github/workflows/ingest.yml`), dispatched at :13/:43 by the Cloudflare cron Worker `winfin-ingest-cron` (`ops/ingest-cron`) | `python -m worker.main --once`; GitHub's own schedule stays as a fallback but fires only every 3–6 hours |
-| LLM | **TokenHarbor** free models, primary + fallback (`FINSCRAPE_MODEL_FALLBACK`) | Worker: `qwen3.8-flash:free` → `mimo-v2.6-flash:free`. API (someone is waiting): `mimo-v2.6-flash:free` → `deepseek-v4.1-flash:free`. OpenAI chat API at `https://tokenharbor.ai/v1`. Heuristic fallback covers a full outage |
+| LLM | **TokenHarbor** free models, primary + fallback (`FINSCRAPE_MODEL_FALLBACK`) | Worker: `mimo-v2.6-flash:free` → `deepseek-v4.1-flash:free` (qwen's free allowance ran out on 30 Sep). API (someone is waiting): `mimo-v2.6-flash:free` → `deepseek-v4.1-flash:free`. OpenAI chat API at `https://tokenharbor.ai/v1`. Heuristic fallback covers a full outage |
 
 ## Environment
 
 **Render API** (`srv-...` env vars) and **GitHub Actions secrets** share:
 - `WORLDFIN_DATABASE_URL` — Supabase session pooler: `postgresql://postgres.<project>:<password>@aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres`
-- `OPENAI_BASE_URL=https://tokenharbor.ai/v1`, `OPENAI_API_KEY=<TokenHarbor key>`, `FINSCRAPE_WIRE_API=chat`, `FINSCRAPE_MODEL=qwen3.8-flash:free`
+- `OPENAI_BASE_URL=https://tokenharbor.ai/v1`, `OPENAI_API_KEY=<TokenHarbor key>`, `FINSCRAPE_WIRE_API=chat`, `FINSCRAPE_MODEL=mimo-v2.6-flash:free`
 - `FINSCRAPE_HEURISTIC_FALLBACK=true` (worker — ingest never stalls if the LLM is down)
 
 API-only: `WORLDFIN_ENV=production` (refuses the default key and CORS `*`), `WORLDFIN_CORS_ORIGINS=https://winfin.pages.dev`, `FINSCRAPE_API_KEY`, `WORLDFIN_RUN_MIGRATIONS=true`, `WORLDFIN_ENABLE_COUNCIL=true`, `FINSCRAPE_LAYA=0` (the image carries no Laya).

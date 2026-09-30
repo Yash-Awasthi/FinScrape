@@ -98,6 +98,8 @@ every event, not holdings). Laya (item 11) is parked; ReliefWeb (G1) is gated.
 - Ingest dispatched every 30 min by the Cloudflare cron Worker `winfin-ingest-cron` (0293b598); it needs its GH_TOKEN secret (item 9).
 - Demo script rewritten (9019d1a5). Merged as PR #11 (942f9e59).
 - uv.lock was gitignored, so CI and ingest resolved fresh and broke on regex 2026.9.29 (no wheels); the lock is committed now (PR #14). Check: CI green, a dispatched ingest run succeeded.
+- Crypto alerts: the ingestor has not been registered since June, and the last alert (from the old Neon-era writer) landed on 28 Sep; subjects keep punctuation since 841b2d35. Migration 0009 gives the 934 stored alerts their sign and decimal back ("dropped 98" becomes "dropped -9.8%"). No per-cycle cap: nothing emits alerts any more.
+- Demo readiness (30 Sep list) re-checked: `/api/accuracy` 323 decisive calls, 59.4% (PULL_OUT 176/294, INVEST 16/29), matching the 29 Sep re-score; since the -3 PULL_OUT rule, 30 of 321 new events are PULL_OUT (26% before). The owner keeps the live hit rate on the landing page. The 54 heuristic rows from the qwen 429s go through the new `reanalyse` Action (`gh workflow run reanalyse.yml -f days=7`).
 
 ## Local hazards
 
