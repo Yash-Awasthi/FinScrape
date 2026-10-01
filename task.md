@@ -95,10 +95,15 @@ Claude is the teacher: it writes and reviews the labels; the owner does not revi
 2. Done, on 243 gold: no Laya 155 (63.8%), stock Laya 155 (63.8%), promoted LoRA 185
    (76.1%). Stock Laya gains energy and financials but pulls 26 `other` stories into a
    sector; the LoRA keeps most `other` right and lifts materials 5/16 to 15/16.
-3. Running: relaunched detached at 16:18 on 30 Sep on mains power (the 10:21 start was
-   stopped at 11:20 so the teacher-round LoRA could have the GPU). Nothing was kept; `data\pretrain.json` (37,384 cases) is built, so a
-   rerun goes straight to training. Rerun with `Desktop\Laya stage 1.cmd` on mains power,
-   overnight (5-7 hours); it logs the verdict to `history.jsonl` (`"stage1": true`).
+3. Done, twice. First run (30 Sep 16:18 to 1 Oct 03:17, 10.3 h, slowed by VRAM spilling
+   into shared memory): kept, 591 of 844 against stock 515. Second run (1 Oct 04:40 to
+   09:06) on the rebuilt corpus: 76,488 cases (6,000 company-naming FNSPID headlines per
+   sector with direction from wording or the day's move net of SPY, Twitter sets with
+   neutrals capped, and the teacher train split), 3 epochs at 20 items/s, best held-out
+   loss at epoch 2 (0.292; epoch 3 0.336), no self-distilled direction targets. Scored raw
+   (no neutral discount) on 243 gold + 907 holdout: sector 943 of 1,150 against 801 for
+   the first stage 1, direction balanced recall 0.736 against 0.607. Kept. Rerun with
+   `Desktop\Laya stage 1.cmd` on mains power; it resumes from its last checkpoint.
 4. Automatic after step 3: the daily LoRA trains from `stage1` when it was kept, and
    from the stock model otherwise. Read two nights of `history.jsonl`.
 5. Done: `laya._load` reloads when the weights file under `FINSCRAPE_LAYA_MODEL`

@@ -93,15 +93,15 @@ def market_scrapers() -> list[tuple[str, str]]:
         return [row for rows in pool.map(run, MARKET_SCRAPERS) for row in rows]
 
 
-def firecrawl_news() -> list[tuple[str, str]]:
+def firecrawl_news(themes=THEMES, tbs: str = "qdr:m") -> list[tuple[str, str]]:
     exe = shutil.which("firecrawl")
     if not exe:
         print("  firecrawl CLI not on PATH", flush=True)
         return []
     out = []
-    for q in THEMES:
+    for q in themes:
         run = subprocess.run(
-            [exe, "search", q, "--sources", "news", "--tbs", "qdr:m", "--limit", "100", "--json"],
+            [exe, "search", q, "--sources", "news", "--tbs", tbs, "--limit", "100", "--json"],
             capture_output=True, text=True, encoding="utf-8", timeout=180, check=False,
         )  # fmt: skip
         try:
@@ -117,6 +117,9 @@ def main() -> None:
     ap.add_argument("out", type=Path)
     ap.add_argument("--days", type=int, default=30)
     ap.add_argument("--no-firecrawl", action="store_true")
+    # Targeted rounds: only Firecrawl, on these ';'-separated queries (e.g. a weak class).
+    ap.add_argument("--themes", default="")
+    ap.add_argument("--tbs", default="qdr:m", help="Firecrawl time window, e.g. qdr:y")
     args = ap.parse_args()
 
     known = {
@@ -131,7 +134,11 @@ def main() -> None:
     }
     steps = [("db", lambda: asyncio.run(db_subjects(args.days))), ("worker", worker_sources),
              ("market", market_scrapers)]  # fmt: skip
-    if not args.no_firecrawl:
+    if args.themes:
+        steps = [
+            ("firecrawl", lambda: firecrawl_news(args.themes.split(";"), args.tbs))
+        ]
+    elif not args.no_firecrawl:
         steps.append(("firecrawl", firecrawl_news))
     rows = []
     for name, step in steps:

@@ -15,6 +15,7 @@ Headlines already in the gold or holdout sets are dropped.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import csv
 import io
 import json
@@ -97,6 +98,24 @@ def excluded() -> set[str]:
     return out
 
 
+@contextlib.contextmanager
+def open_fnspid():
+    """The CSV from data/fnspid.csv when downloaded (curl -C - resumes it), else a live
+    stream: the server drops the 5.7 GB stream often enough to lose a long build."""
+    local = (
+        Path(os.environ.get("LAYA_FT_HOME", Path.home() / "laya-ft"))
+        / "data"
+        / "fnspid.csv"
+    )
+    if local.exists():
+        with local.open(encoding="utf-8", errors="replace", newline="") as fh:
+            yield fh
+        return
+    with requests.get(FNSPID, stream=True, timeout=60) as resp:
+        resp.raise_for_status()
+        yield io.TextIOWrapper(resp.raw, encoding="utf-8", errors="replace")
+
+
 def fnspid(per_sector: int, max_rows: int, skip: set[str]) -> list[dict]:
     sp = pd.read_csv(SP500)
     sector_of = {r.Symbol: GICS[r._3] for r in sp.itertuples() if r._3 in GICS}
@@ -104,11 +123,8 @@ def fnspid(per_sector: int, max_rows: int, skip: set[str]) -> list[dict]:
     counts: Counter[str] = Counter()
     cases, seen = [], set()
     csv.field_size_limit(2**31 - 1)
-    with requests.get(FNSPID, stream=True, timeout=60) as resp:
-        resp.raise_for_status()
-        rows = csv.DictReader(
-            io.TextIOWrapper(resp.raw, encoding="utf-8", errors="replace")
-        )
+    with open_fnspid() as fh:
+        rows = csv.DictReader(fh)
         for i, row in enumerate(rows):
             if i % 50000 == 0:
                 print(f"  fnspid row {i}: {dict(counts)}", flush=True)
@@ -222,6 +238,45 @@ def twitter(
     return cases
 
 
+def parquet(dataset: str) -> pd.DataFrame:
+    url = (
+        f"https://huggingface.co/api/datasets/{dataset}/parquet/default/train/0.parquet"
+    )
+    return pd.read_parquet(io.BytesIO(requests.get(url, timeout=300).content))
+
+
+def fingpt(skip: set[str]) -> list[dict]:
+    """FinGPT sentiment (Financial PhraseBank, FiQA, news): graded labels fold into
+    positive, negative or neutral direction."""
+    df = parquet("FinGPT/fingpt-sentiment-train")
+    cases, seen = [], set()
+    for text, label in zip(df["input"], df["output"]):
+        text = re.sub(r"\s+", " ", re.sub(r"https?://\S+", "", str(text))).strip()
+        direction = next(
+            (d for d in ("positive", "negative", "neutral") if d in str(label)), ""
+        )
+        n = norm(text)
+        if direction and 15 <= len(n) and len(text) <= 300 and n not in skip | seen:
+            seen.add(n)
+            cases.append({"subject": text, "direction": direction, "source": "fingpt"})
+    print("fingpt:", dict(Counter(c["direction"] for c in cases)), flush=True)
+    return cases
+
+
+def agnews(skip: set[str]) -> list[dict]:
+    """AG News world and sport headlines as "other": the class production sees most and
+    the public finance sets lack. World news is sometimes market news, so train.py
+    gives these half weight."""
+    df = parquet("fancyzhx/ag_news")
+    cases = []
+    for text, label in zip(df["text"], df["label"]):
+        title = re.split(r" \(|\\", str(text))[0].strip()
+        if int(label) in (0, 1) and len(norm(title)) >= 15 and norm(title) not in skip:
+            cases.append({"subject": title, "sector": "other", "source": "agnews"})
+    print("agnews:", len(cases), flush=True)
+    return cases
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("out", type=Path)
@@ -229,20 +284,31 @@ def main() -> None:
     ap.add_argument("--max-rows", type=int, default=3_000_000)
     # Teacher-labelled files (e.g. data/train.json) to fold in; never the holdout.
     ap.add_argument("--extra", type=Path, nargs="*", default=[])
+    # Reuse an earlier build's public cases (hours of streaming) and only fold in --extra.
+    ap.add_argument("--base", type=Path)
     args = ap.parse_args()
     skip = excluded()
-    cases = (
-        twitter("twitter-financial-news-topic", "sector", TOPIC, skip)
-        + twitter("twitter-financial-news-sentiment", "direction", SENTIMENT, skip)
-        + fnspid(args.per_sector, args.max_rows, skip)
-    )
+    if args.base:
+        cases = [
+            c
+            for c in json.loads(args.base.read_text("utf-8"))["cases"]
+            if norm(c["subject"]) not in skip and c.get("source", "") != "extra"
+        ]
+    else:
+        cases = (
+            twitter("twitter-financial-news-topic", "sector", TOPIC, skip)
+            + twitter("twitter-financial-news-sentiment", "direction", SENTIMENT, skip)
+            + fingpt(skip)
+            + agnews(skip)
+            + fnspid(args.per_sector, args.max_rows, skip)
+        )
     for path in args.extra:
         extra = [
             c
             for c in json.loads(path.read_text("utf-8"))["cases"]
             if norm(c["subject"]) not in skip
         ]
-        cases += [c | {"source": c.get("source") or path.stem} for c in extra]
+        cases += [c | {"source": c.get("source") or "extra"} for c in extra]
         print(f"{path.name}: {len(extra)}", flush=True)
     # Most direction rows are neutral; drop neutral direction labels beyond the larger
     # move class so the model is not taught that nothing moves prices.

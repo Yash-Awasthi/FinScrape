@@ -251,6 +251,13 @@ def main() -> None:
             "lora",
             "--epochs",
             "3",
+            # Same 32 per update as the defaults, but batches big enough to keep the GPU
+            # busy; train.py falls back to checkpointing if memory runs short.
+            "--micro-batch",
+            "16",
+            "--grad-accum",
+            "2",
+            "--no-grad-ckpt",
             *base,
         ],
         check=True,

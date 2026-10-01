@@ -44,17 +44,17 @@ Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
 
 try {
   if (-not (Test-Path "$Home2\data\pretrain.json")) {
-    & $Py -W ignore -u scripts\laya_train\build_pretrain.py "$Home2\data\pretrain.json" --per-sector 6000 --extra "$Home2\data\train.json"
+    & $Py -W ignore -u scripts\laya_train\build_pretrain.py "$Home2\data\pretrain.json" --per-sector 50000 --max-rows 20000000 --extra "$Home2\data\train.json"
     if ($LASTEXITCODE -ne 0) { throw "build_pretrain failed" }
   }
   $Next = "$Home2\stage1-next"
   # Two minutes on the longest items: loss must fall and memory must fit, or stop now.
   "$(Get-Date -Format 'dd MMM HH:mm')  smoke test" | Set-Content -Encoding utf8 "$Home2\progress.txt"
-  & $Py -W ignore -u scripts\laya_train\train.py "$Home2\stage1-smoke" --data "$Home2\data\pretrain.json" --mode full --micro-batch 32 --balance-direction --no-distill --smoke
+  & $Py -W ignore -u scripts\laya_train\train.py "$Home2\stage1-smoke" --data "$Home2\data\pretrain.json" --mode full --micro-batch 8 --no-grad-ckpt --balance-direction --no-distill --smoke
   $Smoke = $LASTEXITCODE
   Remove-Item -Recurse -Force "$Home2\stage1-smoke" -ErrorAction SilentlyContinue
   if ($Smoke -ne 0) { throw "smoke test failed; see the lines above" }
-  & $Py -W ignore -u scripts\laya_train\train.py $Next --data "$Home2\data\pretrain.json" --mode full --epochs 3 --micro-batch 32 --grad-accum 1 --balance-direction --no-distill
+  & $Py -W ignore -u scripts\laya_train\train.py $Next --data "$Home2\data\pretrain.json" --mode full --epochs 2 --micro-batch 8 --grad-accum 4 --no-grad-ckpt --balance-direction --no-distill
   if ($LASTEXITCODE -ne 0) { throw "training failed" }
   Get-ChildItem $Next -Directory -Filter "epoch*" | Remove-Item -Recurse -Force
   "$(Get-Date -Format 'dd MMM HH:mm')  scoring stage1-next against the incumbent on CPU (about 25 min)" |

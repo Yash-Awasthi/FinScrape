@@ -181,6 +181,10 @@ def build_items(
                 else [1.0 / len(keys)] * len(keys)
             )
             if it := item(tok, cfg, state, sector_q, target):
+                if (
+                    case.get("source") == "agnews"
+                ):  # world news is sometimes market news
+                    it["w"] = 0.5
                 items.append(it)
         if direction in directions:
             target = [1.0 if k == direction else 0.0 for k in directions]
@@ -287,9 +291,13 @@ def main() -> None:
     # Recomputing activations saves memory at ~30% speed; skip it when VRAM allows.
     ap.add_argument("--no-grad-ckpt", action="store_true")
     ap.add_argument("--no-distill", action="store_true")
+    ap.add_argument("--gpu-fraction", type=float, default=0.94)
     args = ap.parse_args()
 
     device = torch.device("cuda")
+    # A hard cap makes an overflow raise OOM (handled below) instead of letting Windows
+    # spill into shared memory, which silently runs several times slower.
+    torch.cuda.set_per_process_memory_fraction(args.gpu_fraction)
     model_dir = args.base or snapshot_download(
         BASE, ignore_patterns=["multilingual/*", "typed-decisions/*"]
     )
@@ -559,6 +567,7 @@ def main() -> None:
     )  # ETA counts only this session's pace
     last_save = time.time()
     t0 = time.time()
+    per, ckpt_on = args.micro_batch, not args.no_grad_ckpt
     for epoch in range(epoch0, args.epochs):
         # Shuffle a fresh copy per epoch so a resumed run replays the same order.
         batch_order = train[:]
@@ -572,13 +581,41 @@ def main() -> None:
         start0 = first_start if epoch == epoch0 else 0
         for start in range(start0, len(batch_order), args.micro_batch):
             chunk = batch_order[start : start + args.micro_batch]
-            loss = batch_loss(chunk, sigma)
-            value = loss.item()
+            try:
+                value = 0.0
+                for i in range(0, len(chunk), per):
+                    part = chunk[i : i + per]
+                    loss = batch_loss(part, sigma)
+                    share = len(part) / len(chunk)
+                    (loss * share / args.grad_accum).backward()
+                    value += loss.item() * share
+            except torch.OutOfMemoryError:
+                # Partial gradients may be in .grad: drop this accumulation group, then
+                # trade speed for memory: checkpointing first, then smaller pieces.
+                opt.zero_grad(set_to_none=True)
+                loss = None
+                gc.collect()
+                torch.cuda.empty_cache()
+                if not ckpt_on:
+                    model.encoder.gradient_checkpointing_enable(
+                        gradient_checkpointing_kwargs={"use_reentrant": False}
+                    )
+                    model.head_checkpointing = ckpt_on = True
+                elif per > 1:
+                    per //= 2
+                else:
+                    raise SystemExit(
+                        f"out of GPU memory at item {start} even at batch 1"
+                    )
+                print(
+                    f"OOM at item {start}; dropped this update, now checkpointing={ckpt_on}, {per} per pass",
+                    flush=True,
+                )
+                continue
             if not math.isfinite(value) or value > 100:
                 raise SystemExit(
                     f"loss diverged ({value}) at item {start}; resume.pt holds the last good state"
                 )
-            (loss / args.grad_accum).backward()
             steps += 1
             total += value
             if steps % args.grad_accum == 0 or start + args.micro_batch >= len(
