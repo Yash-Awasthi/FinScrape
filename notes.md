@@ -120,6 +120,7 @@ History was rewritten on 30 Sep 2026 into 32 dated checkpoints (later commits fo
 - AI analysis runs only on click: ingest and the ingest endpoint stopped analysing every event, the panel no longer analyses on open, the API tries `FINSCRAPE_MODEL_FALLBACK` in order (c274951c), and when every model fails it dispatches the `analyze` workflow, capped at 20 an hour (682d21d6, 6aa1b8ed). Check: job 36996992811 stored event 22248 in 59 s, and the API returned it in 0.5 s.
 - `backup.yml` and `reanalyse.yml` were never registered on the recreated repo, so no nightly backup ran from 1 Oct; both now declare read-only permissions, which registered them.
 - Telegram alerts never reached production: no bot token on Render, and only the API ingest endpoint called them, not the GitHub ingest runner. Ingest now sends INVEST/PULL_OUT alerts to subscribers through the new bot @YashAwasthiBot, and event text is Markdown-escaped, since one stray `_` made Telegram reject the message. The email digest was removed: it depended on a mail relay this deployment never had.
+- Sector contest (plan step 5): LoRAs scored 95.6% on test but mostly by memorising company names and read live macro stories worse, so none was published and frozen `laya-20261001-1041` stays; headlines now match S&P 500 short names (`finscrape/analysis/sp500.py`) and a named company outranks Laya. Check: contest chains tie at 96.0% (production taxonomy), 3 of 500 live headlines change sector, Laya still labels 13% of live headlines that would stay `other`.
 
 ## Local hazards
 

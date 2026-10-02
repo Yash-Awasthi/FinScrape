@@ -68,8 +68,9 @@ Facts about the owner's setup that the items below rely on (as of 2 Oct 2026):
 ### 11. Sector model and call tuning
 Follow `docs/LAYA_PLAN.md`. Steps 1 to 3 are done: `scripts/backfill/` builds the universe,
 prices, one events file per month from 2023-10 and `outcomes.parquet`. Step 4 is done: calls carry
-+2 / +4 day vs-SPY scores and the landing page shows both rates. The next step is step 5, the
-sector contest on test-split single-company events.
++2 / +4 day vs-SPY scores and the landing page shows both rates. Step 5 is done: frozen Laya
+stays, headlines' S&P 500 short names now set the sector ahead of Laya, and no LoRA was
+published (result in the plan). The next step is step 6, call tuning on live events.
 The nightly LoRA loop is stopped (`WorldFin Laya daily` is disabled) and production stays
 on `laya-20261001-1041`. The loop's runs and measurements are in this file's git history
 before the plan landed (27a668c8).

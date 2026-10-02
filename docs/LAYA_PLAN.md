@@ -84,6 +84,18 @@ Each step ends with a check that can be rerun.
    hand-started GPU run. Report overall and per-sector accuracy, and on no-company events
    how often each entry leaves `other` versus picks a sector. The winner replaces
    `laya.classify` if it clears the keep rule; otherwise Laya is removed from the pipeline.
+   Result (3 Oct 2026, `python -m scripts.backfill.sector_contest`): test 3,000 uniform from
+   128,618 single-company events, no-company 1,000. Every LoRA and the embeddings beat the
+   old no-model chain (15.7%) by far, the LoRA reaching 95.6% against frozen Laya's 56.0%,
+   but almost all of that was company-name memory (99.9% on companies seen 100+ times in
+   training, 52.6% on unseen ones), and on 500 live headlines both LoRAs read macro stories
+   worse than frozen (tanker strikes as industrials, or `other`). The truth is a name match,
+   so a name match settles it: the pipeline now matches S&P 500 short names in the headline
+   (`finscrape/analysis/sp500.py`), and a named company outranks Laya, which was wrong 389
+   times to 33 there. All chains then tie at 78.2% on test (96.0% in the production
+   taxonomy, which files GOOGL, AMZN and META under technology), so the keep rule cannot
+   separate them; frozen Laya stays for stories naming no company, where it labels 13% of
+   live headlines that would otherwise stay `other`. No LoRA was published.
 6. **Call tuning.** On live events, fit INVEST and PULL_OUT score thresholds and weights
    per source and event type on the older half, test on the newer half. Kept only under the
    calls keep rule.
@@ -102,4 +114,4 @@ direction no longer marks an event as divergent.
 
 ## Next session
 
-Steps 1 and 2, ending with the pilot report and a go / plan-B decision.
+Step 6, call tuning on the live events.
