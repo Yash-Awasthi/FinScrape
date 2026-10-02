@@ -9,6 +9,9 @@ on:
         description: Look back this many days
         default: "7"
 
+permissions:
+  contents: read
+
 concurrency:
   group: reanalyse
   cancel-in-progress: false

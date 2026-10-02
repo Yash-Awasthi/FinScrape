@@ -5,12 +5,11 @@ what has closed.
 
 ## Where things stand
 
-As of 30 Sep 2026: demo-ready. A fresh clone starts with `make demo`; production is
-Pages + Render + Supabase with ingest dispatched by a Cloudflare cron Worker (item 9
-lists what the owner still has to do). `docs/DEMO.md` is the walkthrough. Gates
-green: ruff, pyright, selfcheck, 1193 pytest with the test database, 69 vitest,
-build, 5 Playwright, 1 real-API Playwright (`e2e-live`). The portfolio feature is gone (WorldFin tracks
-every event, not holdings). Laya runs in the ingest Action (item 11); ReliefWeb is live.
+As of 2 Oct 2026: live and demo-ready. A fresh clone starts with `make demo`; production
+is Pages + Render + Supabase with ingest dispatched by a Cloudflare cron Worker (task.md
+item 9 lists what the owner still has to do). `docs/DEMO.md` is the walkthrough. The
+portfolio feature is gone (WorldFin tracks every event, not holdings). Laya runs frozen in
+the ingest Action; `docs/LAYA_PLAN.md` replaces its nightly training loop. ReliefWeb is live.
 
 ## Measured, worth not re-deriving
 
@@ -115,6 +114,11 @@ History was rewritten on 30 Sep 2026 into 32 dated checkpoints (later commits fo
 - Keep-warm, alerting and backups (PR #26): the cron Worker pings `/health` every 10 min; each ingest run fails (GitHub emails the owner) if no event landed for 3 h or the database passes 400 MB; `backup.yml` stores an encrypted nightly dump for 14 days. Check: backup run 36708726005 (3.1 MB) decrypted and listed 52 tables with pg_restore; ingest check read 30 MB, newest event fresh.
 - Docs refreshed 30 Sep: README rewritten to the current product and stack; ARCHITECTURE, RUNBOOK (production section), DATA_SOURCES, CONTRIBUTING, DEPLOYMENT (now the API table), DEMO, FRONTEND_DESIGN and `.env.example` updated; stale plans (PLAN_TOMORROW, WORKLOG, RESEARCH_NEXT, COUNCIL_EXTRACTION_PLAN, RISKS) deleted, and code docstrings no longer cite PLAN.md appendices. Git history keeps the deleted files.
 - Master CI had failed on every push since the `trivy-action@0.28.0` tag vanished; pinned to v0.36.0, and the scan's eight HIGH findings fixed (OpenSSL upgraded from Debian, pip and its vendored msgpack and setuptools dropped from the runtime image). Check: master CI green on all four jobs.
+- The repository was recreated on 1 Oct without the vendored `finscrape/absorbed/` corpus; the old history is in the local bundle `fin-scrape-history-backup-20260930.bundle`. Repo variables, secrets and the latest Laya release were copied over, and Render was relinked to the new repo.
+- The new repo's `WORLDFIN_DATABASE_URL` and `OPENAI_API_KEY` secrets held local values (localhost, the Ollama placeholder); both reset on 2 Oct. Check: ingest runs 36990458181 and 36991669635 stored events with zero LLM failures.
+- The API logs the provider's reply when an LLM call fails (c01b7171); that showed TokenHarbor refusing Render with 403 `request_forbidden`.
+- AI analysis runs only on click: ingest and the ingest endpoint stopped analysing every event, the panel no longer analyses on open, the API tries `FINSCRAPE_MODEL_FALLBACK` in order (c274951c), and when every model fails it dispatches the `analyze` workflow, capped at 20 an hour (682d21d6, 6aa1b8ed). Check: job 36996992811 stored event 22248 in 59 s, and the API returned it in 0.5 s.
+- `backup.yml` and `reanalyse.yml` were never registered on the recreated repo, so no nightly backup ran from 1 Oct; both now declare read-only permissions, which registered them.
 
 ## Local hazards
 

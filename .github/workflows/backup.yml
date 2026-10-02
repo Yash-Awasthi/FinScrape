@@ -7,6 +7,9 @@ on:
     - cron: "17 21 * * *"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   backup:
     runs-on: ubuntu-24.04
