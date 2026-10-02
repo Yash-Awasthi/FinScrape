@@ -241,6 +241,7 @@ def no_model_inputs(rows: pd.DataFrame) -> pd.DataFrame:
     """Keyword sector and named-company tickers the pipeline would see on the headline, and
     the stored LLM sector when a live event carries the same URL."""
     from finscrape.analysis.nlp import FinancialNLP
+    from finscrape.analysis.sp500 import headline_tickers
     from finscrape.entity_map import resolve_company_tickers
 
     nlp = FinancialNLP()
@@ -251,7 +252,9 @@ def no_model_inputs(rows: pd.DataFrame) -> pd.DataFrame:
     )
     return rows.assign(
         keyword=[nlp.analyze(t, "").sector for t in rows["title"]],
-        companies=[resolve_company_tickers(t) for t in rows["title"]],
+        companies=[
+            resolve_company_tickers(t) + headline_tickers(t) for t in rows["title"]
+        ],
         llm=rows["url"].map(live).fillna(""),
     )
 

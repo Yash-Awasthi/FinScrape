@@ -25,6 +25,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
+from finscrape.analysis import sp500
 from finscrape.analysis.sectors import TAXONOMY, normalize
 from finscrape.analysis.ticker_map import TICKER_SECTOR
 
@@ -193,16 +194,18 @@ def choose_sector(
     keyword_sector: str,
     tickers: Iterable[str] = (),
 ) -> str:
-    """Confident Laya label, then the LLM's, then keywords, then the sector of the
-    companies named, then a plausible Laya pick, else "other".
+    """Confident Laya label when no company is named, then the LLM's, then keywords,
+    then the sector of the companies named, then a plausible Laya pick, else "other".
 
     The LLM's "technology" counts only with keyword or company support: it is the
     label the LLM stamps on purely political stories, the defect this chain exists to fix.
     """
     laya_p = view.sector_p if view and view.sector in TAXONOMY else 0.0
-    if laya_p >= CONFIDENT:
+    # The curated map wins: it files internet platforms (GOOGL, AMZN, META) under technology.
+    company = Counter(s for t in tickers if (s := TICKER_SECTOR.get(t) or sp500.sector(t)))
+    # On headlines naming a company Laya was wrong 389 times to 33 (sector contest, 3 Oct).
+    if laya_p >= CONFIDENT and not company:
         return view.sector  # type: ignore[union-attr]
-    company = Counter(TICKER_SECTOR[t] for t in tickers if t in TICKER_SECTOR)
     llm = next((s for s in normalize(llm_sector) if s in TAXONOMY and s != "other"), "")
     if llm == "technology" and keyword_sector != "technology" and "technology" not in company:
         llm = ""

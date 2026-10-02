@@ -7,14 +7,15 @@ prices are adjusted daily closes from September 2023, a month before the first e
 from __future__ import annotations
 
 import io
+import json
 import re
 import sys
-import unicodedata
 from pathlib import Path
 
 import pandas as pd
 import requests
 
+from finscrape.analysis.sp500 import TABLE, norm
 from finscrape.analysis.ticker_map import COMPANY_TO_TICKER
 
 OUT = Path("data/backfill")
@@ -53,14 +54,6 @@ AMBIGUOUS = {
 }  # fmt: skip
 
 
-def norm(text: str) -> str:
-    """Lowercase ASCII words, the shape `slug_title` leaves after its hyphens are split."""
-    plain = "".join(
-        c for c in unicodedata.normalize("NFKD", text) if not unicodedata.combining(c)
-    )
-    return " ".join(re.sub(r"[^a-z0-9]+", " ", plain.lower()).split())
-
-
 def short_name(security: str) -> str:
     """'Alphabet Inc. (Class A)' -> 'alphabet'; 'The Home Depot' -> 'home depot'."""
     words = norm(re.sub(r"\(.*?\)", " ", security)).split()
@@ -91,6 +84,15 @@ def build_universe(table: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(
         rows, columns=["ticker", "name", "gics_sector", "sector", "aliases"]
     )
+
+
+def write_table(uni: pd.DataFrame) -> None:
+    rows = uni.sort_values("ticker")[["ticker", "sector", "aliases"]].itertuples(
+        index=False
+    )
+    # One company per line keeps a refresh's diff readable.
+    lines = [f"{json.dumps(t)}: {json.dumps([s, list(a)])}" for t, s, a in rows]
+    TABLE.write_text("{\n" + ",\n".join(lines) + "\n}\n", "utf-8")
 
 
 def fetch_prices(tickers: list[str]) -> pd.DataFrame:
@@ -137,6 +139,7 @@ def main() -> int:
         pd.read_html(io.StringIO(html), attrs={"id": "constituents"})[0]
     )
     uni.to_parquet(OUT / "universe.parquet", index=False)
+    write_table(uni)
     prices = fetch_prices(uni["ticker"].tolist() + ["SPY"])
     prices.to_parquet(OUT / "prices.parquet", index=False)
     return 1 if check(uni, prices) else 0

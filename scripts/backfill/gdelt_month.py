@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import csv
 import io
-import re
 import sys
 import time
 import zipfile
@@ -21,6 +20,7 @@ from urllib.parse import urlparse
 import pandas as pd
 import requests
 
+from finscrape.analysis.sp500 import compile_matcher
 from finscrape.ingestors.gdelt import (
     _ADDED,
     _CAMEO,
@@ -36,7 +36,6 @@ from finscrape.ingestors.gdelt import (
     _float,
     slug_title,
 )
-from scripts.backfill.universe import norm
 
 OUT = Path("data/backfill")
 EXPORT = "https://data.gdeltproject.org/gdeltv2/{}.export.CSV.zip"
@@ -76,17 +75,13 @@ def fetch(stamp: str) -> bytes | None:
 
 def matcher(universe: pd.DataFrame):
     """title -> sorted tickers whose alias appears in it as whole words."""
-    alias = {
-        a: t
-        for t, aliases in zip(universe["ticker"], universe["aliases"])
-        for a in aliases
-    }
-    rx = re.compile(
-        r"(?<![a-z0-9])(?:"
-        + "|".join(re.escape(a) for a in sorted(alias, key=len, reverse=True))
-        + r")(?![a-z0-9])"
+    return compile_matcher(
+        {
+            a: t
+            for t, aliases in zip(universe["ticker"], universe["aliases"])
+            for a in aliases
+        }
     )
-    return lambda title: sorted({alias[m.group(0)] for m in rx.finditer(norm(title))})
 
 
 _KEEP = (_ID, _ADDED, _URL, _CAMEO, _QUAD, _GOLDSTEIN, _MENTIONS, _TONE, _COUNTRY, _LAT, _LON)  # fmt: skip

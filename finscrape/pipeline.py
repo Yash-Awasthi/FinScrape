@@ -15,7 +15,7 @@ from difflib import SequenceMatcher
 from typing import Any, Protocol
 
 from finscrape.agents import DEFAULT_AGENTS, AgentCouncil
-from finscrape.analysis import laya
+from finscrape.analysis import laya, sp500
 from finscrape.analysis.ai_client import call_ai
 from finscrape.analysis.nlp import FinancialNLP
 from finscrape.analysis.prompts import render_prompt
@@ -160,7 +160,7 @@ class FinScrapePipeline:
         # for "Taiwan", which would pass a political story off as technology.
         sector = laya.choose_sector(
             result.get("sector_impact", ""), laya_view, nlp_result.sector,
-            tickers=company_tickers,
+            tickers=company_tickers + sp500.headline_tickers(article.title),
         )
 
         # Merge NLP-extracted metrics into key_metrics

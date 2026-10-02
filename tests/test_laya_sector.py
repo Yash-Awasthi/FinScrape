@@ -63,3 +63,19 @@ def test_promoted_checkpoint_reloads_without_restart(tmp_path, monkeypatch):
     weights.write_text("b")
     os.utime(weights, (1, 1))
     assert laya._load() == 2
+
+
+def test_short_sp500_names_in_the_headline_back_the_sector():
+    from finscrape.analysis.sp500 import headline_tickers
+
+    assert headline_tickers("Netflix stock falls after subscriber miss") == ["NFLX"]
+    assert headline_tickers("Chevron extends EnerMech contract") == ["CVX"]
+    assert headline_tickers("Target hit and price target cut at Intel event") == []
+    assert choose_sector("", None, "", tickers=headline_tickers("Netflix stock falls")) == "communications"
+    assert choose_sector("", None, "", tickers=headline_tickers("Chevron extends contract")) == "energy"
+
+
+def test_named_company_outranks_confident_laya():
+    netflix = LayaView("technology", 0.9, "", 0.0)
+    assert choose_sector("", netflix, "", tickers=["NFLX"]) == "communications"
+    assert choose_sector("", netflix, "", tickers=[]) == "technology"
