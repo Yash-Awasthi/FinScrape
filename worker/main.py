@@ -1,7 +1,7 @@
 """Worker entrypoint: `python -m worker.main [--once]`.
 
 Two deployments share one body of work. `--once` runs a single cycle and exits —
-that is the live path, a scheduled GitHub Action against Neon
+that is the live path, a GitHub Action against the production database
 (`.github/workflows/ingest.yml`). Without it an AsyncIOScheduler keeps the same
 work running on intervals, for compose and self-hosted runs.
 

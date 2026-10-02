@@ -2,8 +2,7 @@
 
 The current application is the FastAPI `server/`, ingestion `worker/`, and Vite
 `web/` dashboard. `dashboard/` and `SETUP_WINDOWS.md` describe the legacy app.
-Current work is tracked in [task.md](../task.md); [plan.md](../plan.md) contains
-audit follow-ups, not a two-year implementation roadmap.
+Current work is tracked in [task.md](../task.md).
 
 ## Requirements
 
@@ -177,8 +176,3 @@ real local proxy configuration. All are included in the full gates above.
 
 - External market/news/LLM paths are deliberately denied during live E2E. Their
   real-provider success, model quality and outbound notifications remain untested.
-- Fresh dependency installation, Linux CI execution, legacy `dashboard/`, live
-  scrapers, model quality, outbound notifications, training, and hosted services:
-  not tested. No paid services, credentials, production data, or remote writes used.
-- `task.md` owner-gated deployment, source access, and training items remain open;
-  local green gates do not close those operational items.

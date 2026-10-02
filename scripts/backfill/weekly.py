@@ -1,4 +1,4 @@
-"""Weekly backfill append (docs/LAYA_PLAN.md step 8): `python -m scripts.backfill.weekly`.
+"""Weekly backfill append (docs/BACKFILL.md): `python -m scripts.backfill.weekly`.
 
 Run on Saturdays by the Windows task `WorldFin backfill weekly`. Refreshes prices,
 rebuilds the event files of the months the last week touched (a rebuild is idempotent

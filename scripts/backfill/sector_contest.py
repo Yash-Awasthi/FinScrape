@@ -1,4 +1,4 @@
-"""Sector contest (docs/LAYA_PLAN.md step 5), all on CPU.
+"""Sector contest (docs/BACKFILL.md), all on CPU.
 
     python -m scripts.backfill.sector_contest sample
     python -m scripts.backfill.sector_contest lora-other

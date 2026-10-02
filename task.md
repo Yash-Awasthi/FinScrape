@@ -1,13 +1,13 @@
 # Tasks
 
-The working list for WorldFin. `notes.md` is the handover log that goes with it.
+The working list for WorldFin. `notes.md` records what is known about it.
 
 ## How to work this list
 
 - Take open items top to bottom. For each one: investigate, write a failing test,
   fix, check it live against the running stack, then make one commit.
-- When an item closes, delete it here and add one line to `notes.md` under
-  "Closed" (what changed, the commit, the live check).
+- When an item closes, delete it here; the commit message records what changed and the
+  live check. Facts worth keeping go to `notes.md`.
 - A **gated** item needs something only the owner can supply. Skip it and add a
   line under its entry saying what was checked and why it is still blocked.
 - Push at the end of the session.
@@ -50,34 +50,8 @@ Facts about the owner's setup that the items below rely on (as of 2 Oct 2026):
 
 ## Open
 
-### 9. Production: what is left
-- Keys pasted into chats stay as they are: the accounts are disposable, by the owner's choice (2 Oct).
-- The Neon project stays for now; `ingest.yml`, `worker/main.py` and the docs still mention it.
-- Owner: mark the local-only compose password (`worldfin`, Postgres on 127.0.0.1) a false
+Owner only; nothing else is open.
+
+- Mark the local-only compose password (`worldfin`, Postgres on 127.0.0.1) a false
   positive in GitGuardian.
-- TokenHarbor refuses requests from Render (403 `request_forbidden`) and serves GitHub
-  runners. So the API runs AI analysis only on click with OpenRouter free models
-  (`FINSCRAPE_MODEL`, `FINSCRAPE_MODEL_FALLBACK` on Render), and when all of them fail it
-  dispatches the `analyze` workflow, at most `ANALYZE_DISPATCH_PER_HOUR` (20) times an hour.
-  Ingest keeps TokenHarbor (deepseek, then mimo).
-- `world/times_of_israel` fails from GitHub runners (blocked there, fine locally).
-- About 4,600 heuristic-era rows were left unanalysed on purpose: re-running them costs
-  about 4.5 hours of the shared LLM key for roughly 600 useful rows, and scenarios and
-  the backtest already skip them.
-
-### 11. Sector model and call tuning
-Follow `docs/LAYA_PLAN.md`. Steps 1 to 3 are done: `scripts/backfill/` builds the universe,
-prices, one events file per month from 2023-10 and `outcomes.parquet`. Step 4 is done: calls carry
-+2 / +4 day vs-SPY scores and the landing page shows both rates. Step 5 is done: frozen Laya
-stays, headlines' S&P 500 short names now set the sector ahead of Laya, and no LoRA was
-published (result in the plan). Step 6 is done: tuning on live events did not beat the
-current +/-3 thresholds, which stay (result in the plan). Step 7 offline: the bandit
-(`scripts/backfill/bandit.py`) has no edge on test and loses to always PULL_OUT, so it was
-dropped. Step 8 is done: the `score-week` Action and the `WorldFin backfill weekly` Windows
-task run on Saturdays. Left: confirm both first scheduled runs (10 Oct), then close this item.
-The nightly LoRA loop is stopped (`WorldFin Laya daily` is disabled) and production stays
-on `laya-20261001-1041`. The loop's runs and measurements are in this file's git history
-before the plan landed (27a668c8).
-
-Live track record on 2 Oct: next-day raw 58.5% of 342 decisive calls; +2 days vs SPY 53.8% of
-874 (INVEST 41.4% of 70); +4 days vs SPY 59.2% of 816 (PULL_OUT 59.1%, INVEST 60.0% of 55).
+- Delete the Neon project; nothing in the repository uses it any more.

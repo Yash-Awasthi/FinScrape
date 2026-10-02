@@ -138,7 +138,7 @@ docs/          architecture, deploy, runbook, data sources, demo, security
 ```
 
 `dashboard/` and [SETUP_WINDOWS.md](SETUP_WINDOWS.md) belong to the older standalone app.
-Current work is in [task.md](task.md); the handover log is [notes.md](notes.md).
+Current work is in [task.md](task.md); what is known and measured is in [notes.md](notes.md).
 
 ---
 

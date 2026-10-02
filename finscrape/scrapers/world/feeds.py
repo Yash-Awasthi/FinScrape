@@ -279,15 +279,6 @@ FEEDS: tuple[Feed, ...] = (
         propaganda_risk="medium",
         topics=("geopolitics", "economy"),
     ),
-    Feed(
-        "times_of_israel",
-        "https://www.timesofisrael.com/feed/",
-        "The Times of Israel",
-        "mainstream",
-        region="mena",
-        propaganda_risk="medium",
-        topics=("conflict", "geopolitics"),
-    ),
 )
 
 _BY_KEY = {f.key: f for f in FEEDS}

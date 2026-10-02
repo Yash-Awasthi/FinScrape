@@ -1,4 +1,4 @@
-"""Call tuning on live events (docs/LAYA_PLAN.md step 6), no LLM.
+"""Call tuning on live events (docs/BACKFILL.md), no LLM.
 
     python -m scripts.backfill.call_tuning pull     # Supabase + yfinance, local Parquet
     python -m scripts.backfill.call_tuning report

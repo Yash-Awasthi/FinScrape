@@ -1,4 +1,4 @@
-"""Weekly live scoring (docs/LAYA_PLAN.md step 8): `python -m worker.score_week`.
+"""Weekly live scoring (docs/BACKFILL.md): `python -m worker.score_week`.
 
 Runs from the `score-week` Action on Saturdays. Ingest scores calls from the last 30 days
 every cycle; this sweep reaches a year back for calls a failed price fetch left open, then

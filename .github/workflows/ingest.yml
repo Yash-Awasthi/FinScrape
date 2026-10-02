@@ -1,9 +1,8 @@
 name: ingest
 
-# Free no-host worker: a scheduled runner does ONE ingest cycle (scrape -> LLM ->
-# ingest -> correlate -> backtest) against Neon, then exits. Replaces an always-on
-# worker process. Unlimited minutes on public repos. Off-peak minutes (:13/:43)
-# reduce GitHub's start-of-hour scheduling delay.
+# One ingest cycle (scrape -> LLM -> ingest -> correlate -> backtest) against production,
+# then exit. The Cloudflare cron Worker `winfin-ingest-cron` dispatches it every
+# 30 minutes, since GitHub fires this schedule only every few hours.
 on:
   schedule:
     - cron: "13,43 * * * *"

@@ -31,7 +31,6 @@ The table is a representative subset of the 32 registered feeds; `/api/feeds` li
 | guardian_world | The Guardian World | mainstream | low | www.theguardian.com/world/rss |
 | npr_world | NPR World | mainstream | low | feeds.npr.org/1004/rss.xml |
 | scmp_news | South China Morning Post | mainstream | medium | www.scmp.com/rss/91/feed |
-| times_of_israel | The Times of Israel | mainstream | medium | www.timesofisrael.com/feed/ (blocks GitHub runners; works locally) |
 | cnbc_finance | CNBC Finance | market | low | search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100 |
 | cnbc_world | CNBC World | market | low | www.cnbc.com/id/100727362/device/rss/rss.html |
 | economist_finance | The Economist — Finance & Economics | market | low | www.economist.com/finance-and-economics/rss.xml |

@@ -1,6 +1,6 @@
 """Build data/backfill/universe.parquet and prices.parquet: `python -m scripts.backfill.universe`.
 
-Universe is today's S&P 500 from Wikipedia (survivorship bias accepted, docs/LAYA_PLAN.md);
+Universe is today's S&P 500 from Wikipedia (survivorship bias accepted, docs/BACKFILL.md);
 prices are adjusted daily closes from September 2023, a month before the first events.
 """
 

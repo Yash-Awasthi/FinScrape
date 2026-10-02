@@ -1,4 +1,4 @@
-"""Bandit shadow on the backfill (docs/LAYA_PLAN.md step 7), no LLM.
+"""Offline bandit on the backfill (docs/BACKFILL.md), no LLM.
 
     python -m scripts.backfill.bandit
 
