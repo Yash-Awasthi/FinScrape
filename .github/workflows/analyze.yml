@@ -9,6 +9,9 @@ on:
         description: Event id to analyse
         required: true
 
+permissions:
+  contents: read
+
 concurrency:
   group: analyze-${{ inputs.event_id }}
   cancel-in-progress: false

@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import logging
 import time
+from collections import deque
 
 import requests
 from fastapi import APIRouter, HTTPException, Query
@@ -23,6 +24,8 @@ log = logging.getLogger("worldfin.ai")
 # the cache, so waiting on the job never spends the API's own model quota.
 _DISPATCH_WINDOW_S = 600.0
 _dispatched: dict[int, float] = {}
+# The route is public: a loop over event ids must not turn into a loop of jobs.
+_recent_dispatches: deque[float] = deque()
 
 
 def _dispatch_job(event_id: int) -> bool:
@@ -33,6 +36,11 @@ def _dispatch_job(event_id: int) -> bool:
     now = time.monotonic()
     if now - _dispatched.get(event_id, -_DISPATCH_WINDOW_S) < _DISPATCH_WINDOW_S:
         return True
+    while _recent_dispatches and now - _recent_dispatches[0] > 3600:
+        _recent_dispatches.popleft()
+    if len(_recent_dispatches) >= s.analyze_dispatch_per_hour:
+        log.warning("analyze dispatch cap reached; event %s left heuristic", event_id)
+        return False
     try:
         resp = requests.post(
             f"https://api.github.com/repos/{s.analyze_dispatch_repo}"
@@ -49,6 +57,7 @@ def _dispatch_job(event_id: int) -> bool:
         log.warning("analyze dispatch failed for event %s: %s", event_id, exc)
         return False
     _dispatched[event_id] = now
+    _recent_dispatches.append(now)
     return True
 
 

@@ -64,6 +64,9 @@ class Settings(BaseSettings):
     analyze_dispatch_ref: str = Field(
         default="master", validation_alias="ANALYZE_DISPATCH_REF"
     )
+    analyze_dispatch_per_hour: int = Field(
+        default=20, validation_alias="ANALYZE_DISPATCH_PER_HOUR"
+    )
 
     # --- Optional infra ---
     redis_url: str = Field(default="", validation_alias="WORLDFIN_REDIS_URL")

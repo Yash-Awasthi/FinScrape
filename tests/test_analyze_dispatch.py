@@ -45,3 +45,29 @@ def test_failed_click_dispatches_once_and_polls_spend_no_model_calls(monkeypatch
     assert first["pending"] and poll["pending"]
     assert model_calls == [7]
     assert dispatches == [{"ref": "master", "inputs": {"event_id": "7"}}]
+
+
+def test_dispatches_stop_at_the_hourly_cap(monkeypatch):
+    sent: list[str] = []
+
+    class Reply:
+        def raise_for_status(self):
+            return None
+
+    def post(url, headers, json, timeout):
+        sent.append(json["inputs"]["event_id"])
+        return Reply()
+
+    monkeypatch.setenv("ANALYZE_DISPATCH_REPO", "owner/repo")
+    monkeypatch.setenv("ANALYZE_DISPATCH_TOKEN", "t")
+    monkeypatch.setenv("ANALYZE_DISPATCH_PER_HOUR", "2")
+    get_settings.cache_clear()
+    monkeypatch.setattr(route.requests, "post", post)
+    monkeypatch.setattr(route, "_dispatched", {})
+    monkeypatch.setattr(route, "_recent_dispatches", route.deque())
+    try:
+        results = [route._dispatch_job(i) for i in (1, 2, 3)]
+    finally:
+        get_settings.cache_clear()
+    assert results == [True, True, False]
+    assert sent == ["1", "2"]
