@@ -1,0 +1,31 @@
+name: score-week
+
+# Saturday sweep of the live track record (worker/score_week.py, plan step 8): scores
+# calls up to a year old whose windows closed and prints the +2 / +4 day vs-SPY rates.
+on:
+  schedule:
+    - cron: "0 6 * * 6"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: score-week
+  cancel-in-progress: false
+
+jobs:
+  score:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      WORLDFIN_DATABASE_URL: ${{ secrets.WORLDFIN_DATABASE_URL }}
+      FINSCRAPE_LAYA: "0"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+      - run: uv python install 3.13
+      - run: uv sync -p 3.13 --group server
+      - run: uv run --no-sync python -u -m worker.score_week

@@ -126,13 +126,20 @@ Each step ends with a check that can be rerun.
    50.3% and 49.8%. Per ticker and day the bandit is 50.2% of 15,018. Always PULL_OUT wins
    because news-named S&P 500 stocks lagged SPY in the test year, not because of the news.
    Calls land on every test day (busiest 589), so event-level intervals are far too narrow.
-   The bandit fails the keep rule and loses to a baseline; shadow logging was not wired.
+   The bandit fails the keep rule and loses to a baseline, so it was dropped (owner
+   decision, 3 Oct): no shadow logging, live calls stay on the +/-3 score rule.
 8. **Weekly job.** Every Saturday, score live events whose +2 and +4 day windows have
    closed, and append the week's GDELT events and outcomes to the backfill.
+   Done (3 Oct 2026): the `score-week` Action (`python -m worker.score_week`, Saturdays
+   06:00 UTC) scores live calls up to a year old whose windows closed, since ingest only
+   reaches back 30 days, and prints the +2 / +4 day rates of the last two weeks and of all
+   calls. The Windows task `WorldFin backfill weekly` (Saturdays 10:00 local,
+   `python -m scripts.backfill.weekly`, log in `data/backfill/weekly.log`) refreshes prices,
+   rebuilds the months the last 8 days touched and recomputes `outcomes.parquet`.
 
 Also in step 4: remove the direction veto, with a test that a confident opposite
 direction no longer marks an event as divergent.
 
 ## Next session
 
-Owner decision on step 7 (shadow or drop the bandit), then step 8, the weekly job.
+All steps are done. Watch the first Saturday runs of both weekly jobs.

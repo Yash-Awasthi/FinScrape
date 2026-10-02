@@ -123,6 +123,7 @@ History was rewritten on 30 Sep 2026 into 32 dated checkpoints (later commits fo
 - Sector contest (plan step 5): LoRAs scored 95.6% on test but mostly by memorising company names and read live macro stories worse, so none was published and frozen `laya-20261001-1041` stays; headlines now match S&P 500 short names (`finscrape/analysis/sp500.py`) and a named company outranks Laya. Check: contest chains tie at 96.0% (production taxonomy), 3 of 500 live headlines change sector, Laya still labels 13% of live headlines that would stay `other`.
 - Call tuning (plan step 6, `scripts/backfill/call_tuning.py`, PR #20): thresholds and weights fit on 23 Jun to 9 Jul live events chose +/-2 and scored 62.9% of 399 at +4 days on 15 Jul to 30 Sep against the current +/-3 rule's 68.3% of 186; neither clears the keep rule at +2, so production keeps +/-3 by owner decision. Check: recomputed excess matched all 874 stored scores.
 - Bandit offline (plan step 7, `scripts/backfill/bandit.py`): a ridge bandit on 127,101 test single-company events hit 48.9% at +4 days against always PULL_OUT's 52.9% (test correlation 0.0002), so it fails the keep rule and no shadow logging was wired. Check: `python -m scripts.backfill.bandit` reruns in 16 s.
+- Weekly job (plan step 8): `score-week` Action sweeps live calls up to a year old (`worker/score_week.py`); the `WorldFin backfill weekly` Windows task runs `scripts/backfill/weekly.py`. Check: a local run took 5m09s, rebuilt 2026-09 (2,880 exports) and 2026-10, prices to 773 days, 464,604 single-company events with ex4.
 
 ## Local hazards
 
@@ -143,6 +144,8 @@ History was rewritten on 30 Sep 2026 into 32 dated checkpoints (later commits fo
   `OPENAI_BASE_URL` works for the analysis LLM at roughly 20s per article.
 - A nightly Windows task "WorldFin DB backup" dumps `worldfin` into `backups/`
   (newest 14 kept); `make restore FILE=...` restores one.
+- The Windows task "WorldFin backfill weekly" rewrites `data/backfill/` on Saturdays at
+  10:00; it refuses a short prices download rather than overwrite history.
 - The bot never answered commands: the webhook secret Telegram held did not match Render's (re-registered), and every reply with a bare `_` (PULL_OUT) was rejected by Telegram's Markdown parser; replies are escaped now. Check: both subscribed chats recorded, a live alert for event 22299 delivered, `telegram-summary` run 37014698043 sent 2.
 - Backfill step 1: `python -m scripts.backfill.universe` writes the S&P 500 universe (Wikipedia, GICS mapped to the taxonomy, aliases from `COMPANY_TO_TICKER` plus cleaned names) and 3 years of adjusted closes. Check: 503 tickers, all mapped, 753 days, none over 5% missing; 8 listed later (GEV, SOLV, SNDK, Q...), GOOG, FOX, NWS, HIG and FFIV have no alias.
 - Backfill step 2, September 2026 pilot (`python -m scripts.backfill.gdelt_month 2026-09`): 2,880 of 2,880 exports, 190.6 MB in 178 s, 3,025,268 rows, 594,729 distinct URLs, 9,699 naming exactly one company (gate 1,000); about 96 of 100 sampled were the named company. Bare names that read as words (intel, southern, eaton, rtx, workday) only match in fuller form, so INTC, WM, DD and CMI get no matches. Only 1 of 558 stored live GDELT URLs names a company, since live ingest keeps conflict stories; its sector agreed.
