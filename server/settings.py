@@ -49,6 +49,10 @@ class Settings(BaseSettings):
     openai_api_key: str = Field(default="", validation_alias="OPENAI_API_KEY")
     openrouter_api_key: str = Field(default="", validation_alias="OPENROUTER_API_KEY")
     ai_model: str = Field(default="auto", validation_alias="FINSCRAPE_MODEL")
+    # Comma-separated, tried in order when ai_model fails; same variable ingest reads.
+    ai_model_fallback: str = Field(
+        default="", validation_alias="FINSCRAPE_MODEL_FALLBACK"
+    )
 
     # --- Optional infra ---
     redis_url: str = Field(default="", validation_alias="WORLDFIN_REDIS_URL")

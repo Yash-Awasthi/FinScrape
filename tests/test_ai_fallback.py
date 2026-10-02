@@ -66,3 +66,39 @@ def test_chat_call_leaves_reasoning_models_room_for_the_json(monkeypatch):
     monkeypatch.delenv("FINSCRAPE_AI_MAX_TOKENS", raising=False)
     assert ai_client._call_openai_proxy("p", "s") == {"relevant": True}
     assert sent["max_tokens"] >= 3000
+
+
+def test_server_chat_tries_each_fallback_model_in_order(monkeypatch):
+    """Free models are often rate-limited upstream; one refusal must not end the call."""
+    import requests
+
+    from server import ai
+    from server.settings import get_settings
+
+    asked: list[str] = []
+
+    class Reply:
+        def __init__(self, model):
+            self.model = model
+
+        def raise_for_status(self):
+            if self.model != "third":
+                raise requests.HTTPError("429", response=None)
+
+        def json(self):
+            return {"choices": [{"message": {"content": "{}"}}]}
+
+    def post(url, headers, json, timeout):
+        asked.append(json["model"])
+        return Reply(json["model"])
+
+    monkeypatch.setenv("OPENAI_BASE_URL", "http://llm.invalid/v1")
+    monkeypatch.setenv("FINSCRAPE_MODEL", "first")
+    monkeypatch.setenv("FINSCRAPE_MODEL_FALLBACK", "second, third")
+    get_settings.cache_clear()
+    monkeypatch.setattr(ai.requests, "post", post)
+    try:
+        assert ai._chat("prompt") == "{}"
+    finally:
+        get_settings.cache_clear()
+    assert asked == ["first", "second", "third"]

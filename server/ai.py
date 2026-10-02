@@ -22,7 +22,7 @@ log = logging.getLogger("worldfin.ai")
 
 _SYSTEM = "You are a senior financial analyst. Return ONLY valid JSON, no markdown."
 
-_TIMEOUT = 60
+_TIMEOUT = 90
 
 
 def _prompt(event: dict) -> str:
@@ -103,31 +103,36 @@ def _chat(prompt: str) -> str | None:
         )
     else:
         return None
-    try:
-        with time_llm(backend):
-            resp = requests.post(
-                f"{base}/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": s.ai_model,
-                    "messages": [
-                        {"role": "system", "content": _SYSTEM},
-                        {"role": "user", "content": prompt},
-                    ],
-                    "temperature": 0.1,
-                },
-                timeout=_TIMEOUT,
-            )
-            resp.raise_for_status()
-            return resp.json()["choices"][0]["message"]["content"]
-    except (requests.RequestException, KeyError, IndexError, ValueError) as exc:
-        # A bare status hides why a provider refused (bad key vs blocked network).
-        body = getattr(getattr(exc, "response", None), "text", "") or ""
-        log.warning("ai chat failed: %s %s", exc, body[:300])
-        return None
+    models = [
+        s.ai_model,
+        *filter(None, (m.strip() for m in s.ai_model_fallback.split(","))),
+    ]
+    for model in models:
+        try:
+            with time_llm(backend):
+                resp = requests.post(
+                    f"{base}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": model,
+                        "messages": [
+                            {"role": "system", "content": _SYSTEM},
+                            {"role": "user", "content": prompt},
+                        ],
+                        "temperature": 0.1,
+                    },
+                    timeout=_TIMEOUT,
+                )
+                resp.raise_for_status()
+                return resp.json()["choices"][0]["message"]["content"]
+        except (requests.RequestException, KeyError, IndexError, ValueError) as exc:
+            # A bare status hides why a provider refused (bad key vs blocked network).
+            body = getattr(getattr(exc, "response", None), "text", "") or ""
+            log.warning("ai chat failed (%s): %s %s", model, exc, body[:300])
+    return None
 
 
 def analyze_event(event: dict) -> dict:
