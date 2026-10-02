@@ -211,10 +211,3 @@ def choose_sector(
     company_sector = top[0][0] if top and (len(top) == 1 or top[0][1] > top[1][1]) else ""
     fallback = view.sector if view and laya_p >= _FLOOR else "other"
     return llm or keyword_sector or company_sector or fallback
-
-
-def disagrees(llm_direction: str, view: LayaView | None) -> bool:
-    """True when Laya confidently calls the opposite price direction to the LLM."""
-    if not view or view.direction_p < CONFIDENT:
-        return False
-    return {llm_direction, view.direction} == {"positive", "negative"}

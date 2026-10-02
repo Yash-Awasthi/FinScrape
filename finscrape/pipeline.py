@@ -143,9 +143,7 @@ class FinScrapePipeline:
 
         # Heuristic validation
         h_sentiment, h_impact = calculate_heuristic_score(full_text, result.get("event_type", ""))
-        divergence = check_divergence(
-            result.get("impact_direction", "neutral"), h_sentiment
-        ) or laya.disagrees(result.get("impact_direction", "neutral"), laya_view)
+        divergence = check_divergence(result.get("impact_direction", "neutral"), h_sentiment)
 
         # Final scoring
         base_score = result.get("signal_score", 0)

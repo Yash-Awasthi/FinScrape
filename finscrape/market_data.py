@@ -290,3 +290,63 @@ def event_moves(tickers: list[str], at: dt.datetime, hours_after: float) -> dict
         if move is not None:
             moves[str(sym)] = move
     return moves
+
+
+EXCESS_HORIZONS = (2, 4)
+
+
+def excess_moves(closes: pd.DataFrame, at: dt.datetime) -> dict[int, dict[str, float]]:
+    """% return minus SPY's, per horizon and ticker, from the last close before `at`.
+
+    News after 16:00 ET, or on a closed day, uses that day's last close. A ticker is
+    missing from a horizon until its close exists.
+    """
+    ts = pd.Timestamp(at)
+    et = (ts if ts.tzinfo else ts.tz_localize("UTC")).tz_convert("America/New_York")
+    cutoff = et.tz_localize(None).normalize() - pd.Timedelta(
+        days=0 if et.hour >= 16 else 1
+    )
+    closes = closes.sort_index()
+    i = int(closes.index.searchsorted(cutoff, side="right")) - 1
+    out: dict[int, dict[str, float]] = {h: {} for h in EXCESS_HORIZONS}
+    if i < 0 or "SPY" not in closes:
+        return out
+    for h in EXCESS_HORIZONS:
+        if i + h >= len(closes):
+            continue
+        rets = closes.iloc[i + h] / closes.iloc[i] - 1
+        for sym, r in rets.drop("SPY").dropna().items():
+            out[h][str(sym)] = float((r - rets["SPY"]) * 100)
+    return out
+
+
+def event_excess(tickers: list[str], at: dt.datetime) -> dict[int, dict[str, float]]:
+    """`excess_moves` from one yfinance download of `tickers` plus SPY around `at`."""
+    tickers = [
+        t for t in dict.fromkeys(tickers) if isinstance(t, str) and t and t != "SPY"
+    ]
+    empty: dict[int, dict[str, float]] = {h: {} for h in EXCESS_HORIZONS}
+    if not tickers:
+        return empty
+    day = _event_day(at)
+    try:
+        df = yf.download(
+            tickers=[*tickers, "SPY"],
+            start=(day - pd.Timedelta(days=10)).date().isoformat(),
+            end=(day + pd.Timedelta(days=14)).date().isoformat(),
+            interval="1d",
+            progress=False,
+            auto_adjust=True,
+        )
+    except Exception as e:  # noqa: BLE001 - a dead yfinance leaves the event unscored
+        logger.warning("Excess fetch error: %s", e)
+        return empty
+    if df is None or df.empty or "Close" not in df.columns:
+        return empty
+    close = df["Close"]
+    # SPY's calendar is the trading calendar; crypto's weekend closes would shift it.
+    close = close[close["SPY"].notna()]
+    close.index = pd.to_datetime(close.index).tz_localize(None)
+    # Today's bar is intraday until the close, so it is never a horizon's close.
+    today = pd.Timestamp.now("America/New_York").normalize().tz_localize(None)
+    return excess_moves(close[close.index < today], at)

@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from server import db
-from server.accuracy import aggregate
+from server.accuracy import aggregate, vs_spy_summary
 
 router = APIRouter()
 
@@ -13,11 +13,11 @@ router = APIRouter()
 @router.get("/api/accuracy")
 async def accuracy() -> dict:
     rows = await db.pool().fetch(
-        "SELECT a.verdict, a.correct, a.checked_at, e.confidence "
+        "SELECT a.verdict, a.correct, a.correct2, a.correct4, a.checked_at, e.confidence "
         "FROM accuracy_outcomes a JOIN events e ON a.event_id = e.id "
         "ORDER BY a.checked_at"
     )
-    return aggregate(
+    result = aggregate(
         [
             {
                 "verdict": r["verdict"],
@@ -28,6 +28,9 @@ async def accuracy() -> dict:
             for r in rows
         ]
     )
+    # Next-day raw move above; +2 / +4 trading days against SPY here.
+    result["vs_spy"] = vs_spy_summary([dict(r) for r in rows])
+    return result
 
 
 @router.get("/api/accuracy/by-variant")

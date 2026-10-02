@@ -72,7 +72,7 @@ function callRow(e: LiveEvent): string {
 async function live(): Promise<void> {
   const [stats, accuracy, feeds, recent] = await Promise.all([
     getJSON<{ total_events: number }>("/api/stats"),
-    getJSON<{ scored: number; hit_rate: number }>("/api/accuracy"),
+    getJSON<{ scored: number; hit_rate: number; vs_spy?: Record<"d2" | "d4", { scored: number; hit_rate: number }> }>("/api/accuracy"),
     getJSON<{ feeds: unknown[] }>("/api/feeds"),
     getJSON<{ events: LiveEvent[] }>("/api/events?limit=60"),
   ]);
@@ -89,10 +89,18 @@ async function live(): Promise<void> {
   // A handful of scored calls is not a track record; say so rather than quote it.
   if (accuracy && accuracy.scored >= 30) {
     setText("stat-hit", `${Math.round(accuracy.hit_rate * 100)}%`);
-    setText("stat-hit-label", `of ${accuracy.scored} INVEST/PULL_OUT calls right: a move of 1% or more their way by the next close`);
+    setText("stat-hit-label", `next-day raw: of ${accuracy.scored} INVEST/PULL_OUT calls, a move of 1% or more their way by the next close`);
   } else if (accuracy) {
     setText("stat-hit", String(accuracy.scored));
     setText("stat-hit-label", "calls scored so far against realized moves");
+  }
+  const spy = accuracy?.vs_spy;
+  if (spy && spy.d4.scored >= 30) {
+    setText("stat-spy", `${Math.round(spy.d4.hit_rate * 100)}%`);
+    setText(
+      "stat-spy-label",
+      `+4 days vs SPY: of ${spy.d4.scored} calls, beat or lagged SPY the way called (+2 days: ${Math.round(spy.d2.hit_rate * 100)}% of ${spy.d2.scored})`,
+    );
   }
 
   const events = (recent?.events ?? []).filter((e) => e.tickers?.length);

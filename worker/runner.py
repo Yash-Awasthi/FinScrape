@@ -344,11 +344,14 @@ class Worker:
 
     async def run_backtest(self) -> int:
         """Score matured directional verdicts against the price move in the window
-        after each event (Phase 7). Returns rows written to accuracy_outcomes."""
-        from finscrape.market_data import event_moves
-        from server.accuracy import backtest
+        after each event (Phase 7), then fill the +2 / +4 day vs-SPY columns of calls
+        whose windows have closed. Returns rows written or updated."""
+        from finscrape.market_data import event_excess, event_moves
+        from server.accuracy import backtest, score_vs_spy
 
-        return await backtest(self.pool, event_moves)
+        return await backtest(self.pool, event_moves) + await score_vs_spy(
+            self.pool, event_excess
+        )
 
     async def _recent_markets(self, lookback_hours: int) -> list[Market]:
         """Price moves for the most-mentioned recent tickers → feeds detect_market

@@ -157,3 +157,59 @@ async def backtest(
         if inserted is not None:
             written += 1
     return written
+
+
+# (tickers, event time) -> {horizon: {ticker: % return minus SPY's}}
+ExcessFetcher = Callable[[list[str], datetime], dict[int, dict[str, float]]]
+
+
+async def score_vs_spy(
+    pool: asyncpg.Pool,
+    excess_fetcher: ExcessFetcher,
+    *,
+    lookback_days: int = 30,
+    limit: int = 500,
+) -> int:
+    """Fill ex2/ex4 on scored calls: the called-direction return over SPY's, +2 and +4
+    trading days on. A call hits when it beat SPY that way; no band. Returns rows updated."""
+    rows = await pool.fetch(
+        """
+        SELECT a.id, a.verdict, e.tickers, e.timestamp, e.affected_entities
+        FROM accuracy_outcomes a JOIN events e ON a.event_id = e.id
+        WHERE a.ex4 IS NULL
+          AND e.timestamp <= now() - interval '2 days'
+          AND e.timestamp >= now() - ($1 || ' days')::interval
+        ORDER BY e.timestamp LIMIT $2
+        """,
+        str(lookback_days),
+        limit,
+    )
+    updated = 0
+    for r in rows:
+        excess = excess_fetcher(r["tickers"] or [], r["timestamp"])
+        ex = [
+            called_move(r["verdict"], r["affected_entities"] or [], excess.get(h, {}))
+            for h in (2, 4)
+        ]
+        if ex[0] is None:
+            continue
+        hit = [None if x is None or x == 0 else x > 0 for x in ex]
+        await pool.execute(
+            "UPDATE accuracy_outcomes SET ex2 = $2, ex4 = $3, correct2 = $4, correct4 = $5 WHERE id = $1",
+            r["id"],
+            *ex,
+            *hit,
+        )
+        updated += 1
+    return updated
+
+
+def vs_spy_summary(rows: list[dict]) -> dict:
+    """Hit rate per horizon from rows {verdict, correct2, correct4}; open windows skipped."""
+    out = {}
+    for h in (2, 4):
+        agg = aggregate(
+            [{"verdict": r["verdict"], "correct": r[f"correct{h}"]} for r in rows]
+        )
+        out[f"d{h}"] = {k: agg[k] for k in ("scored", "hits", "hit_rate", "by_verdict")}
+    return out

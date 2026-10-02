@@ -181,3 +181,15 @@ class TestAlertActions:
         results = engine.execute_actions(event, [Action(action_type="webhook")])
         assert len(results) == 1
         assert results[0]["status"] == "skipped"
+
+
+@patch("finscrape.pipeline.call_ai")
+@patch("finscrape.pipeline.get_market_data", return_value=[])
+def test_laya_direction_no_longer_marks_an_event_divergent(mock_market, mock_ai, sample_article, mock_ai_response):
+    from finscrape.analysis.laya import LayaView
+
+    mock_ai.return_value = mock_ai_response  # positive
+    opposite = LayaView(sector="technology", sector_p=0.9, direction="negative", direction_p=0.99)
+    with patch("finscrape.pipeline.laya.classify", return_value=opposite):
+        event = FinScrapePipeline(MemoryEvents())._analyze_article("yahoo", sample_article)
+    assert event is not None and event.divergence_flag is False

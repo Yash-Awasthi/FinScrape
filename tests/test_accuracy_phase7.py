@@ -143,3 +143,73 @@ def test_each_ticker_is_scored_in_the_direction_the_analysis_gave_it():
     event_id, ticker, verdict, called_move, correct = written[0]
     assert (event_id, verdict, correct) == (9, "PULL_OUT", True)
     assert called_move == 2.5  # mean of +3.0 (up, as called) and +2.0 (down, as called)
+
+
+def test_vs_spy_scores_each_call_against_the_market():
+    """A PULL_OUT whose ticker lagged SPY is a hit even when the ticker itself rose."""
+    import asyncio
+    from datetime import UTC, datetime
+
+    from server.accuracy import score_vs_spy
+
+    row = {
+        "id": 3,
+        "verdict": "PULL_OUT",
+        "tickers": ["RTX", "ZIM"],
+        "timestamp": datetime(2026, 9, 21, 14, tzinfo=UTC),
+        "affected_entities": [{"ticker": "RTX", "impact": "positive"}],
+    }
+    updates: list[tuple] = []
+
+    class Pool:
+        async def fetch(self, *args):
+            return [row]
+
+        async def execute(self, query, *args):
+            updates.append(args)
+
+    # RTX beat SPY (+1.0, called up) and ZIM lagged it (-3.0, called down): both right.
+    excess = {2: {"RTX": 1.0, "ZIM": -3.0}, 4: {"RTX": -2.0}}
+    assert asyncio.run(score_vs_spy(Pool(), lambda t, a: excess)) == 1
+    assert updates == [(3, 2.0, -2.0, True, False)]
+
+
+def test_vs_spy_leaves_an_open_window_unscored():
+    import asyncio
+    from datetime import UTC, datetime
+
+    from server.accuracy import score_vs_spy
+
+    row = {
+        "id": 4,
+        "verdict": "INVEST",
+        "tickers": ["XOM"],
+        "affected_entities": [],
+        "timestamp": datetime(2026, 9, 29, 14, tzinfo=UTC),
+    }
+    updates: list[tuple] = []
+
+    class Pool:
+        async def fetch(self, *args):
+            return [row]
+
+        async def execute(self, query, *args):
+            updates.append(args)
+
+    assert asyncio.run(score_vs_spy(Pool(), lambda t, a: {2: {"XOM": 0.5}, 4: {}})) == 1
+    assert updates == [(4, 0.5, None, True, None)]
+
+
+def test_vs_spy_summary_counts_only_closed_windows():
+    from server.accuracy import vs_spy_summary
+
+    rows = [
+        {"verdict": "PULL_OUT", "correct2": True, "correct4": True},
+        {"verdict": "PULL_OUT", "correct2": False, "correct4": None},
+        {"verdict": "INVEST", "correct2": True, "correct4": False},
+        {"verdict": "INVEST", "correct2": None, "correct4": None},
+    ]
+    s = vs_spy_summary(rows)
+    assert (s["d2"]["scored"], s["d2"]["hits"], s["d2"]["hit_rate"]) == (3, 2, 0.667)
+    assert (s["d4"]["scored"], s["d4"]["hits"]) == (2, 1)
+    assert s["d4"]["by_verdict"]["PULL_OUT"] == {"hits": 1, "total": 1, "hit_rate": 1.0}
