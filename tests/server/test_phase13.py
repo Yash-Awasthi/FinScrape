@@ -156,3 +156,27 @@ def test_format_alert_escapes_markdown_in_event_text():
     )
     assert r"oil\_price \*spikes\* after \[strike]" in msg
     assert r"BRK\_B" in msg and r"_supply\_shock_" in msg
+
+
+def test_command_replies_escape_markdown(monkeypatch):
+    # One bare underscore (PULL_OUT) made Telegram reject every reply with a 400.
+    class Pool:
+        async def execute(self, *a):
+            return None
+
+        async def fetch(self, *a):
+            return []
+
+    sent: list[str] = []
+    monkeypatch.setattr(tg.db, "pool", lambda: Pool())
+    monkeypatch.setattr(tg, "send_message", lambda chat, text: sent.append(text))
+    rows = [{"verdict": "PULL_OUT", "subject": "oil_price falls"}]
+
+    async def events(*a, **k):
+        return rows
+
+    monkeypatch.setattr(tg.queries, "get_events", events)
+    for cmd in ("/start", "/subscribe", "/unsubscribe", "/status", "/latest"):
+        asyncio.run(tg._handle_command("1", cmd))
+    for text in sent:
+        assert "_" not in text.replace(r"\_", ""), text

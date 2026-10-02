@@ -140,3 +140,4 @@ History was rewritten on 30 Sep 2026 into 32 dated checkpoints (later commits fo
   `OPENAI_BASE_URL` works for the analysis LLM at roughly 20s per article.
 - A nightly Windows task "WorldFin DB backup" dumps `worldfin` into `backups/`
   (newest 14 kept); `make restore FILE=...` restores one.
+- The bot never answered commands: the webhook secret Telegram held did not match Render's (re-registered), and every reply with a bare `_` (PULL_OUT) was rejected by Telegram's Markdown parser; replies are escaped now. Check: both subscribed chats recorded, a live alert for event 22299 delivered, `telegram-summary` run 37014698043 sent 2.

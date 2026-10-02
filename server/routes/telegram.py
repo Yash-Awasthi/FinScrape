@@ -25,7 +25,7 @@ router = APIRouter()
 
 _HELP = (
     "WorldFin bot commands:\n"
-    "/subscribe — get INVEST/PULL_OUT alerts\n"
+    "/subscribe — get INVEST/PULL\\_OUT alerts\n"
     "/unsubscribe — stop alerts\n"
     "/status — subscription + alert status\n"
     "/latest — most recent signals"
@@ -54,7 +54,7 @@ def send_message(chat_id: str | int, text: str) -> bool:
         return False
 
 
-def _md(text: str) -> str:
+def escape_md(text: str) -> str:
     """Escape Telegram legacy-Markdown markers; an unescaped one makes the send fail."""
     for ch in ("\\", "_", "*", "`", "["):
         text = text.replace(ch, "\\" + ch)
@@ -68,11 +68,11 @@ def format_alert(event: dict) -> str:
     text = (
         f"🚨 *{event.get('verdict', '?')}* ({arrow}{score}) — "
         f"{event.get('confidence', 0):.0%} confidence\n"
-        f"Tickers: {_md(', '.join(event.get('tickers') or []))}\n"
-        f"{_md(event.get('subject') or 'Unknown event')}"
+        f"Tickers: {escape_md(', '.join(event.get('tickers') or []))}\n"
+        f"{escape_md(event.get('subject') or 'Unknown event')}"
     )
     reasoning = (event.get("reasoning") or "")[:200]
-    return text + (f"\n_{_md(reasoning)}_" if reasoning else "")
+    return text + (f"\n_{escape_md(reasoning)}_" if reasoning else "")
 
 
 async def notify_new_events(events: list[dict]) -> int:
@@ -106,7 +106,7 @@ async def _handle_command(chat_id: str, text: str) -> None:
             "INSERT INTO telegram_subscribers (chat_id) VALUES ($1) ON CONFLICT DO NOTHING",
             str(chat_id),
         )
-        send_message(chat_id, "✅ Subscribed to INVEST/PULL_OUT alerts.")
+        send_message(chat_id, "✅ Subscribed to INVEST/PULL\\_OUT alerts.")
     elif cmd == "unsubscribe":
         await db.pool().execute(
             "DELETE FROM telegram_subscribers WHERE chat_id = $1", str(chat_id)
@@ -117,7 +117,7 @@ async def _handle_command(chat_id: str, text: str) -> None:
         send_message(chat_id, f"Alerts: {'on' if subbed else 'off'}.")
     elif cmd == "latest":
         rows = await queries.get_events(db.pool(), limit=5)
-        lines = [f"• {r['verdict']} {r['subject']}" for r in rows] or [
+        lines = ["• " + escape_md(f"{r['verdict']} {r['subject']}") for r in rows] or [
             "No signals yet."
         ]
         send_message(chat_id, "Latest signals:\n" + "\n".join(lines))

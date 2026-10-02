@@ -1,0 +1,26 @@
+name: telegram-summary
+
+# One message a day to every /subscribe-d chat: the last 24 hours of signals.
+on:
+  schedule:
+    - cron: "30 2 * * *" # 08:00 IST
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  summary:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      WORLDFIN_DATABASE_URL: ${{ secrets.WORLDFIN_DATABASE_URL }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+      - run: uv python install 3.13
+      - run: uv sync -p 3.13 --group server
+      - run: uv run --no-sync python -m worker.telegram_summary
