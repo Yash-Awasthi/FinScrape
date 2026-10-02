@@ -102,8 +102,13 @@ Claude is the teacher: it writes and reviews the labels; the owner does not revi
    neutrals capped, and the teacher train split), 3 epochs at 20 items/s, best held-out
    loss at epoch 2 (0.292; epoch 3 0.336), no self-distilled direction targets. Scored raw
    (no neutral discount) on 243 gold + 907 holdout: sector 943 of 1,150 against 801 for
-   the first stage 1, direction balanced recall 0.736 against 0.607. Kept. Rerun with
-   `Desktop\Laya stage 1.cmd` on mains power; it resumes from its last checkpoint.
+   the first stage 1, direction balanced recall 0.736 against 0.607. Kept. Third run (1 Oct
+   16:16 to 2 Oct 05:34) on the 362k corpus, 2 epochs at 20 items/s: held-out loss 0.533
+   after epoch 1 and 0.695 after epoch 2, so epoch 1 was kept and `stage1.ps1` now trains
+   one epoch. Scored raw on 243 gold + 2,272 holdout: sector 1,983 of 2,515 against 1,936,
+   direction balanced recall 0.791 against 0.703. Kept. Scoring took 74 min on CPU. Rerun
+   with `Desktop\Laya stage 1.cmd` on mains power; it resumes from its last checkpoint, and
+   the training output goes to `laya-ft\logs\stage1-train-*.log`.
 4. Automatic after step 3: the daily LoRA trains from `stage1` when it was kept, and
    from the stock model otherwise. Read two nights of `history.jsonl`.
 5. Done: `laya._load` reloads when the weights file under `FINSCRAPE_LAYA_MODEL`
@@ -170,6 +175,20 @@ Claude is the teacher: it writes and reviews the labels; the owner does not revi
     Neither was promoted: both lost sector cases (14 and 4) and neither caught one more down
     move, so `daily.py` keeps x3 for both. Training from the current checkpoint cost fewer
     sector cases. Heavier repeats do not help; the next try is more down-move labels.
+11. After the third stage 1 (2 Oct). `NEUTRAL_SCALE` on the new stage 1: 0.2 to 0.4 tie on
+    the check half (0.790, 0.789, 0.785) and higher scales fall to 0.732 at 1.0, so it stays
+    0.3. Per class on 243 gold + 2,272 holdout, sector through the production chain:
+
+    | model | gold | holdout | balanced | up | down | neutral |
+    |---|---|---|---|---|---|---|
+    | stock | 155 | 1,290 | 0.547 | 484/647 | 554/649 | 37/922 |
+    | current (daily LoRA on the second stage 1) | 201 | 1,950 | 0.828 | 545/647 | 543/649 | 741/922 |
+    | third stage 1, raw | 191 | 1,793 | 0.787 | 546/647 | 555/649 | 609/922 |
+
+    The raw stage 1 trails the current LoRA, which trained on the teacher labels the holdout
+    is split from; the next daily LoRA trains from it. The daily config of 16 per pass without
+    checkpointing filled 7.5 of 8 GB and spilled to shared memory at 0.4 items/s; 8 per pass
+    ran 37 items/s at 5.1 GB, so `daily.py` uses 8 with 4 accumulation steps.
 
 Checked and dropped (29 Sep): labelling headlines by which SPDR sector ETF moved most
 against SPY after them. Only 22 of 72 trading days from June to September had one

@@ -54,10 +54,14 @@ try {
   $Smoke = $LASTEXITCODE
   Remove-Item -Recurse -Force "$Home2\stage1-smoke" -ErrorAction SilentlyContinue
   if ($Smoke -ne 0) { throw "smoke test failed; see the lines above" }
-  & $Py -W ignore -u scripts\laya_train\train.py $Next --data "$Home2\data\pretrain.json" --mode full --epochs 2 --micro-batch 8 --grad-accum 4 --no-grad-ckpt --balance-direction --no-distill
-  if ($LASTEXITCODE -ne 0) { throw "training failed" }
+  # The transcript dropped most of the 12-hour training output, so it gets its own log.
+  # One epoch: on the 362k corpus the second raised held-out loss from 0.533 to 0.695.
+  $TrainLog = "$Home2\logs\stage1-train-$(Get-Date -Format yyyyMMdd-HHmm).log"
+  cmd /c "`"$Py`" -W ignore -u scripts\laya_train\train.py `"$Next`" --data `"$Home2\data\pretrain.json`" --mode full --epochs 1 --micro-batch 8 --grad-accum 4 --no-grad-ckpt --balance-direction --no-distill 2>&1" |
+    ForEach-Object { $_; Add-Content -Encoding utf8 $TrainLog $_ }
+  if ($LASTEXITCODE -ne 0) { throw "training failed; see $TrainLog" }
   Get-ChildItem $Next -Directory -Filter "epoch*" | Remove-Item -Recurse -Force
-  "$(Get-Date -Format 'dd MMM HH:mm')  scoring stage1-next against the incumbent on CPU (about 25 min)" |
+  "$(Get-Date -Format 'dd MMM HH:mm')  scoring stage1-next against the incumbent on CPU (about 75 min)" |
     Set-Content -Encoding utf8 "$Home2\progress.txt"
 
   # Compare the raw models; the neutral discount is tuned later for the daily LoRA.

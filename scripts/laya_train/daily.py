@@ -251,12 +251,12 @@ def main() -> None:
             "lora",
             "--epochs",
             "3",
-            # Same 32 per update as the defaults, but batches big enough to keep the GPU
-            # busy; train.py falls back to checkpointing if memory runs short.
+            # Same 32 per update as the defaults. On the 8 GB card 8 per pass ran 37
+            # items/s; 16 spilled into shared memory at 0.4 items/s.
             "--micro-batch",
-            "16",
+            "8",
             "--grad-accum",
-            "2",
+            "4",
             "--no-grad-ckpt",
             *base,
         ],

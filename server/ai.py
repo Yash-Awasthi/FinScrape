@@ -124,7 +124,9 @@ def _chat(prompt: str) -> str | None:
             resp.raise_for_status()
             return resp.json()["choices"][0]["message"]["content"]
     except (requests.RequestException, KeyError, IndexError, ValueError) as exc:
-        log.warning("ai chat failed: %s", exc)
+        # A bare status hides why a provider refused (bad key vs blocked network).
+        body = getattr(getattr(exc, "response", None), "text", "") or ""
+        log.warning("ai chat failed: %s %s", exc, body[:300])
         return None
 
 
