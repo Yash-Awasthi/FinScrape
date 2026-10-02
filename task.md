@@ -66,9 +66,9 @@ Facts about the owner's setup that the items below rely on (as of 2 Oct 2026):
   the backtest already skip them.
 
 ### 11. Sector model and call tuning
-Follow `docs/LAYA_PLAN.md`. Steps 1 and 2 are done (`python -m scripts.backfill.universe`,
-`python -m scripts.backfill.gdelt_month 2026-09`); the pilot cleared the gate with 9,699
-single-company events. Step 3, the full backfill, waits for the owner's go.
+Follow `docs/LAYA_PLAN.md`. Steps 1 to 3 are done: `scripts/backfill/` builds the universe,
+prices, one events file per month from 2023-10 and `outcomes.parquet`. The next step is step 4,
+re-scoring stored live calls on the +2 / +4 day vs-SPY metric and removing the direction veto.
 The nightly LoRA loop is stopped (`WorldFin Laya daily` is disabled) and production stays
 on `laya-20261001-1041`. The loop's runs and measurements are in this file's git history
 before the plan landed (27a668c8).

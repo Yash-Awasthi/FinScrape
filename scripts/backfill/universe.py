@@ -1,7 +1,7 @@
 """Build data/backfill/universe.parquet and prices.parquet: `python -m scripts.backfill.universe`.
 
 Universe is today's S&P 500 from Wikipedia (survivorship bias accepted, docs/LAYA_PLAN.md);
-prices are 3 years of adjusted daily closes from yfinance, SPY included.
+prices are adjusted daily closes from September 2023, a month before the first events.
 """
 
 from __future__ import annotations
@@ -97,7 +97,7 @@ def fetch_prices(tickers: list[str]) -> pd.DataFrame:
     import yfinance as yf
 
     raw = yf.download(
-        tickers, period="3y", auto_adjust=True, progress=False, threads=True
+        tickers, start="2023-09-01", auto_adjust=True, progress=False, threads=True
     )
     close = raw["Close"].dropna(how="all")
     # Today's bar is intraday until the close; the next run picks it up.

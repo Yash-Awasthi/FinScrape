@@ -6,8 +6,10 @@ import io
 import zipfile
 
 import pandas as pd
+import pytest
 
 from scripts.backfill.gdelt_month import COLUMNS, build, matcher, parse_export
+from scripts.backfill.outcomes import outcomes
 from scripts.backfill.universe import build_universe, short_name
 
 
@@ -92,3 +94,65 @@ def test_month_rows_dedupe_by_url_and_tag_single_companies(tmp_path):
     )
     assert back.loc[4, "n_companies"] == 0
     assert str(back.loc[2, "added_utc"]) == "2026-09-15 12:00:00+00:00"
+
+
+def test_outcomes_use_the_last_close_before_the_news():
+    days = pd.bdate_range("2026-09-07", "2026-09-18")  # Mon 7th to Fri 18th
+    prices = pd.concat(
+        [
+            pd.DataFrame(
+                {
+                    "date": days,
+                    "ticker": "XOM",
+                    "close": [100.0 + i for i in range(len(days))],
+                }
+            ),
+            pd.DataFrame({"date": days, "ticker": "SPY", "close": 100.0}),
+        ]
+    )
+    utc = lambda s: pd.Timestamp(s, tz="America/New_York").tz_convert("UTC")
+    events = pd.DataFrame(
+        {
+            "event_id": [1, 2, 3, 4],
+            "added_utc": [
+                utc("2026-09-09 10:00"),  # Wed before the close: Tue's close
+                utc("2026-09-09 16:30"),  # Wed after the close: Wed's close
+                utc("2026-09-12 11:00"),  # Saturday: Fri's close
+                utc("2026-09-16 17:00"),  # Wed after close, +4 days runs past the data
+            ],
+            "tickers": [["XOM"]] * 4,
+        }
+    )
+    out = outcomes(events, prices).set_index("event_id")
+    assert str(out.loc[1, "base_date"].date()) == "2026-09-08"
+    assert str(out.loc[2, "base_date"].date()) == "2026-09-09"
+    assert str(out.loc[3, "base_date"].date()) == "2026-09-11"
+    assert out.loc[1, "ret2"] == pytest.approx(103 / 101 - 1)
+    assert out.loc[1, "spy4"] == 0 and out.loc[1, "ex4"] == pytest.approx(105 / 101 - 1)
+    assert pd.notna(out.loc[4, "ret2"]) and pd.isna(out.loc[4, "ret4"])
+
+
+def test_outcomes_drop_windows_across_an_unadjusted_spin_off(monkeypatch):
+    import scripts.backfill.outcomes as mod
+
+    days = pd.bdate_range("2026-09-07", "2026-09-11")
+    prices = pd.concat(
+        [
+            pd.DataFrame(
+                {"date": days, "ticker": "CTVA", "close": [80.0, 80, 80, 13, 13]}
+            ),
+            pd.DataFrame({"date": days, "ticker": "SPY", "close": 100.0}),
+        ]
+    )
+    monkeypatch.setattr(mod, "UNADJUSTED", {"CTVA": "2026-09-10"})
+    events = pd.DataFrame(
+        {
+            "event_id": [1, 2],
+            "added_utc": pd.to_datetime(
+                ["2026-09-07 21:00", "2026-09-09 21:00"], utc=True
+            ),
+            "tickers": [["CTVA"], ["CTVA"]],
+        }
+    )
+    out = outcomes(events, prices).set_index("event_id")
+    assert pd.isna(out.loc[1, "ex4"]) and pd.isna(out.loc[2, "ex2"])
