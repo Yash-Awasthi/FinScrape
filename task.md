@@ -70,7 +70,10 @@ Follow `docs/LAYA_PLAN.md`. Steps 1 to 3 are done: `scripts/backfill/` builds th
 prices, one events file per month from 2023-10 and `outcomes.parquet`. Step 4 is done: calls carry
 +2 / +4 day vs-SPY scores and the landing page shows both rates. Step 5 is done: frozen Laya
 stays, headlines' S&P 500 short names now set the sector ahead of Laya, and no LoRA was
-published (result in the plan). The next step is step 6, call tuning on live events.
+published (result in the plan). Step 6 is done: tuning on live events did not beat the
+current +/-3 thresholds, which stay (result in the plan). Step 7 offline: the bandit
+(`scripts/backfill/bandit.py`) has no edge on test and loses to always PULL_OUT, so no shadow
+logging is wired until the owner decides (result in the plan). Then step 8, the weekly job.
 The nightly LoRA loop is stopped (`WorldFin Laya daily` is disabled) and production stays
 on `laya-20261001-1041`. The loop's runs and measurements are in this file's git history
 before the plan landed (27a668c8).
