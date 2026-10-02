@@ -25,8 +25,8 @@ logger = logging.getLogger(__name__)
 LASTUPDATE = "https://data.gdeltproject.org/gdeltv2/lastupdate.txt"
 
 # Events table columns (GDELT 2.0 codebook). QuadClass 3/4 = verbal/material conflict.
-_QUAD, _MENTIONS = 29, 31
-_LAT, _LON, _ADDED, _URL = 56, 57, 59, 60
+_ID, _CAMEO, _QUAD, _GOLDSTEIN, _MENTIONS, _TONE = 0, 26, 29, 30, 31, 34
+_COUNTRY, _LAT, _LON, _ADDED, _URL = 53, 56, 57, 59, 60
 
 
 def slug_title(url: str) -> str:

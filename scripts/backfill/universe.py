@@ -45,32 +45,12 @@ SUFFIXES = {
 }
 # Single words that mostly mean something else in a headline; fuller names still match.
 AMBIGUOUS = {
-    "apa",
-    "aes",
-    "ball",
-    "best",
-    "block",
-    "booking",
-    "carnival",
-    "coherent",
-    "dover",
-    "dow",
-    "everest",
-    "flex",
-    "gap",
-    "general",
-    "global",
-    "hartford",
-    "match",
-    "mosaic",
-    "news",
-    "progressive",
-    "public",
-    "target",
-    "ups",
-    "visa",
-    "waters",
-}
+    "aes", "apa", "ball", "best", "block", "booking", "carnival", "coherent", "cummins",
+    "dover", "dow", "dupont", "eaton", "eqt", "everest", "flex", "fox", "gap", "general",
+    "global", "hartford", "intel", "kla", "match", "mccormick", "mosaic", "news",
+    "progressive", "public", "rollins", "rtx", "southern", "state street", "tapestry",
+    "target", "ups", "visa", "waste management", "waters", "workday",
+}  # fmt: skip
 
 
 def norm(text: str) -> str:
