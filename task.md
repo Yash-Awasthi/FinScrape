@@ -66,8 +66,9 @@ Facts about the owner's setup that the items below rely on (as of 2 Oct 2026):
   the backtest already skip them.
 
 ### 11. Sector model and call tuning
-Follow `docs/LAYA_PLAN.md`; the next step is steps 1 and 2 (S&P 500 universe and prices,
-then the September 2026 GDELT pilot against the 1,000 single-company events per month gate).
+Follow `docs/LAYA_PLAN.md`. Step 1 is done (`python -m scripts.backfill.universe`); the next
+step is step 2, the September 2026 GDELT pilot against the 1,000 single-company events per
+month gate.
 The nightly LoRA loop is stopped (`WorldFin Laya daily` is disabled) and production stays
 on `laya-20261001-1041`. The loop's runs and measurements are in this file's git history
 before the plan landed (27a668c8).

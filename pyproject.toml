@@ -46,6 +46,7 @@ dev = [
     # lint rules between runs. Upgrade deliberately and fix findings in the same change.
     "ruff==0.16.9",
     "pyright==1.1.411",
+    "pyarrow>=25.0.1",
 ]
 # WorldFin backend (server/). Kept out of core deps so the finscrape CLI install
 # stays lean; `uv sync --group server` to work on the API.

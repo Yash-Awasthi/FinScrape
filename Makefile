@@ -10,7 +10,8 @@ COMPOSE := docker compose
 NEW_DIRS := server worker finscrape/scrapers/world finscrape/ingestors \
 	finscrape/scenarios.py \
 	tests/server tests/test_world_phase2.py tests/test_worker_phase3.py \
-	tests/test_correlate_phase4.py tests/test_scenarios.py tests/test_no_multi_model.py tests/live_e2e.py
+	tests/test_correlate_phase4.py tests/test_scenarios.py tests/test_no_multi_model.py tests/live_e2e.py \
+	scripts/backfill tests/test_backfill.py
 
 .PHONY: help llm up down logs seed backup restore demo test lint fmt fmt-check typecheck selfcheck ci web-ci e2e e2e-live
 
