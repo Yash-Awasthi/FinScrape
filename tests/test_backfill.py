@@ -156,3 +156,29 @@ def test_outcomes_drop_windows_across_an_unadjusted_spin_off(monkeypatch):
     )
     out = outcomes(events, prices).set_index("event_id")
     assert pd.isna(out.loc[1, "ex4"]) and pd.isna(out.loc[2, "ex2"])
+
+
+def test_contest_report_applies_keep_rule():
+    from scripts.backfill.sector_contest import by_familiarity, report
+
+    truth = ["energy"] * 6 + ["technology"] * 4
+    frame = pd.DataFrame(
+        {
+            "split": ["test"] * 10 + ["none"] * 2,
+            "truth": truth + ["", ""],
+            "base": ["energy"] * 5 + ["other"] * 5 + ["other", "other"],
+            "model": truth[:9] + ["energy"] + ["energy", "other"],
+            "model alone": truth + ["energy", "energy"],
+        }
+    )
+    text = report(frame, ["base", "model", "model alone"], min_n=10)
+    assert "| base | 50.0% | 100.0% | 0.0% |" in text
+    assert "| model | 90.0% | 50.0% | 50.0% |" in text
+    assert "| energy | 6 | 83.3 | 100.0 | 100.0 |" in text
+    assert "`model` leads `base` by +40.0 points; kept" in text
+    assert "not kept" in report(frame, ["base", "model"], min_n=11)
+
+    frame["ticker"] = ["XOM"] * 6 + ["NEW"] * 4 + ["", ""]
+    table = by_familiarity(frame, pd.Series({"XOM": 120}), ["model"])
+    assert "| never | 4 | 75.0 |" in table
+    assert "| 100+ | 6 | 100.0 |" in table
