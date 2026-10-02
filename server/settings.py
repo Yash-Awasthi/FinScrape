@@ -53,6 +53,17 @@ class Settings(BaseSettings):
     ai_model_fallback: str = Field(
         default="", validation_alias="FINSCRAPE_MODEL_FALLBACK"
     )
+    # When every model above fails, /api/ai/analyze dispatches the `analyze` workflow in
+    # this repo with a token allowed to run Actions. Unset leaves the heuristic answer.
+    analyze_dispatch_repo: str = Field(
+        default="", validation_alias="ANALYZE_DISPATCH_REPO"
+    )
+    analyze_dispatch_token: str = Field(
+        default="", validation_alias="ANALYZE_DISPATCH_TOKEN"
+    )
+    analyze_dispatch_ref: str = Field(
+        default="master", validation_alias="ANALYZE_DISPATCH_REF"
+    )
 
     # --- Optional infra ---
     redis_url: str = Field(default="", validation_alias="WORLDFIN_REDIS_URL")

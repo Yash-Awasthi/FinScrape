@@ -151,6 +151,10 @@ export interface AIAnalysis {
   summary: string;
   ticker_impacts: Array<{ ticker: string; direction: string; estimated_pct: string; reason: string }>;
   verdict_reason: string;
+  /** No model answered; the text is the stored-signal summary. */
+  heuristic?: boolean;
+  /** A backup job is analysing on another host; ask again shortly. */
+  pending?: boolean;
 }
 
 export interface EventQuery {

@@ -99,11 +99,11 @@ async def mark_visited(pool: asyncpg.Pool, source: str, urls: list[str]) -> None
         )
 
 
-async def precompute_analysis(pool: asyncpg.Pool, event_ids: list[int]) -> int:
-    """Store the API's on-demand analysis for new events.
+async def store_analysis(pool: asyncpg.Pool, event_ids: list[int]) -> int:
+    """Analyse events and store the answers the API serves on click.
 
-    The API host is refused by the analysis provider while this runner is not, so the
-    runner writes the answer the API would otherwise have to fetch. Returns rows stored.
+    The API host is refused by the analysis provider while GitHub runners are not, so the
+    API hands a click it cannot answer to worker.analyze_event. Returns rows stored.
     """
     model = get_settings().ai_model
     stored = 0
@@ -119,7 +119,7 @@ async def precompute_analysis(pool: asyncpg.Pool, event_ids: list[int]) -> int:
             await save_ai_cache(pool, key, eid, result)
             stored += 1
         except Exception:  # one event's failure spares the rest
-            log.warning("precompute analysis failed for event %s", eid, exc_info=True)
+            log.warning("analysis failed for event %s", eid, exc_info=True)
     return stored
 
 
@@ -301,7 +301,6 @@ class Worker:
             record_ingest(name, result["inserted"], result["duplicates"], status)
             if result["inserted_ids"]:
                 await fire_alerts(self.pool, result["inserted_rows"])
-                await precompute_analysis(self.pool, result["inserted_ids"])
                 # Push to API WS clients across processes (no-op unless Redis enabled).
                 await publish(
                     {

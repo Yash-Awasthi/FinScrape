@@ -1,0 +1,35 @@
+name: analyze
+
+# On-demand analysis of one event. The API dispatches this when its own models are all
+# rate-limited: the analysis provider refuses the API host but serves GitHub runners.
+on:
+  workflow_dispatch:
+    inputs:
+      event_id:
+        description: Event id to analyse
+        required: true
+
+concurrency:
+  group: analyze-${{ inputs.event_id }}
+  cancel-in-progress: false
+
+jobs:
+  analyze:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      WORLDFIN_DATABASE_URL: ${{ secrets.WORLDFIN_DATABASE_URL }}
+      OPENAI_BASE_URL: ${{ vars.OPENAI_BASE_URL }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      FINSCRAPE_MODEL: ${{ vars.FINSCRAPE_MODEL }}
+      FINSCRAPE_MODEL_FALLBACK: ${{ vars.FINSCRAPE_MODEL_FALLBACK }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+      - run: uv python install 3.13
+      - run: uv sync -p 3.13 --group server
+      - run: uv run --no-sync python -m worker.analyze_event "$EVENT_ID"
+        env:
+          EVENT_ID: ${{ inputs.event_id }}

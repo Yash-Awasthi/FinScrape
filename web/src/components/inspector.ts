@@ -3,8 +3,12 @@
 // Replaces the modal. A terminal keeps the detail beside the feed rather than over
 // it, so j/k can walk rows and read each one without a dialog opening and closing.
 
-import { api, type EventOut, type Prediction, verdictColor } from "../api";
+import { type AIAnalysis, api, type EventOut, type Prediction, verdictColor } from "../api";
 import { escapeHtml, sourceLabel } from "../util";
+
+// A backup analysis job takes 1-2 minutes; stop asking after 4.
+const PENDING_POLL_MS = 15_000;
+const PENDING_POLLS = 16;
 
 const PLACEHOLDER =
   '<p class="empty">Select a signal — click a row, or press j / k to walk the feed.</p>';
@@ -150,34 +154,44 @@ export class Inspector {
     out.className = "ai-out";
     const btn = document.createElement("button");
     btn.className = "ai-btn";
-    btn.textContent = "↻ Re-run AI analysis";
+    btn.textContent = "Run AI analysis";
+    out.textContent = "AI analysis runs only when asked; free models have daily limits.";
+
+    const show = (a: AIAnalysis): void => {
+      const impacts = a.ticker_impacts
+        .map((t) => `${t.ticker}: ${t.direction} ${t.estimated_pct} — ${t.reason}`)
+        .join("\n");
+      out.textContent =
+        [a.summary, impacts, a.verdict_reason].filter(Boolean).join("\n\n") ||
+        "No analysis returned.";
+    };
 
     const run = async (): Promise<void> => {
       btn.disabled = true;
-      out.textContent = "AI is analyzing… (local model, a few seconds)";
+      out.textContent = "AI is analyzing…";
       try {
-        const a = await api.analyze(ev.id);
+        let a = await api.analyze(ev.id);
+        // Free models busy: a backup job is analysing on another host, so poll the cache.
+        for (let i = 0; a.pending && i < PENDING_POLLS; i++) {
+          if (this.current !== ev.id) return;
+          out.textContent = "Free models are busy; the backup model is analysing (about 1–2 min)…";
+          await new Promise((r) => setTimeout(r, PENDING_POLL_MS));
+          a = await api.analyze(ev.id);
+        }
         if (this.current !== ev.id) return;
-        const impacts = a.ticker_impacts
-          .map((t) => `${t.ticker}: ${t.direction} ${t.estimated_pct} — ${t.reason}`)
-          .join("\n");
-        out.textContent =
-          [a.summary, impacts, a.verdict_reason].filter(Boolean).join("\n\n") ||
-          "No analysis returned.";
-      } catch (err) {
+        if (a.heuristic) {
+          out.textContent = "AI models are unavailable right now. Try again in a few minutes.";
+          return;
+        }
+        show(a);
+      } catch {
         if (this.current !== ev.id) return;
-        out.textContent =
-          err instanceof Error && err.message.includes("503")
-            ? "AI backend unavailable — start Ollama, then: main.py devtools on"
-            : "AI analysis unavailable.";
+        out.textContent = "AI analysis unavailable.";
       } finally {
         btn.disabled = false;
       }
     };
     btn.addEventListener("click", () => void run());
-
-    // Reasoning must never sit blank: events stored without the LLM analyze on open.
-    if (!ev.reasoning) void run();
     return [btn, out];
   }
 }

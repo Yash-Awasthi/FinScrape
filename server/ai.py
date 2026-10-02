@@ -73,6 +73,11 @@ def _fallback(event: dict) -> dict:
     }
 
 
+def heuristic_answer(event: dict) -> dict:
+    """The answer given when no model replies, flagged so it is never cached."""
+    return {**_fallback(event), "heuristic": True}
+
+
 def _extract_json(text: str) -> dict | None:
     cleaned = re.sub(r"```(?:json)?", "", text).strip()
     cleaned = re.sub(r"<think>.*?</think>", "", cleaned, flags=re.DOTALL).strip()
@@ -140,7 +145,7 @@ def analyze_event(event: dict) -> dict:
     text = _chat(_prompt(event))
     parsed = _extract_json(text) if text else None
     if not parsed:
-        return {**_fallback(event), "heuristic": True}
+        return heuristic_answer(event)
     return {
         "summary": parsed.get("summary", ""),
         "ticker_impacts": parsed["ticker_impacts"]

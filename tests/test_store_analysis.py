@@ -1,4 +1,4 @@
-"""Ingest stores the API's analysis for new events, skipping heuristic answers."""
+"""Stored analysis keeps real answers and skips heuristic ones."""
 
 import asyncio
 
@@ -22,5 +22,5 @@ def test_precompute_stores_real_answers_and_skips_heuristics(monkeypatch):
     monkeypatch.setattr(runner, "get_event_by_id", get_event)
     monkeypatch.setattr(runner, "analyze_event", analyze)
     monkeypatch.setattr(runner, "save_ai_cache", save)
-    stored = asyncio.run(runner.precompute_analysis(None, [1, 2, 3]))
+    stored = asyncio.run(runner.store_analysis(None, [1, 2, 3]))
     assert stored == 1 and list(saved) == [1]
