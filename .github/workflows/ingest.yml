@@ -31,6 +31,8 @@ jobs:
       WORLDFIN_ENABLE_CORRELATION: "true"
       FINSCRAPE_MARKET_TTL: "900"
       RELIEFWEB_APPNAME: ${{ vars.RELIEFWEB_APPNAME }}
+      # INVEST/PULL_OUT alerts go to /subscribe-d chats; unset sends nothing.
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.2.0

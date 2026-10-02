@@ -119,6 +119,7 @@ History was rewritten on 30 Sep 2026 into 32 dated checkpoints (later commits fo
 - The API logs the provider's reply when an LLM call fails (c01b7171); that showed TokenHarbor refusing Render with 403 `request_forbidden`.
 - AI analysis runs only on click: ingest and the ingest endpoint stopped analysing every event, the panel no longer analyses on open, the API tries `FINSCRAPE_MODEL_FALLBACK` in order (c274951c), and when every model fails it dispatches the `analyze` workflow, capped at 20 an hour (682d21d6, 6aa1b8ed). Check: job 36996992811 stored event 22248 in 59 s, and the API returned it in 0.5 s.
 - `backup.yml` and `reanalyse.yml` were never registered on the recreated repo, so no nightly backup ran from 1 Oct; both now declare read-only permissions, which registered them.
+- Telegram alerts never reached production: no bot token on Render, and only the API ingest endpoint called them, not the GitHub ingest runner. Ingest now sends INVEST/PULL_OUT alerts to subscribers through the new bot @YashAwasthiBot, and event text is Markdown-escaped, since one stray `_` made Telegram reject the message. The email digest was removed: it depended on a mail relay this deployment never had.
 
 ## Local hazards
 

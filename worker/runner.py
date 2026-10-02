@@ -33,6 +33,7 @@ from server.ingest import canonical_url, ingest_events
 from server.obs import record_ingest
 from server.pubsub import publish
 from server.queries import get_event_by_id, get_recent_predictions, save_ai_cache
+from server.routes.telegram import notify_new_events
 from server.settings import get_settings
 from worker.health import (
     finish_scrape_run,
@@ -301,6 +302,7 @@ class Worker:
             record_ingest(name, result["inserted"], result["duplicates"], status)
             if result["inserted_ids"]:
                 await fire_alerts(self.pool, result["inserted_rows"])
+                await notify_new_events(result["inserted_rows"])
                 # Push to API WS clients across processes (no-op unless Redis enabled).
                 await publish(
                     {

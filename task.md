@@ -51,14 +51,8 @@ Facts about the owner's setup that the items below rely on (as of 2 Oct 2026):
 ## Open
 
 ### 9. Production: what is left
-- Owner: rotate the Supabase password, the TokenHarbor, OpenRouter and Render keys, and the
-  fine-grained GitHub PAT, all pasted into a chat. Then update GitHub secrets, the Render
-  env (`OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `ANALYZE_DISPATCH_TOKEN`) and the cron
-  Worker (`npx wrangler secret put GH_TOKEN` in `ops/ingest-cron`).
-- Owner: delete the Neon project after 6 Oct (a clean week on Supabase); then drop the
-  remaining Neon mentions in `ingest.yml`, `worker/main.py` and the docs.
-- Owner: the email digest needs `RESEND_PROXY_URL` and `FINSCRAPE_DIGEST_TO`; then add a
-  scheduled Action for `python -m worker.digest daily`, or drop the digest.
+- Keys pasted into chats stay as they are: the accounts are disposable, by the owner's choice (2 Oct).
+- The Neon project stays for now; `ingest.yml`, `worker/main.py` and the docs still mention it.
 - Owner: mark the local-only compose password (`worldfin`, Postgres on 127.0.0.1) a false
   positive in GitGuardian.
 - TokenHarbor refuses requests from Render (403 `request_forbidden`) and serves GitHub

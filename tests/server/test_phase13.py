@@ -140,3 +140,19 @@ def test_format_alert_shape():
         }
     )
     assert "PULL_OUT" in msg and "TSLA" in msg and "-3" in msg
+
+
+def test_format_alert_escapes_markdown_in_event_text():
+    # Telegram rejects the whole message when a headline carries a stray marker.
+    msg = tg.format_alert(
+        {
+            "verdict": "INVEST",
+            "signal_score": 3,
+            "confidence": 0.7,
+            "tickers": ["BRK_B"],
+            "subject": "oil_price *spikes* after [strike]",
+            "reasoning": "supply_shock",
+        }
+    )
+    assert r"oil\_price \*spikes\* after \[strike]" in msg
+    assert r"BRK\_B" in msg and r"_supply\_shock_" in msg
