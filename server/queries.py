@@ -104,6 +104,24 @@ async def get_ai_cache(pool: asyncpg.Pool, cache_key: str) -> dict | None:
     return row["result"] if row else None
 
 
+async def get_ai_cache_for_event(pool: asyncpg.Pool, event_id: int) -> dict | None:
+    """Newest real analysis for the event, whichever model wrote it.
+
+    Rows cached before heuristic answers were flagged are recognised by their reasons.
+    """
+    row = await pool.fetchrow(
+        "SELECT result FROM ai_analysis_cache WHERE event_id = $1 "
+        "AND result->>'heuristic' IS NULL "
+        "AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements("
+        "CASE WHEN jsonb_typeof(result->'ticker_impacts') = 'array' "
+        "THEN result->'ticker_impacts' ELSE '[]'::jsonb END) t "
+        "WHERE t->>'reason' = 'heuristic') "
+        "ORDER BY created_at DESC LIMIT 1",
+        event_id,
+    )
+    return row["result"] if row else None
+
+
 async def save_ai_cache(
     pool: asyncpg.Pool, cache_key: str, event_id: int, result: dict
 ) -> list[str]:

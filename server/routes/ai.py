@@ -21,7 +21,8 @@ async def analyze(id: int = Query(...)) -> dict:
     pool = db.pool()
     cache_key = hashlib.sha256(f"{get_settings().ai_model}:{id}".encode()).hexdigest()
 
-    cached = await queries.get_ai_cache(pool, cache_key)
+    # Ingest stores an analysis per new event with its own model; any real one will do.
+    cached = await queries.get_ai_cache_for_event(pool, id)
     if cached:
         return cached
 
@@ -30,6 +31,8 @@ async def analyze(id: int = Query(...)) -> dict:
         raise HTTPException(status_code=404, detail="Event not found")
 
     result = await asyncio.to_thread(analyze_event, event)
+    if result.get("heuristic"):
+        return result  # not cached, so a later request can still reach a model
     merged = await queries.save_ai_cache(pool, cache_key, id, result)
     # If AI discovered new tickers, tell live clients to refresh.
     if len(merged) > len(event.get("tickers") or []):

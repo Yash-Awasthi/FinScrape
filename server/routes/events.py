@@ -84,7 +84,8 @@ async def _background_ai(event_ids: list[int]) -> None:
             if await queries.get_ai_cache(pool, cache_key):
                 continue
             result = await asyncio.to_thread(analyze_event, event)
-            await queries.save_ai_cache(pool, cache_key, eid, result)
+            if not result.get("heuristic"):
+                await queries.save_ai_cache(pool, cache_key, eid, result)
         # One event's failure spares the rest.
         except Exception as exc:  # noqa: BLE001  # pragma: no cover
             log.warning("background ai failed for event %s: %s", eid, exc)

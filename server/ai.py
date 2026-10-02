@@ -140,7 +140,7 @@ def analyze_event(event: dict) -> dict:
     text = _chat(_prompt(event))
     parsed = _extract_json(text) if text else None
     if not parsed:
-        return _fallback(event)
+        return {**_fallback(event), "heuristic": True}
     return {
         "summary": parsed.get("summary", ""),
         "ticker_impacts": parsed["ticker_impacts"]

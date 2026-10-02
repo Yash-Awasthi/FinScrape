@@ -93,3 +93,26 @@ def test_concurrent_migration_runs_do_not_collide():
             await db.disconnect()
 
     asyncio.run(body())
+
+
+def test_stored_analysis_is_found_by_event_and_heuristics_are_skipped():
+    # Ingest stores analysis under its own model's key; the API must still find it.
+    async def body():
+        pool = await _fresh_pool()
+        events = json.loads(TEST_EVENT.read_text())["events"]
+        eid = (await ingest_events(pool, events))["inserted_ids"][0]
+        heuristic = {
+            "summary": "h",
+            "ticker_impacts": [{"ticker": "XOM", "reason": "heuristic"}],
+        }
+        flagged = {"summary": "f", "ticker_impacts": [], "heuristic": True}
+        real = {"summary": "r", "ticker_impacts": [{"ticker": "XOM", "reason": "oil"}]}
+        await queries.save_ai_cache(pool, "old-heuristic", eid, heuristic)
+        await queries.save_ai_cache(pool, "flagged", eid, flagged)
+        assert await queries.get_ai_cache_for_event(pool, eid) is None
+        await queries.save_ai_cache(pool, "ingest-model", eid, real)
+        found = await queries.get_ai_cache_for_event(pool, eid)
+        await db.disconnect()
+        assert found["summary"] == "r"
+
+    asyncio.run(body())

@@ -8,6 +8,7 @@ A source that throws degrades to WARN and is recorded — it never crashes the w
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import threading
@@ -18,6 +19,7 @@ import asyncpg
 from finscrape.logging_config import correlation_id
 from finscrape.market_data import get_market_data
 from finscrape.pipeline import FinScrapePipeline
+from server.ai import analyze_event
 from server.alert_rules import fire_alerts
 from server.correlate import (
     VELOCITY_WINDOW_DAYS,
@@ -30,7 +32,7 @@ from server.geocode import geocode_event
 from server.ingest import canonical_url, ingest_events
 from server.obs import record_ingest
 from server.pubsub import publish
-from server.queries import get_recent_predictions
+from server.queries import get_event_by_id, get_recent_predictions, save_ai_cache
 from server.settings import get_settings
 from worker.health import (
     finish_scrape_run,
@@ -95,6 +97,30 @@ async def mark_visited(pool: asyncpg.Pool, source: str, urls: list[str]) -> None
             canon,
             source,
         )
+
+
+async def precompute_analysis(pool: asyncpg.Pool, event_ids: list[int]) -> int:
+    """Store the API's on-demand analysis for new events.
+
+    The API host is refused by the analysis provider while this runner is not, so the
+    runner writes the answer the API would otherwise have to fetch. Returns rows stored.
+    """
+    model = get_settings().ai_model
+    stored = 0
+    for eid in event_ids:
+        try:
+            event = await get_event_by_id(pool, eid)
+            if not event:
+                continue
+            result = await asyncio.to_thread(analyze_event, event)
+            if result.get("heuristic"):
+                continue
+            key = hashlib.sha256(f"{model}:{eid}".encode()).hexdigest()
+            await save_ai_cache(pool, key, eid, result)
+            stored += 1
+        except Exception:  # one event's failure spares the rest
+            log.warning("precompute analysis failed for event %s", eid, exc_info=True)
+    return stored
 
 
 async def merge_coverage(
@@ -275,6 +301,7 @@ class Worker:
             record_ingest(name, result["inserted"], result["duplicates"], status)
             if result["inserted_ids"]:
                 await fire_alerts(self.pool, result["inserted_rows"])
+                await precompute_analysis(self.pool, result["inserted_ids"])
                 # Push to API WS clients across processes (no-op unless Redis enabled).
                 await publish(
                     {
