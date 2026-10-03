@@ -315,15 +315,33 @@ def _validate_response(data: dict) -> dict | None:
 # Backend implementations
 # ---------------------------------------------------------------------------
 
-# ponytail: a 429 retires the key for the process (one ingest run); per-key reset
-# times from the 429 body would let a long-lived process bring keys back.
-_spent_keys: set[str] = set()
+# Key fingerprint -> time of its last 429. worker.key_queue keeps it in Postgres so the
+# queue order survives between ingest runs.
+_moved_at: dict[str, float] = {}
+_key_lock = threading.Lock()
+
+
+def key_fingerprint(key: str) -> str:
+    return hashlib.sha256(key.encode()).hexdigest()[:16]
+
+
+def key_moves() -> dict[str, float]:
+    with _key_lock:
+        return dict(_moved_at)
+
+
+def load_key_moves(moves: dict[str, float]) -> None:
+    with _key_lock:
+        _moved_at.update(moves)
 
 
 def _proxy_keys() -> list[str]:
-    """OPENAI_API_KEY then the comma-separated OPENAI_API_KEYS, minus spent ones."""
+    """Key queue over OPENAI_API_KEY and the comma-separated OPENAI_API_KEYS: the key
+    whose last 429 is oldest leads, ties in that listed order."""
     keys = [os.getenv("OPENAI_API_KEY", "proxy"), *os.getenv("OPENAI_API_KEYS", "").split(",")]
-    return [k for k in dict.fromkeys(k.strip() for k in keys) if k and k not in _spent_keys]
+    keys = [k for k in dict.fromkeys(k.strip() for k in keys) if k]
+    with _key_lock:
+        return sorted(keys, key=lambda k: _moved_at.get(key_fingerprint(k), 0.0))
 
 
 def _call_openai_proxy(prompt: str, system_prompt: str, model: str | None = None) -> dict | None:
@@ -335,8 +353,7 @@ def _call_openai_proxy(prompt: str, system_prompt: str, model: str | None = None
     the extra field.
     """
     try:
-        keys = _proxy_keys()
-        for key in keys:
+        for key in _proxy_keys():
             response = requests.post(
                 f"{os.getenv('OPENAI_BASE_URL', '')}/chat/completions",
                 headers={
@@ -357,12 +374,11 @@ def _call_openai_proxy(prompt: str, system_prompt: str, model: str | None = None
                 },
                 timeout=int(os.getenv("FINSCRAPE_AI_TIMEOUT", "60")),
             )
-            # The last key is never retired: OpenRouter 429s are per-minute limits, and
-            # Render's long-lived API holds a single key.
-            if response.status_code != 429 or key == keys[-1]:
+            if response.status_code != 429:
                 break
-            _spent_keys.add(key)
-            logger.warning("AI proxy key ...%s spent (429), rotating", key[-4:])
+            with _key_lock:
+                _moved_at[key_fingerprint(key)] = time.time()
+            logger.warning("AI proxy key ...%s answered 429, moved to the back", key[-4:])
 
         if response.status_code != 200:
             logger.error("AI proxy HTTP %d: %s", response.status_code, response.text[:200])

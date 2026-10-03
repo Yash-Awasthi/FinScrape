@@ -9,11 +9,12 @@ As of 3 Oct 2026: live and demo-ready. A fresh clone starts with `make demo`
 (`docs/DEMO.md` is the walkthrough).
 
 - Production: SPA on Cloudflare Pages, API on Render, Postgres on Supabase. The Cloudflare
-  cron Worker `winfin-ingest-cron` dispatches the `ingest` Action every 30 minutes and pings
+  cron Worker `winfin-ingest-cron` dispatches the `ingest` Action every hour and pings
   `/health` every 10; `backup.yml` stores an encrypted nightly dump for 14 days.
-- Analysis: ingest calls TokenHarbor (deepseek, then mimo) with `OPENAI_API_KEY`, moving
-  through the eight `OPENAI_API_KEYS` as each key's free 7-day allowance answers 429 (the
-  first key is spent until 9 Oct 09:45 UTC). TokenHarbor refuses requests
+- Analysis: ingest calls TokenHarbor (deepseek, then mimo) through a queue of
+  `OPENAI_API_KEY` and the eight `OPENAI_API_KEYS`: a key that answers 429 (its free 7-day
+  allowance is spent) goes to the back, and `llm_key_queue` keeps that order between runs.
+  The first key is spent until 9 Oct 09:45 UTC. TokenHarbor refuses requests
   from Render (403 `request_forbidden`), so the API analyses only on click with OpenRouter
   free models (`FINSCRAPE_MODEL`, `FINSCRAPE_MODEL_FALLBACK`) and, when all fail, dispatches
   the `analyze` workflow, at most 20 times an hour.
@@ -26,7 +27,7 @@ As of 3 Oct 2026: live and demo-ready. A fresh clone starts with `make demo`
   landing page shows both. `docs/BACKFILL.md` holds the backfill, the weekly jobs and the
   studies behind these choices.
 - Telegram: ingest sends INVEST / PULL_OUT alerts through @YashAwasthiBot, and the
-  `telegram-summary` Action sends a daily summary at 02:30 UTC.
+  `telegram-summary` Action, dispatched by the cron Worker at 02:30 UTC, sends a daily summary.
 
 ## Measured, worth not re-deriving
 

@@ -11,6 +11,7 @@ import sys
 
 from server import db
 from server.settings import get_settings
+from worker import key_queue
 from worker.runner import store_analysis
 
 
@@ -18,7 +19,11 @@ async def main(event_id: int) -> int:
     s = get_settings()
     pool = await db.connect(s.database_url, min_size=1, max_size=2)
     try:
-        return await store_analysis(pool, [event_id])
+        await key_queue.load(pool)
+        try:
+            return await store_analysis(pool, [event_id])
+        finally:
+            await key_queue.save(pool)
     finally:
         await db.disconnect()
 

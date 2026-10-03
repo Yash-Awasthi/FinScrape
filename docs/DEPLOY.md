@@ -32,7 +32,7 @@ The API reads `$PORT` (Render injects it; `settings.port` aliases `WORLDFIN_PORT
 ## Redeploy
 - **Web:** `cd web && VITE_API_BASE=https://winfin-api.onrender.com npm run build && npx wrangler pages deploy dist --project-name=winfin --branch=main`
 - **API:** push to `master` → Render auto-deploys (`autoDeploy: yes`). Or POST a deploy via the Render API.
-- **Worker:** runs every 30 min automatically; `gh workflow run ingest.yml` to fire now.
+- **Worker:** runs every hour automatically; `gh workflow run ingest.yml` to fire now.
 - **Ingest cron:** `cd ops/ingest-cron && npx wrangler deploy`; its `GH_TOKEN` secret is a fine-grained PAT (this repo, Actions read and write), set with `npx wrangler secret put GH_TOKEN`.
 
 ## Keep-warm, alerts, backups
@@ -42,7 +42,7 @@ The API reads `$PORT` (Render injects it; `settings.port` aliases `WORLDFIN_PORT
 
 ## Known free-tier limits
 - Worker updates the dashboard on **refresh**, not live WS push (cross-process WS needs Redis — deferred).
-- GitHub cron can be delayed/skipped under load (~"every 30 min", not exact).
+- GitHub cron can be delayed/skipped under load (~"every hour", not exact).
 - Supabase free: 500 MB database, paused after a week without activity (the ingest cron keeps it active); TokenHarbor free models have usage caps — the heuristic fallback absorbs LLM exhaustion.
 
 ## Choosing the model

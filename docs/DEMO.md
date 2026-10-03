@@ -51,7 +51,7 @@ Sentiment (Reddit posts per ticker), News Lobby (raw feeds), Live TV, and Dates
 - The record is young: about 320 scored calls, mostly from June and July, and most
   of them PULL_OUT. Since 29 Sep a PULL_OUT needs a -3 score, mirroring INVEST at +3;
   older calls keep the verdict they were given.
-- Ingest runs every 30 minutes on free infrastructure (GitHub Actions dispatched by
+- Ingest runs every hour on free infrastructure (GitHub Actions dispatched by
   a Cloudflare cron). The dashboard updates on refresh, not by live push.
 - The analysis uses free LLMs with a fallback chain. When every model fails, a keyword
   heuristic keeps ingest running; those rows are kept out of scenarios and the record.

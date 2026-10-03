@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 SRC = Path(r"C:\Users\yasha\PROJECTS\inspiration\fin-scrape")
-DST = Path(r"C:\Users\yasha\PROJECTS\PROJECTS\fin-scrape\finscrape\absorbed")
+DST = Path(__file__).resolve().parents[1] / "finscrape" / "absorbed"
 
 DOMAINS = [
     "scraping", "market_data", "gdelt", "social", "nlp", "agents",

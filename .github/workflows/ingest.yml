@@ -2,10 +2,10 @@ name: ingest
 
 # One ingest cycle (scrape -> LLM -> ingest -> correlate -> backtest) against production,
 # then exit. The Cloudflare cron Worker `winfin-ingest-cron` dispatches it every
-# 30 minutes, since GitHub fires this schedule only every few hours.
+# hour, since GitHub fires this schedule only every few hours.
 on:
   schedule:
-    - cron: "13,43 * * * *"
+    - cron: "13 * * * *"
   workflow_dispatch: {}
 
 concurrency:

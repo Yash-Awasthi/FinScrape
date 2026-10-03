@@ -1,9 +1,9 @@
 name: telegram-summary
 
 # One message a day to every /subscribe-d chat: the last 24 hours of signals.
+# The cron Worker `winfin-ingest-cron` dispatches it at 02:30 UTC (08:00 IST); a GitHub
+# schedule here as well could send the summary twice.
 on:
-  schedule:
-    - cron: "30 2 * * *" # 08:00 IST
   workflow_dispatch: {}
 
 permissions:

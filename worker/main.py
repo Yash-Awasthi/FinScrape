@@ -22,6 +22,7 @@ from prometheus_client import start_http_server
 from finscrape.logging_config import setup_logging
 from server import db
 from server.settings import Settings, get_settings
+from worker import key_queue
 from worker.runner import Worker, prune_old_rows
 from worker.social import refresh_social
 
@@ -148,7 +149,11 @@ async def main() -> None:
 async def run_once() -> None:
     """One cycle (every source + correlate + backtest) then exit — the live deploy."""
     worker, s = await _bootstrap()
-    await worker.run_all_once()  # all sources once + correlate
+    await key_queue.load(worker.pool)
+    try:
+        await worker.run_all_once()  # all sources once + correlate
+    finally:
+        await key_queue.save(worker.pool)
     await _score_outcomes(worker)
     await _prune(worker, s.retention_days)
     await db.disconnect()
