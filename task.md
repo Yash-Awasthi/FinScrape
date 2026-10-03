@@ -44,7 +44,8 @@ Facts about the owner's setup that the items below rely on (as of 2 Oct 2026):
   (`winfin-api`), Postgres on Supabase, ingest in the `ingest` Action dispatched by the
   Cloudflare cron Worker `winfin-ingest-cron`.
 - **GPU:** an RTX 4060 (8 GB) on the local machine; GPU runs are started by hand only.
-- **Keys:** `.env` holds `RENDER_API_KEY`, `OPENROUTER_API_KEY` and `NEON_API_KEY`; the Render
+- **Keys:** `.env` holds `RENDER_API_KEY`, `OPENROUTER_API_KEY`, `NEON_API_KEY` and the
+  TokenHarbor rotation list `OPENAI_API_KEYS` (also a GitHub secret); the Render
   and Neon keys are also Windows user variables. Ask the owner only for real decisions or credentials.
 - **Store:** one data store, Postgres.
 

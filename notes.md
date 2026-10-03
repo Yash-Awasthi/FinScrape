@@ -11,7 +11,9 @@ As of 3 Oct 2026: live and demo-ready. A fresh clone starts with `make demo`
 - Production: SPA on Cloudflare Pages, API on Render, Postgres on Supabase. The Cloudflare
   cron Worker `winfin-ingest-cron` dispatches the `ingest` Action every 30 minutes and pings
   `/health` every 10; `backup.yml` stores an encrypted nightly dump for 14 days.
-- Analysis: ingest calls TokenHarbor (deepseek, then mimo). TokenHarbor refuses requests
+- Analysis: ingest calls TokenHarbor (deepseek, then mimo) with `OPENAI_API_KEY`, moving
+  through the eight `OPENAI_API_KEYS` as each key's free 7-day allowance answers 429 (the
+  first key is spent until 9 Oct 09:45 UTC). TokenHarbor refuses requests
   from Render (403 `request_forbidden`), so the API analyses only on click with OpenRouter
   free models (`FINSCRAPE_MODEL`, `FINSCRAPE_MODEL_FALLBACK`) and, when all fail, dispatches
   the `analyze` workflow, at most 20 times an hour.
