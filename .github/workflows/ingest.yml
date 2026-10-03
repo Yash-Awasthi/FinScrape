@@ -2,11 +2,13 @@ name: ingest
 
 # One ingest cycle (scrape -> LLM -> ingest -> correlate -> backtest) against production,
 # then exit. The Cloudflare cron Worker `winfin-ingest-cron` dispatches it every
-# hour, since GitHub fires this schedule only every few hours.
+# INGEST_EVERY_HOURS hours (`make ingest-every HOURS=...`).
 on:
-  schedule:
-    - cron: "13 * * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      every_hours:
+        description: Ingest interval the cron Worker runs at (sets the no-new-events alert)
+        default: "24"
 
 concurrency:
   group: ingest
@@ -67,4 +69,6 @@ jobs:
           FINSCRAPE_LAYA_MODEL: ${{ vars.LAYA_RELEASE != '' && format('{0}/laya-model', github.workspace) || '' }}
         run: uv run --no-sync python -m worker.main --once
       - name: Alert if events stopped or the database is near its cap
+        env:
+          INGEST_EVERY_HOURS: ${{ inputs.every_hours }}
         run: uv run --no-sync python scripts/check_prod.py

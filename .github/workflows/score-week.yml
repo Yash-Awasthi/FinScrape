@@ -2,9 +2,8 @@ name: score-week
 
 # Saturday sweep of the live track record (worker/score_week.py, plan step 8): scores
 # calls up to a year old whose windows closed and prints the +2 / +4 day vs-SPY rates.
+# The cron Worker `winfin-ingest-cron` dispatches it on Saturdays at 06:00 UTC.
 on:
-  schedule:
-    - cron: "0 6 * * 6"
   workflow_dispatch:
 
 permissions:

@@ -11,9 +11,9 @@ NEW_DIRS := server worker finscrape/scrapers/world finscrape/ingestors \
 	finscrape/scenarios.py \
 	tests/server tests/test_world_phase2.py tests/test_worker_phase3.py \
 	tests/test_correlate_phase4.py tests/test_scenarios.py tests/test_no_multi_model.py tests/live_e2e.py \
-	scripts/backfill tests/test_backfill.py tests/test_call_tuning.py tests/test_bandit.py tests/test_weekly.py tests/test_full_text_enrich.py tests/test_key_rotation.py tests/server/test_key_queue.py
+	scripts/backfill tests/test_backfill.py tests/test_call_tuning.py tests/test_bandit.py tests/test_weekly.py tests/test_full_text_enrich.py tests/test_check_prod.py tests/test_key_rotation.py tests/server/test_key_queue.py
 
-.PHONY: help llm up down logs seed backup restore demo test lint fmt fmt-check typecheck selfcheck ci web-ci e2e e2e-live
+.PHONY: help ingest-every llm up down logs seed backup restore demo test lint fmt fmt-check typecheck selfcheck ci web-ci e2e e2e-live
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | sort | \
@@ -37,6 +37,9 @@ backup: ## Dump the database to backups/ (keeps the newest 14)
 
 restore: ## Restore a dump: make restore FILE=backups/worldfin-....dump
 	$(PY) python scripts/db_backup.py restore $(FILE)
+
+ingest-every: ## Ingest interval in hours: make ingest-every HOURS=1 (demos, keeps the API warm) or HOURS=24
+	cd ops/ingest-cron && npx --yes wrangler deploy --var INGEST_EVERY_HOURS:$(HOURS)
 
 llm: ## Switch production LLM: make llm MODEL=... URL=... KEY=... FALLBACK=... (any subset)
 	$(PY) python scripts/llm.py $(if $(MODEL),--model "$(MODEL)") $(if $(URL),--url "$(URL)") $(if $(KEY),--key "$(KEY)") $(if $(FALLBACK),--fallback "$(FALLBACK)")

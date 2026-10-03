@@ -7,7 +7,7 @@
 [![Cost](https://img.shields.io/badge/Cost-$0%2Fmonth-brightgreen.svg)](docs/DEPLOY.md)
 [![Live](https://img.shields.io/badge/Live-Dashboard-blue.svg)](https://winfin.pages.dev/app/)
 
-WorldFin reads world and geopolitical news every hour, works out which sectors
+WorldFin reads world and geopolitical news on a schedule (daily, or hourly for demos), works out which sectors
 and tickers each event moves, turns related events into scenarios with a calibrated
 probability and an instruction (invest, pull out, observe), and scores every call
 against the market move that followed.
@@ -74,7 +74,7 @@ cd web && npm ci && npm run dev                 # dashboard at :8080, proxies /a
 ## 🏗️ How it runs
 
 ```
-Cloudflare cron Worker ──(every hour)──▶ GitHub Action "ingest"
+Cloudflare cron Worker ──(every N hours)──▶ GitHub Action "ingest"
                                               │  fetch → LLM → Laya sector → tickers
                                               │  → dedup/merge → correlate → backtest
                                               ▼

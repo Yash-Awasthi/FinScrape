@@ -64,6 +64,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run test
+      - run: node --test ../ops/ingest-cron/index.test.mjs
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test

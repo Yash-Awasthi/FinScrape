@@ -60,7 +60,7 @@ windows across that date are dropped (`UNADJUSTED` in `outcomes.py`).
 
 ## Weekly jobs
 
-- `score-week` Action, Saturdays 06:00 UTC (`python -m worker.score_week`): scores live
+- `score-week` Action, Saturdays 06:00 UTC via the cron Worker (`python -m worker.score_week`): scores live
   calls up to a year old whose windows have closed (ingest only reaches back 30 days) and
   prints the +2 / +4 day rates of the last two weeks and of all calls.
 - Windows task `WorldFin backfill weekly`, Saturdays 10:00 local

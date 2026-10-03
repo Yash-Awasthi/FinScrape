@@ -2,9 +2,8 @@ name: backup
 
 # Supabase free keeps no backups; a nightly dump, encrypted with BACKUP_KEY (also in the
 # owner's .env) because artifacts of a public repo are readable, is kept for 14 days.
+# The cron Worker `winfin-ingest-cron` dispatches it at 21:20 UTC.
 on:
-  schedule:
-    - cron: "17 21 * * *"
   workflow_dispatch:
 
 permissions:

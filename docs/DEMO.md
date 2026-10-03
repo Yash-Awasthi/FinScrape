@@ -51,8 +51,9 @@ Sentiment (Reddit posts per ticker), News Lobby (raw feeds), Live TV, and Dates
 - The record is young: about 320 scored calls, mostly from June and July, and most
   of them PULL_OUT. Since 29 Sep a PULL_OUT needs a -3 score, mirroring INVEST at +3;
   older calls keep the verdict they were given.
-- Ingest runs every hour on free infrastructure (GitHub Actions dispatched by
-  a Cloudflare cron). The dashboard updates on refresh, not by live push.
+- Ingest runs daily on free infrastructure (GitHub Actions dispatched by a Cloudflare
+  cron). Before a demo, `make ingest-every HOURS=1` makes it hourly and keeps the API
+  warm; `make ingest-every HOURS=24` goes back. The dashboard updates on refresh.
 - The analysis uses free LLMs with a fallback chain. When every model fails, a keyword
   heuristic keeps ingest running; those rows are kept out of scenarios and the record.
 - Tickers come from the text and a sector map, so a political story can still carry

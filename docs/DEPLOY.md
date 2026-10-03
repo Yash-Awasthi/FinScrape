@@ -32,17 +32,17 @@ The API reads `$PORT` (Render injects it; `settings.port` aliases `WORLDFIN_PORT
 ## Redeploy
 - **Web:** `cd web && VITE_API_BASE=https://winfin-api.onrender.com npm run build && npx wrangler pages deploy dist --project-name=winfin --branch=main`
 - **API:** push to `master` → Render auto-deploys (`autoDeploy: yes`). Or POST a deploy via the Render API.
-- **Worker:** runs every hour automatically; `gh workflow run ingest.yml` to fire now.
-- **Ingest cron:** `cd ops/ingest-cron && npx wrangler deploy`; its `GH_TOKEN` secret is a fine-grained PAT (this repo, Actions read and write), set with `npx wrangler secret put GH_TOKEN`.
+- **Worker:** runs every `INGEST_EVERY_HOURS` hours (24 by default); `gh workflow run ingest.yml` to fire now.
+- **Ingest cron:** the only scheduler (ingest, summary, backup, score-week). `make ingest-every HOURS=1` for hourly demos, `HOURS=24` for daily; a plain `npx wrangler deploy` in `ops/ingest-cron` resets it to 24; its `GH_TOKEN` secret is a fine-grained PAT (this repo, Actions read and write), set with `npx wrangler secret put GH_TOKEN`.
 
 ## Keep-warm, alerts, backups
-- The cron Worker also pings `/health` every 10 minutes, so Render never sleeps.
-- Each ingest run ends with `scripts/check_prod.py`: it fails the run (GitHub emails the owner) when no event landed for 3 hours or the database passes 400 MB.
+- In hourly mode the cron Worker also pings `/health` every 10 minutes, so Render never sleeps; in daily mode the first request cold-starts in 30-50 s.
+- Each ingest run ends with `scripts/check_prod.py`: it fails the run (GitHub emails the owner) when no event landed for two ingest intervals plus an hour (3 h hourly, 49 h daily) or the database passes 400 MB.
 - `backup.yml` dumps production nightly, encrypted with `BACKUP_KEY` (GitHub secret and local `.env`), as a 14-day artifact. Restore: `gh run download <run> -n worldfin-<run>`, then `openssl enc -d -aes-256-cbc -pbkdf2 -pass env:BACKUP_KEY -in worldfin.dump.enc -out worldfin.dump` and `pg_restore -d <url> --no-owner worldfin.dump`.
 
 ## Known free-tier limits
 - Worker updates the dashboard on **refresh**, not live WS push (cross-process WS needs Redis — deferred).
-- GitHub cron can be delayed/skipped under load (~"every hour", not exact).
+- GitHub skips schedules under load and turns them off after 60 days without commits, so no workflow has a GitHub schedule; the cron Worker dispatches them all.
 - Supabase free: 500 MB database, paused after a week without activity (the ingest cron keeps it active); TokenHarbor free models have usage caps — the heuristic fallback absorbs LLM exhaustion.
 
 ## Choosing the model
