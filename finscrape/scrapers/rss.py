@@ -19,6 +19,10 @@ from finscrape.scrapers.fastfetch import fast_get
 
 logger = logging.getLogger(__name__)
 
+MIN_BODY_CHARS = 300
+# News leads with the facts; past this the body costs tokens and adds little.
+MAX_TEXT_CHARS = 6000
+
 
 # Default financial RSS feeds
 DEFAULT_FEEDS = {
@@ -114,14 +118,34 @@ class RSSScraperSource(BaseScraper):
         return article
 
     def _enrich_with_full_text(self, article: ScrapedArticle) -> ScrapedArticle:
-        """Fetch full article text if the RSS summary is too short.
+        """Swap the feed summary for the page's main text when that is longer.
 
-        Two-stage enrichment: Scrapling stealth fetch → site extraction, then a
-        trafilatura pass on raw HTML (best-in-class main-content extraction).
-        Kills most "Insufficient content" skips.
+        trafilatura on a plain fetch first (0.7 s a page); the Scrapling fetch only
+        when that yields under MIN_BODY_CHARS. The text is capped at MAX_TEXT_CHARS.
         """
-        if len(article.text) >= 300:
-            return article
+        text = ""
+        try:
+            import trafilatura
+
+            raw = fast_get(article.url)
+            if raw:
+                text = trafilatura.extract(raw.decode("utf-8", "ignore")) or ""
+        except Exception as e:  # noqa: BLE001 — enrichment is best-effort
+            logger.debug("[%s] trafilatura enrichment failed: %s", self.name, e)
+
+        if len(text) < MIN_BODY_CHARS:
+            page = self.fetch_page(article.url)
+            if page:
+                text = max(text, self.extract_article_text(page), key=len)
+                if not article.published_at:
+                    pub_date, age = self.extract_publish_date(page)
+                    article.published_at = pub_date
+                    article.age_hours = age
+
+        if len(text) > len(article.text):
+            article.text = text
+        article.text = article.text[:MAX_TEXT_CHARS]
+        return article
 
         page = self.fetch_page(article.url)
         if page:

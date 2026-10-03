@@ -44,14 +44,10 @@ Facts about the owner's setup that the items below rely on (as of 2 Oct 2026):
   (`winfin-api`), Postgres on Supabase, ingest in the `ingest` Action dispatched by the
   Cloudflare cron Worker `winfin-ingest-cron`.
 - **GPU:** an RTX 4060 (8 GB) on the local machine; GPU runs are started by hand only.
-- **Keys:** `.env` holds `RENDER_API_KEY` and `OPENROUTER_API_KEY`; `RENDER_API_KEY` is also a
-  Windows user variable. Ask the owner only for real decisions or credentials.
+- **Keys:** `.env` holds `RENDER_API_KEY`, `OPENROUTER_API_KEY` and `NEON_API_KEY`; the Render
+  and Neon keys are also Windows user variables. Ask the owner only for real decisions or credentials.
 - **Store:** one data store, Postgres.
 
 ## Open
 
-Owner only; nothing else is open.
-
-- Mark the local-only compose password (`worldfin`, Postgres on 127.0.0.1) a false
-  positive in GitGuardian.
-- Delete the Neon project; nothing in the repository uses it any more.
+Nothing is open.

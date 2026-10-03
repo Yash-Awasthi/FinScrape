@@ -49,7 +49,9 @@ def _ingestor_producer(cls) -> Producer:
 
 def build_enrichers() -> dict[str, Callable[[ScrapedArticle], ScrapedArticle]]:
     """Per-source full-text enrichment, applied only to articles about to be analyzed."""
-    return {"world_rss": WorldRSSScraper().enrich}
+    # GDELT rows carry only a title rebuilt from the URL slug.
+    enrich = WorldRSSScraper().enrich
+    return {"world_rss": enrich, "gdelt": enrich}
 
 
 def build_sources(max_articles: int = 20) -> dict[str, Producer]:
