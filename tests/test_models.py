@@ -15,11 +15,11 @@ class TestVerdictFromScore:
     def test_invest(self, score):
         assert Verdict.from_score(score) is Verdict.INVEST
 
-    @pytest.mark.parametrize("score", [1, 2])
+    @pytest.mark.parametrize("score", [0, 1, 2])
     def test_observe(self, score):
         assert Verdict.from_score(score) is Verdict.OBSERVE
 
-    @pytest.mark.parametrize("score", [-2, -1, 0])
+    @pytest.mark.parametrize("score", [-2, -1])
     def test_cautious(self, score):
         assert Verdict.from_score(score) is Verdict.CAUTIOUS
 

@@ -111,7 +111,7 @@ class TestDebateRounds:
         assert captured == {}
         assert not explicit.judged
         assert explicit.consensus_score == default.consensus_score == 0.0
-        assert explicit.consensus_verdict == default.consensus_verdict == "CAUTIOUS"
+        assert explicit.consensus_verdict == default.consensus_verdict == "OBSERVE"
         assert len(explicit.score_history) == len(default.score_history) == 1
         assert explicit.score_history[0] == ROUND_1_SCORES
         assert default.score_history[0] == ROUND_1_SCORES

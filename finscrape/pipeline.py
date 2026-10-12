@@ -29,11 +29,7 @@ from finscrape.analysis.validator import (
 )
 from finscrape.analysis.embeddings import most_similar
 from finscrape.entity_map import lede_tickers, resolve_company_tickers
-from finscrape.market_data import (
-    calculate_market_boost,
-    get_indicators,
-    get_market_data,
-)
+from finscrape.market_data import get_indicators
 from finscrape.models import FinEvent, ScrapedArticle, Verdict
 
 logger = logging.getLogger(__name__)
@@ -137,17 +133,16 @@ class FinScrapePipeline:
 
         laya_view = laya.classify(article.title, article.text)
 
-        # Market data
-        market_data = get_market_data(valid_tickers)
-        market_boost = calculate_market_boost(market_data)
-
         # Heuristic validation
         h_sentiment, h_impact = calculate_heuristic_score(full_text, result.get("event_type", ""))
         divergence = check_divergence(result.get("impact_direction", "neutral"), h_sentiment)
 
         # Final scoring
         base_score = result.get("signal_score", 0)
-        final_score = max(-5, min(5, base_score + market_boost))
+        final_score = max(-5, min(5, base_score))
+        # Text and model disagree on polarity, so neither direction is trustworthy.
+        if divergence:
+            final_score = max(-2, min(2, final_score))
         confidence = fuse_confidence(
             result.get("confidence", 0.5),
             source_name,

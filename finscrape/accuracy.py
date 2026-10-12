@@ -10,28 +10,24 @@ from typing import Any
 
 
 def calibration(rows: list[dict]) -> dict[str, Any]:
-    """Brier score + calibration buckets for confidence vs. actual correctness.
+    """Brier score + per-bucket hit rate for confidence vs. actual correctness.
 
     rows: dicts with 'confidence' (0..1) and 'correct' (bool). Rows missing
     either key are skipped.
     """
     scored = [r for r in rows if r.get("confidence") is not None and r.get("correct") is not None]
-    buckets = {"0-.25": 0, ".25-.5": 0, ".5-.75": 0, ".75-1": 0}
+    names = ("0-.25", ".25-.5", ".5-.75", ".75-1")
+    hits = {n: [] for n in names}
+    for r in scored:
+        hits[names[min(3, int(r["confidence"] * 4))]].append(bool(r["correct"]))
+    buckets = {
+        n: {"n": len(h), "hit_rate": round(sum(h) / len(h), 3) if h else None}
+        for n, h in hits.items()
+    }
     if not scored:
         return {"brier": None, "buckets": buckets}
 
     brier = sum((r["confidence"] - (1.0 if r["correct"] else 0.0)) ** 2 for r in scored) / len(scored)
-    for r in scored:
-        conf = r["confidence"]
-        if conf < 0.25:
-            buckets["0-.25"] += 1
-        elif conf < 0.5:
-            buckets[".25-.5"] += 1
-        elif conf < 0.75:
-            buckets[".5-.75"] += 1
-        else:
-            buckets[".75-1"] += 1
-
     return {"brier": round(brier, 4), "buckets": buckets}
 
 

@@ -23,10 +23,10 @@ def test_verdict_outcome_nondirectional():
 
 def test_aggregate_hit_rate_and_equity_curve():
     rows = [
-        {"verdict": "INVEST", "correct": True, "checked_at": "2026-01-01T00:00:00"},
-        {"verdict": "INVEST", "correct": False, "checked_at": "2026-01-02T00:00:00"},
-        {"verdict": "PULL_OUT", "correct": True, "checked_at": "2026-01-03T00:00:00"},
-        {"verdict": "OBSERVE", "correct": None, "checked_at": "2026-01-04T00:00:00"},  # unscored
+        {"verdict": "INVEST", "correct": True, "at": "2026-01-01T00:00:00"},
+        {"verdict": "INVEST", "correct": False, "at": "2026-01-02T00:00:00"},
+        {"verdict": "PULL_OUT", "correct": True, "at": "2026-01-03T00:00:00"},
+        {"verdict": "OBSERVE", "correct": None, "at": "2026-01-04T00:00:00"},  # unscored
     ]
     agg = aggregate(rows)
     assert agg["total"] == 4 and agg["scored"] == 3
@@ -70,23 +70,55 @@ def test_calibration_bucket_counts_sum_to_rows():
         {"confidence": 0.99, "correct": False},
     ]
     calib = calibration(rows)
-    assert sum(calib["buckets"].values()) == len(rows)
+    assert sum(b["n"] for b in calib["buckets"].values()) == len(rows)
+
+
+def test_calibration_buckets_report_hit_rate():
+    rows = [
+        {"confidence": 0.8, "correct": True},
+        {"confidence": 0.9, "correct": False},
+        {"confidence": 1.0, "correct": True},
+        {"confidence": 0.1, "correct": False},
+    ]
+    b = calibration(rows)["buckets"]
+    assert b[".75-1"] == {"n": 3, "hit_rate": 0.667}
+    assert b["0-.25"] == {"n": 1, "hit_rate": 0.0}
+    assert b[".5-.75"] == {"n": 0, "hit_rate": None}
+
+
+def test_equity_curve_follows_event_time_not_insert_order():
+    rows = [
+        {"verdict": "INVEST", "correct": False, "at": "2026-01-03T00:00:00"},
+        {"verdict": "INVEST", "correct": True, "at": "2026-01-01T00:00:00"},
+        {"verdict": "INVEST", "correct": True, "at": "2026-01-02T00:00:00"},
+    ]
+    assert aggregate(rows)["equity_curve"] == [1, 2, 1]
+
+
+def test_equity_metrics_use_realized_moves():
+    rows = [
+        {"verdict": "INVEST", "correct": True, "at": "1", "move": 2.0},
+        {"verdict": "PULL_OUT", "correct": None, "at": "2", "move": -0.5},
+        {"verdict": "INVEST", "correct": False, "at": "3", "move": -1.5},
+    ]
+    dd = aggregate(rows)["equity_metrics"]["max_drawdown"]
+    assert dd == pytest.approx(0.995 * 0.985 - 1, abs=1e-4)
 
 
 def test_calibration_empty():
     calib = calibration([])
     assert calib["brier"] is None
-    assert sum(calib["buckets"].values()) == 0
+    assert sum(b["n"] for b in calib["buckets"].values()) == 0
 
 
 def test_aggregate_includes_calibration():
     rows = [
-        {"verdict": "INVEST", "correct": True, "checked_at": "2026-01-01T00:00:00", "confidence": 0.9},
-        {"verdict": "PULL_OUT", "correct": False, "checked_at": "2026-01-02T00:00:00", "confidence": 0.9},
+        {"verdict": "INVEST", "correct": True, "at": "2026-01-01T00:00:00", "confidence": 0.9},
+        {"verdict": "PULL_OUT", "correct": False, "at": "2026-01-02T00:00:00", "confidence": 0.9},
     ]
     agg = aggregate(rows)
     assert agg["calibration"]["brier"] == pytest.approx((0.01 + 0.81) / 2, abs=1e-6)
-    assert sum(agg["calibration"]["buckets"].values()) == 2
+    assert sum(b["n"] for b in agg["calibration"]["buckets"].values()) == 2
 
 
 def _pool(event: dict, written: list):

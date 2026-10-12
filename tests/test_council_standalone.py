@@ -36,7 +36,7 @@ def test_verdict_from_score():
     assert AgentVerdict._verdict_from_score(3) == "INVEST"
     assert AgentVerdict._verdict_from_score(2) == "OBSERVE"
     assert AgentVerdict._verdict_from_score(1) == "OBSERVE"
-    assert AgentVerdict._verdict_from_score(0) == "CAUTIOUS"
+    assert AgentVerdict._verdict_from_score(0) == "OBSERVE"
     assert AgentVerdict._verdict_from_score(-1) == "CAUTIOUS"
     assert AgentVerdict._verdict_from_score(-3) == "PULL_OUT"
 

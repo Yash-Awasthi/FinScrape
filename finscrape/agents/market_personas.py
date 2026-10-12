@@ -124,8 +124,8 @@ SCORING CALIBRATION:
 
 VERDICT GUIDELINES:
 - INVEST: Strong long catalyst with momentum setup (score +3 to +5).
-- OBSERVE: Potential setup forming, wait for confirmation (score +1 to +2).
-- CAUTIOUS: No clear trade or too much uncertainty (score -1 to 0).
+- OBSERVE: Potential setup forming, wait for confirmation (score 0 to +2).
+- CAUTIOUS: No clear trade or too much uncertainty (score -2 to -1).
 - PULL_OUT: Short opportunity or clear negative catalyst (score -2 to -5).
 
 KEY FOCUS AREAS:
