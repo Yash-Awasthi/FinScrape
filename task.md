@@ -34,7 +34,9 @@ not involve sector labels.
 
 Gates to keep green: `pytest -q`, `ruff check` and `ruff format --check` on the
 `NEW_DIRS` in the Makefile, `pyright`, `python -m tests.server.selfcheck`, and in
-`web/`: `npm run typecheck`, `npm run test`, `npm run build`, `npx playwright test`.
+`web/`: `npm run typecheck` (`vp check`: format, lint and types), `npm run test`,
+`npm run build`, `npx playwright test`. `web/` runs on Vite+ (`vp`), which needs Node
+`^22.18.0 || ^24.11.0`; run `npm ci` in `web/` after pulling the 12 Oct changes.
 
 ## Owner context
 
@@ -51,4 +53,17 @@ Facts about the owner's setup that the items below rely on (as of 2 Oct 2026):
 
 ## Open
 
-Nothing is open.
+1. **Publish the web app to Cloudflare Pages.** *Gated: Cloudflare login.* The live site at
+   winfin.pages.dev still serves the old 18-panel build; the API and worker already run
+   the 12 Oct code. Either add the repo secrets `CLOUDFLARE_API_TOKEN` (Cloudflare Pages:
+   Edit) and `CLOUDFLARE_ACCOUNT_ID` and run `gh workflow run deploy-web.yml`, or, logged
+   in with `npx wrangler login`: `cd web && npm ci && set VITE_API_BASE=https://winfin-api.onrender.com && npm run build && npx wrangler pages deploy dist --project-name=winfin --branch=main`
+   (PowerShell: `$env:VITE_API_BASE=...`). Live check: `/app/#record` shows Next day,
+   +2 and +4 days vs SPY with intervals and the Scored calls table; `/app/#tickers` charts
+   the top ticker with the calls that named it; an event's inspector shows Outcome,
+   Coverage and the council button. Merging PR #41 (the `deploy-web` workflow) first makes
+   later web changes deploy on push.
+2. **Unreachable vendored code.** Much of `finscrape/` (`services/`, `trading/`,
+   `exchanges.py`, `sentiment/`, `edgar/`, the root `main.py` CLI) is reached from neither
+   `server/` nor `worker/`. Map reachability from those entry points and the tests, then
+   remove what only the retired CLI used.

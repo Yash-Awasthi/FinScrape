@@ -5,8 +5,9 @@ lives in git history.
 
 ## Where things stand
 
-As of 3 Oct 2026: live and demo-ready. A fresh clone starts with `make demo`
-(`docs/DEMO.md` is the walkthrough).
+As of 12 Oct 2026: API and worker run the 12 Oct changes (logic fixes, four-view
+dashboard, Vite+); the Pages site still serves the previous build until task 1 lands.
+A fresh clone starts with `make demo` (`docs/DEMO.md` is the walkthrough).
 
 - Production: SPA on Cloudflare Pages, API on Render, Postgres on Supabase. The Cloudflare
   cron Worker `winfin-ingest-cron` is the only scheduler (GitHub turns off schedules in a
@@ -26,12 +27,22 @@ As of 3 Oct 2026: live and demo-ready. A fresh clone starts with `make demo`
   feed summary or the GDELT slug title: on 3 Oct that took GDELT from ~60 characters to
   4,000-6,000 and world RSS from a median ~200 to ~2,600.
 - Sectors: a named S&P 500 company sets the sector; frozen Laya `laya-20261001-1041` labels
-  stories that name none. Calls: INVEST at score +3, PULL_OUT at -3.
+  stories that name none. Calls: INVEST at score +3, PULL_OUT at -3, OBSERVE at 0 to +2,
+  CAUTIOUS at -1 and -2. A score is capped at ±2 when the AI and the heuristic disagree on
+  direction, and the previous session's price move no longer feeds it.
 - Scoring: every call is scored next-day raw and +2 / +4 trading days against SPY, and the
   landing page shows both. `docs/BACKFILL.md` holds the backfill, the weekly jobs and the
   studies behind these choices.
 - Telegram: ingest sends INVEST / PULL_OUT alerts through @YashAwasthiBot, and the
   `telegram-summary` Action sends a daily summary.
+
+- Correlations: the velocity baseline and the already-emitted keys are read from Postgres
+  each run, so the one-shot ingest keeps state. A fixed watch list (topic-mapped tickers
+  plus CL=F, NG=F) is priced every run so silent_divergence can fire; a story that names a
+  ticker explains its move. Up to three signals per type survive a run.
+- Source health reads STALE after 25 h (`WORLDFIN_SOURCE_STALE_MIN`, default 1500), to
+  match the daily ingest; `scripts/check_prod.py` alerts sooner.
+- The council (`/api/ai/council`) is on in production and answered in about a minute on 12 Oct.
 
 ## Measured, worth not re-deriving
 
@@ -47,8 +58,12 @@ As of 3 Oct 2026: live and demo-ready. A fresh clone starts with `make demo`
   writer until 28 Sep and stay in the record.
 - Cold `/api/scenarios?window=200` costs ~73 s, almost all Ollama embedding, once per
   process: `embeddings.embed` is LRU-cached and startup warm-up pays it.
-- Every scenario is a singleton by design: `_find_duplicate` merges same-story coverage at
-  ingest, so corroboration lives in one event's `articles` / `sources`.
+- `_find_duplicate` merges same-story coverage at ingest, so corroboration lives in one
+  event's `articles` / `sources`. Storylines group follow-up stories on top of that:
+  embeddings where Ollama runs, otherwise `clusters.same_story` (a shared ticker plus half
+  the headline's words), which on 12 Oct grouped 200 production events into 178 storylines.
+- Migration 0013 (12 Oct) relabelled score-0 CAUTIOUS rows to OBSERVE and dropped
+  `social_posts`; the backup run 38281322368 just before it holds the prior state.
 - The LLM's reasoning invents technology angles, so Laya reads article text, never the
   reasoning. Laya's checkpoint has no valid calibration for 11+ options, so it is offered
   ten and low confidence reads as `other`.
