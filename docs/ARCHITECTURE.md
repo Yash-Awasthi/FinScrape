@@ -120,8 +120,8 @@ that name no company. Both share the word-boundary matcher in `entity_map._match
 like "arm" or "target" cannot fire on a substring inside "pharma" or "price target". The resolved
 ticker list is filtered through `finscrape/analysis/validator.py:clean_tickers(tickers, text=...)`,
 which only lets a stopword-listed word (`NOW`, `ALL`, `IT`, `AI`, `KEY`, `GO`, `ONE`, …) through when
-the source text carries it as an explicit `$TICK` or `(TICK)` marker; both `finscrape/pipeline.py`
-and `push_to_dashboard.py` pass the article text into this call. LLM tickers survive only when the
+the source text carries it as an explicit `$TICK` or `(TICK)` marker; `finscrape/pipeline.py`
+passes the article text into this call. LLM tickers survive only when the
 article backs them (`validator.grounded_tickers`): a text-derived source found them, or the LLM
 named a company that appears in the text and the curated map or the SEC title agrees that the
 ticker is that company's (so no "FZ" for flydubai or "MSFT" for OpenAI).

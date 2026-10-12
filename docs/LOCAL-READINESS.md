@@ -1,7 +1,7 @@
 # Local readiness and zero-cost setup
 
 The current application is the FastAPI `server/`, ingestion `worker/`, and Vite
-`web/` dashboard. `dashboard/` and `SETUP_WINDOWS.md` describe the legacy app.
+`web/` dashboard.
 Current work is tracked in [task.md](../task.md).
 
 ## Requirements
