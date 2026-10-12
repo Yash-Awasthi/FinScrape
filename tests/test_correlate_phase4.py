@@ -316,3 +316,21 @@ def test_several_stories_of_one_type_all_surface():
     sigs, _ = analyze_correlations(items, prev_snapshot={"topics": {}})
     conv = [s for s in sigs if s.type == "convergence"]
     assert len(conv) == 3
+
+
+def test_a_ticker_the_news_named_is_never_a_silent_move():
+    """URA, UEC and NIO read as silent_divergence while stories listed them: tickers
+    with no keyword entry were never matched to the events that named them."""
+    named = NewsItem(
+        title="Uranium miners rally on reactor deal",
+        link="u",
+        source="w",
+        tickers=("URA",),
+    )
+    sigs, _ = analyze_correlations(
+        [named],
+        markets=[Market(symbol="URA", change=4.0)],
+        prev_snapshot={"topics": {}},
+    )
+    assert "silent_divergence" not in {s.type for s in sigs}
+    assert "explained_market_move" in {s.type for s in sigs}

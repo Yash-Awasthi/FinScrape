@@ -405,7 +405,7 @@ class Worker:
         if not get_settings().enable_correlation:
             return 0
         rows = await self.pool.fetch(
-            "SELECT subject, sources, articles, timestamp, lat, lon FROM events "
+            "SELECT subject, sources, articles, tickers, timestamp, lat, lon FROM events "
             "WHERE timestamp >= now() - ($1 || ' hours')::interval",
             str(lookback_hours),
         )
@@ -418,6 +418,7 @@ class Worker:
                 lat=r["lat"],
                 lon=r["lon"],
                 timestamp=r["timestamp"].timestamp(),
+                tickers=tuple(_json_list(r["tickers"])),
             )
             for r in rows
         ]

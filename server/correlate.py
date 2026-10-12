@@ -180,6 +180,7 @@ class NewsItem:
     lat: float | None = None
     lon: float | None = None
     timestamp: float = 0.0  # epoch seconds
+    tickers: tuple[str, ...] = ()
 
 
 @dataclass
@@ -461,11 +462,14 @@ def find_news_for_market_symbol(symbol: str, items: list[NewsItem]) -> list[News
     """Entity-aware (Phase 12): news items whose title mentions a sector/region keyword
     mapped to `symbol` via finscrape.entity_map. Non-empty → detect_market emits
     explained_market_move instead of collapsing the move to silent_divergence."""
+    # A story whose analysis named the ticker explains its move, keyword index or not.
+    sym = (symbol or "").upper()
     keywords = keywords_for_ticker(symbol)
-    if not keywords:
-        return []
     return [
-        it for it in items if any(contains_topic_keyword(it.title, k) for k in keywords)
+        it
+        for it in items
+        if sym in it.tickers
+        or any(contains_topic_keyword(it.title, k) for k in keywords)
     ]
 
 
