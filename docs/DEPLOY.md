@@ -30,7 +30,7 @@ Ingest Action only: the repo variable `LAYA_RELEASE` names the GitHub release ho
 The API reads `$PORT` (Render injects it; `settings.port` aliases `WORLDFIN_PORT`/`PORT`).
 
 ## Redeploy
-- **Web:** `cd web && VITE_API_BASE=https://winfin-api.onrender.com npm run build && npx wrangler pages deploy dist --project-name=winfin --branch=main`
+- **Web:** the `deploy-web` Action builds and publishes on every push to `master` that touches `web/`, or by hand with `gh workflow run deploy-web.yml`. It needs the repo secrets `CLOUDFLARE_API_TOKEN` (a token with Cloudflare Pages: Edit) and `CLOUDFLARE_ACCOUNT_ID`; without them it skips with a warning. By hand from a logged-in machine: `cd web && VITE_API_BASE=https://winfin-api.onrender.com npm run build && npx wrangler pages deploy dist --project-name=winfin --branch=main`
 - **API:** push to `master` → Render auto-deploys (`autoDeploy: yes`). Or POST a deploy via the Render API.
 - **Worker:** runs every `INGEST_EVERY_HOURS` hours (24 by default); `gh workflow run ingest.yml` to fire now.
 - **Ingest cron:** the only scheduler (ingest, summary, backup, score-week). `make ingest-every HOURS=1` for hourly demos, `HOURS=24` for daily; a plain `npx wrangler deploy` in `ops/ingest-cron` resets it to 24; its `GH_TOKEN` secret is a fine-grained PAT (this repo, Actions read and write), set with `npx wrangler secret put GH_TOKEN`.
