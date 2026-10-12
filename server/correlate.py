@@ -6,8 +6,8 @@ and flags news↔market divergence — "before it's news".
 
 Each detector is a pure function so it can be unit-tested against its
 formulas. `analyze_correlations` orchestrates: extract topics → run detectors in order
-(each gated by a dedup `seen` set) → keep the FIRST signal per type → drop confidence
-< 0.6. First call (no prev_snapshot) emits nothing, just returns the snapshot.
+(each gated by a dedup `seen` set) → drop confidence < 0.6 → keep the strongest
+MAX_PER_TYPE signals per type. First call (no prev_snapshot) emits nothing, just returns the snapshot.
 
 JS `Math.round(x*10)/10` rounds half-up; Python's round() is banker's, so we use
 `round1 = floor(x*10 + 0.5)/10` to match exactly.
@@ -35,6 +35,8 @@ VELOCITY_WINDOW_DAYS = 7
 SPIKE_MULTIPLIER = 3.0
 CONVERGENCE_WINDOW_S = 3600  # 1h
 CONFIDENCE_FLOOR = 0.6
+# A daily run sees a whole day of stories; one signal per type would drop the rest.
+MAX_PER_TYPE = 3
 
 MARKET_TYPES = ("silent_divergence", "flow_price_divergence", "explained_market_move")
 
@@ -430,6 +432,12 @@ def _topics_by_ticker() -> dict[str, frozenset[str]]:
     return {symbol: frozenset(names) for symbol, names in out.items()}
 
 
+def watch_symbols() -> list[str]:
+    """Symbols priced every cycle whether or not the news names them, so a move with no
+    coverage can surface as silent_divergence or flow_price_divergence."""
+    return [*sorted(_topics_by_ticker()), *ENERGY_SYMS]
+
+
 def _topic_mentions_for_symbol(symbol: str, topics: dict[str, dict]) -> int:
     """Coverage volume plausibly related to a market symbol, as the busiest single topic
     it belongs to.
@@ -529,9 +537,13 @@ def analyze_correlations(
             mentions = _topic_mentions_for_symbol(sym, topics)
             consider(detect_flow_price_divergence(m, mentions, pipeline_signals))
 
-    # keep the FIRST signal per type (insertion order), then drop < floor
-    first_per_type: dict[str, Signal] = {}
+    by_type: dict[str, list[Signal]] = {}
     for sig in candidates:
-        first_per_type.setdefault(sig.type, sig)
-    signals = [s for s in first_per_type.values() if s.confidence >= CONFIDENCE_FLOOR]
+        if sig.confidence >= CONFIDENCE_FLOOR:
+            by_type.setdefault(sig.type, []).append(sig)
+    signals = [
+        s
+        for sigs in by_type.values()
+        for s in sorted(sigs, key=lambda s: -s.confidence)[:MAX_PER_TYPE]
+    ]
     return signals, snapshot

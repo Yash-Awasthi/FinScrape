@@ -24,6 +24,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 logging.basicConfig(level=logging.WARNING)
 
+from finscrape.models import Verdict
 from finscrape.scrapers.bloomberg    import BloombergScraper
 from finscrape.scrapers.reuters      import ReutersScraper
 from finscrape.scrapers.marketwatch  import MarketWatchScraper
@@ -70,10 +71,7 @@ SOURCES = [
 # ---------------------------------------------------------------------------
 
 def heuristic_verdict(score: int) -> str:
-    if score >= 3:  return "INVEST"
-    if score >= 1:  return "OBSERVE"
-    if score >= -1: return "CAUTIOUS"
-    return "PULL_OUT"
+    return Verdict.from_score(score).value
 
 
 def guess_direction(title: str, text: str) -> str:
@@ -132,9 +130,8 @@ def article_to_event(article, source_name: str, use_ai: bool = True) -> dict | N
     Convert a scraped article to a dashboard event dict.
 
     Scoring mirrors pipeline.py:_analyze_article exactly:
-      - final_score = clamp(ai.signal_score + market_boost, -5, 5)
-        (market_boost = 0 in this lighter path — no yfinance lookup)
-      - divergence penalty applied to confidence, not score
+      - final_score = clamp(ai.signal_score, -5, 5), clamped to [-2, 2] on divergence
+      - divergence penalty also applied to confidence
       - source credibility and recency decay applied after divergence
     """
     title     = article.title or ""
@@ -178,12 +175,12 @@ def article_to_event(article, source_name: str, use_ai: bool = True) -> dict | N
         magnitude  = ai_result.get("magnitude", "medium")
         sector     = ai_result.get("sector_impact", "")
 
-        # market_boost = 0 in this path (no yfinance call)
         final_score = max(-5, min(5, base_score))
 
         # Divergence check: AI direction vs heuristic sentiment
         divergence = check_divergence(direction, h_sentiment)
         if divergence:
+            final_score = max(-2, min(2, final_score))
             confidence = max(0.0, confidence - 0.15)
 
         # Source credibility + recency decay

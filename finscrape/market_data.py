@@ -217,26 +217,6 @@ def get_indicators(tickers: list[str]) -> dict[str, dict]:
     return {t: fresh[t] for t in dict.fromkeys(tickers) if t in fresh}
 
 
-def calculate_market_boost(market_data: list[dict]) -> int:
-    """Calculate a score boost based on recent price movement.
-
-    Sign follows the biggest mover: a crash pushes the boost negative,
-    a rally pushes it positive.
-    """
-    biggest = 0
-    for md in market_data:
-        change = md.get("change_percent", 0)
-        if abs(change) > abs(biggest):
-            biggest = change
-
-    magnitude = abs(biggest)
-    if magnitude >= 10:
-        return 2 if biggest > 0 else -2
-    if magnitude >= 5:
-        return 1 if biggest > 0 else -1
-    return 0
-
-
 def window_move(closes: pd.Series, at: dt.datetime, hours_after: float) -> float | None:
     """% move from the last close before the event's day to the Nth trading-day close
     after it (N = days in `hours_after`, min 1). None until that close exists."""

@@ -137,7 +137,7 @@ def mock_ai_client(prompt: str, system: str, model: str | None = None) -> dict |
     import random
     score = random.randint(-3, 4)
     return {
-        "verdict": "INVEST" if score >= 3 else "OBSERVE" if score >= 1 else "CAUTIOUS" if score >= -1 else "PULL_OUT",
+        "verdict": "INVEST" if score >= 3 else "OBSERVE" if score >= 0 else "CAUTIOUS" if score >= -2 else "PULL_OUT",
         "signal_score": score,
         "confidence": round(random.uniform(0.5, 0.9), 2),
         "reasoning": f"Analysis based on the provided article.",

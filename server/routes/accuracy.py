@@ -13,16 +13,18 @@ router = APIRouter()
 @router.get("/api/accuracy")
 async def accuracy() -> dict:
     rows = await db.pool().fetch(
-        "SELECT a.verdict, a.correct, a.correct2, a.correct4, a.checked_at, e.confidence "
+        "SELECT a.verdict, a.correct, a.correct2, a.correct4, a.price_move_pct, "
+        "e.timestamp, e.confidence "
         "FROM accuracy_outcomes a JOIN events e ON a.event_id = e.id "
-        "ORDER BY a.checked_at"
+        "ORDER BY e.timestamp"
     )
     result = aggregate(
         [
             {
                 "verdict": r["verdict"],
                 "correct": r["correct"],
-                "checked_at": r["checked_at"].isoformat() if r["checked_at"] else "",
+                "at": r["timestamp"].isoformat(),
+                "move": r["price_move_pct"],
                 "confidence": r["confidence"],
             }
             for r in rows
@@ -38,10 +40,10 @@ async def accuracy_by_variant() -> dict:
     """Hit-rate split by prompt A/B variant (Phase 13). Variant is read from the event's
     key_metrics; outcomes from variant-less events fall under 'v1'."""
     rows = await db.pool().fetch(
-        "SELECT a.verdict, a.correct, a.checked_at, e.confidence, "
+        "SELECT a.verdict, a.correct, a.price_move_pct, e.timestamp, e.confidence, "
         "COALESCE(e.key_metrics->>'prompt_variant', 'v1') AS variant "
         "FROM accuracy_outcomes a JOIN events e ON a.event_id = e.id "
-        "ORDER BY a.checked_at"
+        "ORDER BY e.timestamp"
     )
     by_variant: dict[str, list[dict]] = {}
     for r in rows:
@@ -49,7 +51,8 @@ async def accuracy_by_variant() -> dict:
             {
                 "verdict": r["verdict"],
                 "correct": r["correct"],
-                "checked_at": r["checked_at"].isoformat() if r["checked_at"] else "",
+                "at": r["timestamp"].isoformat(),
+                "move": r["price_move_pct"],
                 "confidence": r["confidence"],
             }
         )

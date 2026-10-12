@@ -103,7 +103,7 @@ LLM is any OpenAI-compatible endpoint, shared with finscrape via env (`OPENAI_BA
 
 `finscrape/pipeline.py:FinScrapePipeline._analyze_article` is the fusion entry point (see the Reuse
 map above). Per article: scrape → freshness gate → `call_ai` (or council) → relevance gate → NLP
-enrich → ticker fusion → market data → heuristic score → divergence check → confidence fuse. The
+enrich → ticker fusion → heuristic score → divergence check → confidence fuse. The
 subsections below describe the pieces that changed in the 2026-08-16 analysis-layer hardening pass
 and the deliberation/quant follow-on that landed the same day; see
 [`../task.md`](../task.md) for current work.
@@ -126,10 +126,11 @@ article backs them (`validator.grounded_tickers`): a text-derived source found t
 named a company that appears in the text and the curated map or the SEC title agrees that the
 ticker is that company's (so no "FZ" for flydubai or "MSFT" for OpenAI).
 
-**Market boost.** `finscrape/market_data.py:calculate_market_boost` picks the single biggest mover
-(by absolute percent change) across the resolved tickers and returns a boost signed to match that
-mover's direction: `±1` at `≥5%`, `±2` at `≥10%`, `0` below that. `finscrape/pipeline.py` adds this
-to the AI's `signal_score` and clamps the result to `[-5, 5]`.
+**Score and verdict.** `finscrape/pipeline.py` clamps the AI's `signal_score` to `[-5, 5]`. The
+price move that already happened is not added: that would push the verdict toward a move the market
+has priced in. When the AI and the heuristic disagree on polarity (`divergence_flag`), the score is
+clamped to `[-2, 2]`, so the event is never INVEST or PULL_OUT. `Verdict.from_score` maps `≥3` to
+INVEST, `0..2` to OBSERVE, `-2..-1` to CAUTIOUS and `≤-3` to PULL_OUT.
 
 **Confidence fusion.** `finscrape/analysis/validator.py:fuse_confidence` is the single place all
 confidence adjustments combine, called from `finscrape/pipeline.py`. The two multiplicative steps

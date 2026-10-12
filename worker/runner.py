@@ -27,6 +27,8 @@ from server.correlate import (
     NewsItem,
     Prediction,
     analyze_correlations,
+    extract_topics,
+    watch_symbols,
 )
 from server.geocode import geocode_event
 from server.ingest import canonical_url, ingest_events
@@ -126,14 +128,17 @@ async def store_analysis(pool: asyncpg.Pool, event_ids: list[int]) -> int:
 
 async def merge_coverage(
     pool: asyncpg.Pool, merges: list[tuple[str, str, str]]
-) -> None:
-    """Apply the pipeline's same-story merges (subject, url, source) to Postgres.
+) -> list[tuple[str, str, str]]:
+    """Apply the pipeline's same-story merges (subject, url, source) to Postgres and
+    return the ones whose row does not exist yet.
 
-    The pipeline stores subjects normalized, so the subject it matched is the exact
-    string the Postgres row carries.
+    The target is found by its exact subject: the pipeline only collapses whitespace,
+    and ingest writes the subject as given. Sources ingest concurrently, so a merge can
+    point at an event another source has accepted but not written yet.
     """
-    for subject, url, source in merges:
-        await pool.execute(
+    missed = []
+    for merge in merges:
+        status = await pool.execute(
             """
             UPDATE events SET
               articles = CASE WHEN articles ? $2 THEN articles
@@ -142,10 +147,11 @@ async def merge_coverage(
                               ELSE sources || to_jsonb($3::text) END
             WHERE id = (SELECT id FROM events WHERE subject = $1 ORDER BY id DESC LIMIT 1)
             """,
-            subject,
-            url,
-            source,
+            *merge,
         )
+        if status == "UPDATE 0":
+            missed.append(merge)
+    return missed
 
 
 class PostgresEvents:
@@ -229,6 +235,23 @@ def _source_type(source: str) -> str:
     return tail if tail in _TIERS else "other"
 
 
+def velocity_history(rows: list, now: float, window_hours: int) -> dict[str, list[int]]:
+    """Topic mention counts for each of the windows before the current one, oldest
+    first, from (subject, source, epoch seconds) rows. Quiet windows count as 0."""
+    width = window_hours * 3600
+    windows = max(1, VELOCITY_WINDOW_DAYS * 24 // window_hours)
+    buckets: list[list[NewsItem]] = [[] for _ in range(windows)]
+    for subject, source, ts in rows:
+        i = int((now - ts) // width) - 1
+        if 0 <= i < windows:
+            buckets[i].append(NewsItem(title=subject, link="", source=source))
+    counts = [extract_topics(b) for b in reversed(buckets)]
+    return {
+        topic: [c.get(topic, {}).get("velocity", 0) for c in counts]
+        for topic in {t for c in counts for t in c}
+    }
+
+
 class Worker:
     def __init__(self, pool: asyncpg.Pool, max_articles: int = 20):
         self.pool = pool
@@ -236,13 +259,7 @@ class Worker:
         self.sources = build_sources(max_articles)
         self.enrichers = build_enrichers()
         self.pipeline = FinScrapePipeline(PostgresEvents(pool))
-        # Not None: `--once` runs have no earlier cycle to seed from, and the
-        # correlations upsert already drops repeats.
-        self._corr_snapshot: dict | None = {}
-        self._corr_seen: set[str] = set()
-        # Per-topic mention counts from previous cycles. detect_velocity_spike needs a
-        # non-zero baseline to fire at all, so without this it can never emit.
-        self._corr_velocity: dict[str, list[int]] = {}
+        self._unmerged: list[tuple[str, str, str]] = []
 
     def _analyze_blocking(
         self, source_name: str, items: list[Item]
@@ -292,7 +309,7 @@ class Worker:
                 self._analyze_blocking, name, fresh
             )
             result = await ingest_events(self.pool, dicts)
-            await merge_coverage(self.pool, merges)
+            await self._merge(merges)
             await mark_visited(self.pool, name, judged)
             status = "OK" if items else "EMPTY"
             await record_source_health(self.pool, name, len(items), status)
@@ -340,7 +357,16 @@ class Worker:
             refresh_social(self.pool),
             return_exceptions=True,
         )
+        await self._merge([])
+        if self._unmerged:
+            log.warning("%d merges found no event", len(self._unmerged))
+            self._unmerged = []
         await self.run_correlations()
+
+    async def _merge(self, merges: list[tuple[str, str, str]]) -> None:
+        """Apply merges plus earlier ones whose event had not been written yet."""
+        pending, self._unmerged = self._unmerged, []
+        self._unmerged.extend(await merge_coverage(self.pool, pending + merges))
 
     async def run_backtest(self) -> int:
         """Score matured directional verdicts against the price move in the window
@@ -354,8 +380,9 @@ class Worker:
         )
 
     async def _recent_markets(self, lookback_hours: int) -> list[Market]:
-        """Price moves for the most-mentioned recent tickers → feeds detect_market
-        (explained_market_move / silent_divergence). Market fetch is cached + batched
+        """Price moves for the most-mentioned recent tickers plus the fixed watch list →
+        feeds detect_market. Tickers picked from the news always have coverage, so only
+        the watch list can show a silent move. Market fetch is cached + batched
         (finscrape.market_data) and runs off the event loop."""
         rows = await self.pool.fetch(
             "SELECT jsonb_array_elements_text(tickers) AS t, count(*) AS c FROM events "
@@ -364,9 +391,9 @@ class Worker:
             "GROUP BY t ORDER BY c DESC LIMIT 25",
             str(lookback_hours),
         )
-        tickers = [r["t"] for r in rows if r["t"]]
-        if not tickers:
-            return []
+        tickers = list(
+            dict.fromkeys([*(r["t"] for r in rows if r["t"]), *watch_symbols()])
+        )
         data = await asyncio.to_thread(get_market_data, tickers)
         return [
             Market(symbol=d["ticker"], change=float(d.get("change_percent", 0.0)))
@@ -397,16 +424,23 @@ class Worker:
             for r in rows
         ]
         markets = await self._recent_markets(lookback_hours)
-        signals, snapshot = analyze_correlations(
+        # State comes from Postgres: a `--once` run is a fresh process with no memory.
+        seen = {
+            r["dedupe_key"]
+            for r in await self.pool.fetch(
+                "SELECT dedupe_key FROM correlations "
+                "WHERE detected_at >= now() - ($1 || ' hours')::interval",
+                str(lookback_hours),
+            )
+        }
+        signals, _ = analyze_correlations(
             items,
             markets=markets,
             predictions=await self._recent_predictions(lookback_hours),
-            prev_snapshot=self._corr_snapshot,
-            seen=self._corr_seen,
-            velocity_history=self._corr_velocity,
+            prev_snapshot={},
+            seen=seen,
+            velocity_history=await self._velocity_history(lookback_hours),
         )
-        self._corr_snapshot = snapshot
-        self._record_velocity(snapshot)
         await persist_correlations(self.pool, signals)
         if signals:
             log.info("correlations: emitted %d signals", len(signals))
@@ -421,16 +455,18 @@ class Worker:
         strongest = await get_recent_predictions(self.pool, lookback_hours)
         return [Prediction(symbol=sym, shift=shift) for sym, shift in strongest.items()]
 
-    def _record_velocity(self, snapshot: dict) -> None:
-        """Append this cycle's topic velocities to the rolling baseline window.
-
-        A topic absent this cycle records 0 so a story that goes quiet decays out of
-        its own baseline instead of holding the spike threshold high forever.
-        """
-        interval = max(1, get_settings().worker_interval_minutes)
-        window = max(2, int(VELOCITY_WINDOW_DAYS * 24 * 60 / interval))
-        topics = snapshot.get("topics", {})
-        for topic in set(self._corr_velocity) | set(topics):
-            hist = self._corr_velocity.setdefault(topic, [])
-            hist.append(int(topics.get(topic, 0)))
-            del hist[:-window]
+    async def _velocity_history(self, lookback_hours: int) -> dict[str, list[int]]:
+        rows = await self.pool.fetch(
+            "SELECT subject, sources->>0 AS source, extract(epoch FROM timestamp) AS ts, "
+            "extract(epoch FROM now()) AS now FROM events "
+            "WHERE timestamp >= now() - ($1 || ' hours')::interval",
+            str(VELOCITY_WINDOW_DAYS * 24 + lookback_hours),
+        )
+        if not rows:
+            return {}
+        now = float(rows[0]["now"])
+        return velocity_history(
+            [(r["subject"], r["source"] or "", float(r["ts"])) for r in rows],
+            now,
+            lookback_hours,
+        )

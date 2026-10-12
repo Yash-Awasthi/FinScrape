@@ -64,8 +64,9 @@ def verdict_outcome(verdict: str, change_pct: float) -> str:
 
 
 def aggregate(rows: list[dict]) -> dict:
-    """rows: {verdict, correct(bool|None), checked_at}. Returns hit-rate overall + by
-    verdict + a cumulative equity curve (+1 correct / -1 incorrect, time-ordered)."""
+    """rows: {verdict, correct(bool|None), at, move?}. `at` is the event time and `move` the
+    % move signed toward the call. Returns hit-rate overall + by verdict + a cumulative
+    equity curve (+1 correct / -1 incorrect, in event order)."""
     scored = [r for r in rows if r.get("correct") is not None]
     hits = sum(1 for r in scored if r["correct"])
     by_verdict: dict[str, dict] = {}
@@ -79,18 +80,16 @@ def aggregate(rows: list[dict]) -> dict:
 
     equity: list[float] = []
     cum = 0.0
-    for r in sorted(scored, key=lambda x: x.get("checked_at") or ""):
+    for r in sorted(scored, key=lambda x: x.get("at") or ""):
         cum += 1 if r["correct"] else -1
         equity.append(cum)
 
-    # Per-step returns of the equity walk (each hit/miss relative to the stake so
-    # far) feed the empyrical-backed metric engine — sharpe/sortino/drawdown.
-    step_returns: list[float] = []
-    prev = 0.0
-    for value in equity:
-        base = max(1.0, abs(prev))
-        step_returns.append((value - prev) / base)
-        prev = value
+    # One unit staked on every call, neutral ones too: the return is the realized move.
+    step_returns = [
+        r["move"] / 100
+        for r in sorted(rows, key=lambda x: x.get("at") or "")
+        if r.get("move") is not None
+    ]
 
     return {
         "total": len(rows),
