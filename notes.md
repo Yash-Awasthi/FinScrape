@@ -62,6 +62,10 @@ A fresh clone starts with `make demo` (`docs/DEMO.md` is the walkthrough).
   event's `articles` / `sources`. Storylines group follow-up stories on top of that:
   embeddings where Ollama runs, otherwise `clusters.same_story` (a shared ticker plus half
   the headline's words), which on 12 Oct grouped 200 production events into 178 storylines.
+- 12 Oct: 122 `finscrape` modules reached from neither `server/`, `worker/` nor `scripts/`
+  (services, trading, the council copy, exchanges, sentiment, edgar, the root `main.py`
+  CLI) and the `/api/v1` routers were removed with their tests. `finscrape/engine/scrapling`
+  is vendored whole and was left alone.
 - Migration 0013 (12 Oct) relabelled score-0 CAUTIOUS rows to OBSERVE and dropped
   `social_posts`; the backup run 38281322368 just before it holds the prior state.
 - The LLM's reasoning invents technology angles, so Laya reads article text, never the
