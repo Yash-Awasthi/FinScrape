@@ -119,7 +119,7 @@ class TestConditionOperators:
 class TestAction:
 
     def test_valid_types(self):
-        for t in ("telegram", "dashboard_push", "log", "webhook"):
+        for t in ("telegram", "log", "webhook"):
             a = Action(action_type=t)
             assert a.action_type == t
 
@@ -255,17 +255,13 @@ class TestEngineEvaluate:
         actions = [
             Action(action_type="telegram", config={"chat_id": "123"}),
             Action(action_type="webhook", config={}),
-            Action(action_type="dashboard_push"),
         ]
         with caplog.at_level(logging.WARNING, logger="finscrape.alerts"):
             results = engine.execute_actions(_sample_event(), actions)
-        assert len(results) == 3
+        assert len(results) == 2
         # Telegram skips without bot_token
         assert results[0]["action_type"] == "telegram"
         assert results[0]["status"] == "skipped"
         # Webhook skips without url
         assert results[1]["action_type"] == "webhook"
         assert results[1]["status"] == "skipped"
-        # Dashboard skips if not configured
-        assert results[2]["action_type"] == "dashboard_push"
-        assert results[2]["status"] == "skipped"

@@ -102,10 +102,10 @@ class Condition:
 class Action:
     """An action to fire when a rule matches."""
 
-    action_type: str  # telegram, discord, slack, dashboard_push, log, webhook
+    action_type: str  # telegram, discord, slack, log, webhook
     config: dict = field(default_factory=dict)
 
-    VALID_TYPES = frozenset({"telegram", "discord", "slack", "dashboard_push", "log", "webhook"})
+    VALID_TYPES = frozenset({"telegram", "discord", "slack", "log", "webhook"})
 
     def __post_init__(self) -> None:
         if self.action_type not in self.VALID_TYPES:
@@ -224,9 +224,6 @@ class AlertEngine:
         elif action.action_type == "webhook":
             return self._send_webhook_alert(event, action)
 
-        elif action.action_type == "dashboard_push":
-            return self._send_dashboard_alert(event, action)
-
         return {"action_type": action.action_type, "status": "unknown_type"}
 
     def _send_telegram_alert(self, event: dict, action: Action) -> dict:
@@ -309,18 +306,6 @@ class AlertEngine:
         except requests.RequestException as e:
             logger.error("Webhook POST failed: %s", e)
             return {"action_type": "webhook", "status": "error", "error": str(e)}
-
-    def _send_dashboard_alert(self, event: dict, action: Action) -> dict:
-        """Push alert event to dashboard."""
-        from finscrape.dashboard import DashboardClient
-        client = DashboardClient()
-        if not client.is_configured:
-            return {"action_type": "dashboard_push", "status": "skipped", "reason": "not configured"}
-
-        alert_event = dict(event)
-        alert_event["alert_triggered"] = True
-        result = client.push_events([alert_event])
-        return {"action_type": "dashboard_push", "status": "ok", "result": result}
 
     # -- presets (class methods) ---------------------------------------------
 
