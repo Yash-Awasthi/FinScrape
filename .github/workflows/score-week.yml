@@ -22,9 +22,5 @@ jobs:
       FINSCRAPE_LAYA: "0"
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.2.0
-        with:
-          enable-cache: true
-      - run: uv python install 3.13
-      - run: uv sync -p 3.13 --group server
+      - uses: ./.github/actions/setup-python
       - run: uv run --no-sync python -u -m worker.score_week

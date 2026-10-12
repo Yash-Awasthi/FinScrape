@@ -52,8 +52,8 @@ SCORING CALIBRATION:
 
 VERDICT GUIDELINES:
 - INVEST: Strong positive signal (score >= 3) with high confidence.
-- OBSERVE: Mildly positive or unclear (score 1-2), warrants monitoring.
-- CAUTIOUS: Mildly negative or ambiguous (score -2 to 0), exercise caution.
+- OBSERVE: Mildly positive or unclear (score 0 to 2), warrants monitoring.
+- CAUTIOUS: Mildly negative (score -2 to -1), exercise caution.
 - PULL_OUT: Strong negative signal (score <= -3), significant downside risk.
 
 You return ONLY valid JSON. No commentary, no markdown fences."""
@@ -195,8 +195,8 @@ SCORING CALIBRATION:
 
 VERDICT GUIDELINES:
 - INVEST: Strong positive catalyst with momentum potential (score +3 to +5).
-- OBSERVE: Mild positive catalyst or news that could shift sentiment (score +1 to +2).
-- CAUTIOUS: News that creates uncertainty or headwinds (score -1 to 0).
+- OBSERVE: Mild positive catalyst or news that could shift sentiment (score 0 to +2).
+- CAUTIOUS: News that creates uncertainty or headwinds (score -2 to -1).
 - PULL_OUT: Clear negative catalyst with selling pressure (score -2 to -5).
 
 KEY INSIGHTS TO HIGHLIGHT:
@@ -248,8 +248,8 @@ SCORING CALIBRATION:
 
 VERDICT GUIDELINES:
 - INVEST: News that materially improves long-term value proposition (score +3 to +5).
-- OBSERVE: Mildly positive for long-term outlook, worth monitoring (score +1 to +2).
-- CAUTIOUS: Negative or uncertain implications for business fundamentals (score -1 to 0).
+- OBSERVE: Mildly positive for long-term outlook, worth monitoring (score 0 to +2).
+- CAUTIOUS: Negative or uncertain implications for business fundamentals (score -2 to -1).
 - PULL_OUT: Structural damage to business model or competitive position (score -2 to -5).
 
 KEY INSIGHTS TO HIGHLIGHT:

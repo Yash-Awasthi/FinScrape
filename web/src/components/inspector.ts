@@ -3,8 +3,8 @@
 // Replaces the modal. A terminal keeps the detail beside the feed rather than over
 // it, so j/k can walk rows and read each one without a dialog opening and closing.
 
-import { type AIAnalysis, api, type EventOut, type Prediction, verdictColor } from "../api";
-import { escapeHtml, sourceLabel } from "../util";
+import { type AIAnalysis, api, type Council, type EventOut, type Prediction, verdictColor } from "../api";
+import { escapeHtml, fmtPct, sourceLabel, timeAgo } from "../util";
 
 // A backup analysis job takes 1-2 minutes; stop asking after 4.
 const PENDING_POLL_MS = 15_000;
@@ -62,8 +62,11 @@ export class Inspector {
       this.reasoning(ev),
       ...this.entities(ev),
       ...this.chain(ev),
+      ...this.coverage(ev),
       ...this.prediction(ev),
+      ...this.outcome(ev),
       ...this.analysis(ev),
+      ...this.council(ev),
     );
   }
 
@@ -82,7 +85,9 @@ export class Inspector {
 
     const meta = document.createElement("div");
     meta.className = "insp-meta";
-    meta.textContent = `${ev.event_type} · ${Math.round(ev.confidence * 100)}% · ${ev.tickers.join(", ") || "no tickers"} · ${ev.sources.map(sourceLabel).join(", ")}`;
+    meta.textContent =
+      `${ev.event_type} · ${ev.sector_impact || "no sector"} · confidence ${Math.round(ev.confidence * 100)}% · ` +
+      `${ev.magnitude} magnitude · ${timeAgo(ev.timestamp)} ago · ${ev.tickers.join(", ") || "no tickers"}`;
 
     wrap.append(badge, h, meta);
     return wrap;
@@ -122,6 +127,92 @@ export class Inspector {
       ul.append(li);
     }
     return [head, ul];
+  }
+
+  /** Every article merged into this event: corroboration is the evidence. */
+  private coverage(ev: EventOut): HTMLElement[] {
+    const head = document.createElement("h3");
+    head.className = "insp-section";
+    head.textContent = `Coverage (${ev.articles.length} article${ev.articles.length === 1 ? "" : "s"}, ${ev.sources.length} source${ev.sources.length === 1 ? "" : "s"})`;
+    const ul = document.createElement("ul");
+    ul.className = "insp-links";
+    ul.innerHTML = ev.articles
+      .slice(0, 8)
+      // Articles and sources are deduped separately, so their positions do not pair up.
+      .map((url) => `<li><a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(host(url))}</a></li>`)
+      .join("");
+    const from = document.createElement("p");
+    from.className = "muted";
+    from.textContent = `Sources: ${ev.sources.map(sourceLabel).join(", ") || "—"}`;
+    return [head, ul, from];
+  }
+
+  /** How the call did once its window closed, or why it has no score. */
+  private outcome(ev: EventOut): HTMLElement[] {
+    const head = document.createElement("h3");
+    head.className = "insp-section";
+    head.textContent = "Outcome";
+    const box = document.createElement("div");
+    box.className = "insp-outcome";
+    if (ev.verdict !== "INVEST" && ev.verdict !== "PULL_OUT") {
+      box.textContent = `${ev.verdict} is not a directional call, so it is not scored.`;
+      return [head, box];
+    }
+    box.textContent = "…";
+    void api
+      .outcomes({ event_id: ev.id })
+      .then(([o]) => {
+        if (this.current !== ev.id) return;
+        if (!o) {
+          box.textContent = "Not scored yet: the next trading day has not closed, or no price data.";
+          return;
+        }
+        const line = (label: string, move: number | null, hit: boolean | null): string =>
+          move == null
+            ? `<li>${label}: <span class="muted">window open</span></li>`
+            : `<li>${label}: <span class="${hit == null ? "muted" : hit ? "up" : "down"}">${hit == null ? "under 1%, not counted" : hit ? "right" : "wrong"} ${fmtPct(move)}</span></li>`;
+        box.innerHTML =
+          `<ul>${line("Next day", o.price_move_pct, o.correct)}${line("+2 days vs SPY", o.ex2, o.correct2)}` +
+          `${line("+4 days vs SPY", o.ex4, o.correct4)}</ul>`;
+      })
+      .catch(() => {
+        if (this.current === ev.id) box.textContent = "Outcome unavailable.";
+      });
+    return [head, box];
+  }
+
+  /** Analyst personas debate the event; a judge reads the transcript. Opt-in server-side. */
+  private council(ev: EventOut): HTMLElement[] {
+    const btn = document.createElement("button");
+    btn.className = "ai-btn secondary";
+    btn.textContent = "Ask the analyst council";
+    const out = document.createElement("div");
+    out.className = "ai-out";
+    btn.addEventListener("click", () => {
+      btn.disabled = true;
+      out.textContent = "The council is debating (up to a minute)…";
+      api
+        .council(ev.id)
+        .then((c: Council) => {
+          if (this.current !== ev.id) return;
+          out.innerHTML =
+            `<b>${escapeHtml(c.consensus_verdict)}</b> · score ${c.consensus_score >= 0 ? "+" : ""}${c.consensus_score} · ` +
+            `${Math.round(c.agreement_level * 100)}% agreement` +
+            (c.dissenting_agents.length ? ` · dissent: ${escapeHtml(c.dissenting_agents.join(", "))}` : "") +
+            list("Risks", c.key_risks) +
+            list("Opportunities", c.key_opportunities);
+        })
+        .catch((err: Error) => {
+          if (this.current !== ev.id) return;
+          out.textContent = err.message.includes("404")
+            ? "The council is switched off on this server (WORLDFIN_ENABLE_COUNCIL)."
+            : "Council unavailable.";
+        })
+        .finally(() => {
+          btn.disabled = false;
+        });
+    });
+    return [btn, out];
   }
 
   /** Calibrated probability the verdict's direction realizes, with its sample size. */
@@ -193,5 +284,18 @@ export class Inspector {
     };
     btn.addEventListener("click", () => void run());
     return [btn, out];
+  }
+}
+
+function list(title: string, items: string[]): string {
+  if (!items.length) return "";
+  return `<h4 class="insp-section">${title}</h4><ul>${items.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>`;
+}
+
+function host(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
   }
 }

@@ -27,7 +27,7 @@ against the market move that followed.
 | 📊 **Track record** | Every call re-scored against the window after the event: hit rate by verdict, reliability, Brier score (`/api/accuracy`) |
 | 🔗 **Correlations** | Fires when independent source types corroborate one story |
 | 🤖 **Council** | Optional analyst personas debate an event; a judge reads the transcript (`/api/ai/council`) |
-| 💬 **Sentiment, alerts** | Reddit posts per ticker, Telegram alerts, alert rules |
+| 🔔 **Alerts** | Telegram alerts on INVEST / PULL_OUT calls, a daily summary, alert rules |
 | 🏥 **Source health** | Per-source and per-feed freshness, shown on the dashboard |
 
 Sources: 32 world RSS feeds, the GDELT 15-minute events export, USGS earthquakes and
@@ -137,7 +137,6 @@ ops/ingest-cron/  Cloudflare cron Worker that dispatches ingest and keeps the AP
 docs/          architecture, deploy, runbook, data sources, demo, security
 ```
 
-`dashboard/` and [SETUP_WINDOWS.md](SETUP_WINDOWS.md) belong to the older standalone app.
 Current work is in [task.md](task.md); what is known and measured is in [notes.md](notes.md).
 
 ---

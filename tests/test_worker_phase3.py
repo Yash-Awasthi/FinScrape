@@ -29,38 +29,23 @@ def test_derive_status_stale_after_window():
     assert derive_status("OK", age_s=None, stale_after_min=60) == "OK"
 
 
-def test_velocity_history_builds_a_baseline_and_decays():
-    """detect_velocity_spike needs baseline > 0, so a worker that never records past
-    cycles can never emit the signal at all."""
-    from worker.runner import Worker
+def test_velocity_history_comes_from_earlier_windows():
+    """detect_velocity_spike needs a baseline > 0; `--once` runs keep no memory, so the
+    baseline is rebuilt from stored events, one window per lookback before now."""
+    from worker.runner import velocity_history
 
-    w = Worker.__new__(Worker)  # skip __init__: no pipeline or network needed
-    w._corr_velocity = {}
-
-    w._record_velocity({"topics": {"energy": 2}})
-    w._record_velocity({"topics": {"energy": 4, "conflict": 1}})
-    # energy went quiet; it still records a 0 so its baseline decays
-    w._record_velocity({"topics": {"conflict": 3}})
-
-    assert w._corr_velocity["energy"] == [2, 4, 0]
-    # conflict only appeared in cycle 2 — no back-fill, so a brand-new topic cannot
-    # spike against a baseline it never had.
-    assert w._corr_velocity["conflict"] == [1, 3]
-
-
-def test_velocity_history_window_is_bounded():
-    from server.correlate import VELOCITY_WINDOW_DAYS
-    from server.settings import get_settings
-    from worker.runner import Worker
-
-    w = Worker.__new__(Worker)
-    w._corr_velocity = {}
-    interval = max(1, get_settings().worker_interval_minutes)
-    window = max(2, int(VELOCITY_WINDOW_DAYS * 24 * 60 / interval))
-    for i in range(window + 10):
-        w._record_velocity({"topics": {"energy": i}})
-    assert len(w._corr_velocity["energy"]) == window
-    assert w._corr_velocity["energy"][-1] == window + 9
+    now, hour = 1_000_000.0, 3600
+    rows = [
+        ("Oil supply cut", "a", now - 1 * hour),  # current window: not baseline
+        ("Oil supply cut", "a", now - 25 * hour),  # 1 window back
+        ("Oil supply cut", "b", now - 26 * hour),
+        ("Oil price jumps", "a", now - 49 * hour),  # 2 windows back
+        ("Oil price jumps", "a", now - 9 * 24 * hour),  # outside 7 days
+    ]
+    hist = velocity_history(rows, now, 24)
+    assert len(hist["energy"]) == 7
+    assert hist["energy"][-2:] == [1, 2]
+    assert sum(hist["energy"]) == 3
 
 
 def _fake_worker():
@@ -85,7 +70,6 @@ def test_scheduler_covers_every_source_plus_correlate_and_backtest():
     assert ids == {
         "world_rss",
         "gdelt",
-        "social",
         "correlations",
         "backtest",
         "retention",
@@ -225,8 +209,8 @@ def test_first_correlation_run_can_emit(monkeypatch):
     written: list = []
 
     class Pool:
-        async def fetch(self, *a):
-            return rows
+        async def fetch(self, sql, *a):
+            return [] if "correlations" in sql or "epoch" in sql else rows
 
         async def execute(self, *a):
             written.append(a[2])
@@ -242,3 +226,56 @@ def test_first_correlation_run_can_emit(monkeypatch):
 
     assert asyncio.run(first_run()) > 0
     assert "convergence" in written
+
+
+def test_markets_include_symbols_the_news_never_named(monkeypatch):
+    """silent_divergence needs a move without coverage; news-picked tickers always have it."""
+    import asyncio
+
+    from server.correlate import ENERGY_SYMS
+    from worker import runner
+
+    asked: list = []
+
+    def fake_market(tickers):
+        asked.extend(tickers)
+        return []
+
+    class Pool:
+        async def fetch(self, *a):
+            return [{"t": "AAPL"}]
+
+    monkeypatch.setattr(runner, "get_market_data", fake_market)
+    w = runner.Worker.__new__(runner.Worker)
+    w.pool = Pool()
+    asyncio.run(w._recent_markets(24))
+    assert asked[0] == "AAPL" and "XOM" in asked and set(ENERGY_SYMS) <= set(asked)
+    assert len(asked) == len(set(asked))
+
+
+def test_merge_waits_for_an_event_another_source_has_not_written():
+    """Sources ingest concurrently: a merge into a still-pending event used to be lost."""
+    import asyncio
+
+    from worker import runner
+
+    rows: set[str] = set()
+    applied: list = []
+
+    class Pool:
+        async def execute(self, sql, subject, url, source):
+            if subject not in rows:
+                return "UPDATE 0"
+            applied.append(url)
+            return "UPDATE 1"
+
+    w = runner.Worker.__new__(runner.Worker)
+    w.pool, w._unmerged = Pool(), []
+
+    async def cycle():
+        await w._merge([("Oil halt", "https://b", "b")])  # source B, before A writes
+        rows.add("Oil halt")  # source A ingests
+        await w._merge([])
+
+    asyncio.run(cycle())
+    assert applied == ["https://b"] and w._unmerged == []

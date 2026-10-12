@@ -18,15 +18,6 @@ How the WorldFin backend defends its trust boundaries. All knobs are env vars (s
 - In-memory, process-local. Ceiling: a single API replica. Multi-replica upgrade path is a
   Redis sorted-set window keyed on `WORLDFIN_REDIS_URL` — noted in the module docstring.
 
-## SSRF guard
-
-- `/api/rss-proxy` only fetches URLs from the **feed registry** (gated by feed key — no
-  arbitrary user URL reaches the fetcher).
-- Defense in depth: `server/ssrf.py` resolves the host and rejects any non-public address
-  (loopback / private / link-local / reserved, incl. the `169.254.169.254` cloud-metadata
-  endpoint) **before** the request *and* on **every redirect hop** — a registry host that
-  302s to a private IP is still refused. Only `http`/`https` schemes are allowed.
-
 ## Security headers / CSP
 
 - Every API response carries `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,

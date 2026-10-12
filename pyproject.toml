@@ -24,7 +24,6 @@ dependencies = [
     "feedparser>=6.0.0",
     # Financial data
     "yfinance>=0.2.30",
-    "pytest>=9.0.3",
     "spacy>=3.8.14",
     "trafilatura>=2.2.0",
     "scipy>=1.17.1",
@@ -42,8 +41,7 @@ dev = [
     "pytest>=9.0.3",
     # Starlette's TestClient deprecates plain httpx in favour of httpx2.
     "httpx2>=2.13",
-    # Pinned: uv.lock is not committed, so an open range let CI pick up new default
-    # lint rules between runs. Upgrade deliberately and fix findings in the same change.
+    # Pinned so new default lint rules arrive deliberately, with their fixes.
     "ruff==0.16.9",
     "pyright==1.1.411",
     "pyarrow>=25.0.1",

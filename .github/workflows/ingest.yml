@@ -10,6 +10,9 @@ on:
         description: Ingest interval the cron Worker runs at (sets the no-new-events alert)
         default: "24"
 
+permissions:
+  contents: read
+
 concurrency:
   group: ingest
   cancel-in-progress: false
@@ -37,14 +40,10 @@ jobs:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.2.0
-        with:
-          enable-cache: true
-      - run: uv python install 3.13
-      # The locked torch pulls ~3 GB of CUDA wheels on Linux; Laya needs only the CPU build.
-      - name: Install dependencies with CPU-only Laya
+      - uses: ./.github/actions/setup-python
+      # Laya's default torch pulls ~3 GB of CUDA wheels on Linux; it needs only the CPU build.
+      - name: Install CPU-only Laya
         run: |
-          uv sync -p 3.13 --group server
           uv pip install -p .venv torch --index-url https://download.pytorch.org/whl/cpu
           uv pip install -p .venv "laya>=0.3.20"
       # vars.LAYA_RELEASE names the release holding the promoted checkpoint

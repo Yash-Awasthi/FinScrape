@@ -20,10 +20,10 @@ class Verdict(str, Enum):
 
     @classmethod
     def from_score(cls, score: int) -> Verdict:
-        # Symmetric: a -2 PULL_OUT hit 56% on realized moves, -3 and below 70%.
+        # Zero is no call, so it observes; only a negative score is cautious.
         if score >= 3:
             return cls.INVEST
-        elif score >= 1:
+        elif score >= 0:
             return cls.OBSERVE
         elif score >= -2:
             return cls.CAUTIOUS

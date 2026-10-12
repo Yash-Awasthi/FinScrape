@@ -298,3 +298,21 @@ def test_prediction_leads_news_is_reachable_through_the_orchestrator():
         busy, predictions=[Prediction("LMT", 10.0)], prev_snapshot={"topics": {}}
     )
     assert "prediction_leads_news" not in {s.type for s in sigs2}
+
+
+def test_several_stories_of_one_type_all_surface():
+    """A daily run covers many stories; one signal per type dropped all but the first."""
+    stories = [
+        "Oil pipeline supply halt in strait",
+        "Wheat export ban hits grain markets",
+        "Chip foundry fire halts semiconductor output",
+        "Copper mine strike shuts smelter",
+    ]
+    items = [
+        _item(t, tier, 9000.0 - i, source=f"{tier}{n}", link=f"{n}{tier}")
+        for n, t in enumerate(stories)
+        for i, tier in enumerate(("wire", "gov", "intel"))
+    ]
+    sigs, _ = analyze_correlations(items, prev_snapshot={"topics": {}})
+    conv = [s for s in sigs if s.type == "convergence"]
+    assert len(conv) == 3

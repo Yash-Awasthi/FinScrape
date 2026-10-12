@@ -77,8 +77,7 @@ class TestPipelineInit:
 class TestArticleProcessing:
 
     @patch("finscrape.pipeline.call_ai")
-    @patch("finscrape.pipeline.get_market_data", return_value=[{"ticker": "AAPL", "price": 185.0, "change_percent": 2.5}])
-    def test_analyze_article_produces_event(self, mock_market, mock_ai, sample_article, mock_ai_response):
+    def test_analyze_article_produces_event(self, mock_ai, sample_article, mock_ai_response):
         mock_ai.return_value = mock_ai_response
         pipeline = FinScrapePipeline(MemoryEvents())
         event = pipeline._analyze_article("yahoo", sample_article)
@@ -108,8 +107,7 @@ class TestArticleProcessing:
 class TestDeduplication:
 
     @patch("finscrape.pipeline.call_ai")
-    @patch("finscrape.pipeline.get_market_data", return_value=[{"ticker": "AAPL", "price": 185.0, "change_percent": 2.5}])
-    def test_duplicate_articles_merged(self, mock_market, mock_ai, mock_ai_response):
+    def test_duplicate_articles_merged(self, mock_ai, mock_ai_response):
         mock_ai.return_value = mock_ai_response
         pipeline = FinScrapePipeline(MemoryEvents())
 
@@ -141,8 +139,7 @@ class TestDeduplication:
 
 
     @patch("finscrape.pipeline.call_ai")
-    @patch("finscrape.pipeline.get_market_data", return_value=[])
-    def test_subject_keeps_its_case_and_dedup_ignores_it(self, mock_market, mock_ai, mock_ai_response):
+    def test_subject_keeps_its_case_and_dedup_ignores_it(self, mock_ai, mock_ai_response):
         # Lowercased subjects read "iran agrees to suspend enrichment" on every panel.
         pipeline = FinScrapePipeline(MemoryEvents())
         art = lambda n: ScrapedArticle(  # noqa: E731
@@ -184,8 +181,7 @@ class TestAlertActions:
 
 
 @patch("finscrape.pipeline.call_ai")
-@patch("finscrape.pipeline.get_market_data", return_value=[])
-def test_laya_direction_no_longer_marks_an_event_divergent(mock_market, mock_ai, sample_article, mock_ai_response):
+def test_laya_direction_no_longer_marks_an_event_divergent(mock_ai, sample_article, mock_ai_response):
     from finscrape.analysis.laya import LayaView
 
     mock_ai.return_value = mock_ai_response  # positive
@@ -193,3 +189,11 @@ def test_laya_direction_no_longer_marks_an_event_divergent(mock_market, mock_ai,
     with patch("finscrape.pipeline.laya.classify", return_value=opposite):
         event = FinScrapePipeline(MemoryEvents())._analyze_article("yahoo", sample_article)
     assert event is not None and event.divergence_flag is False
+
+
+@patch("finscrape.pipeline.check_divergence", return_value=True)
+@patch("finscrape.pipeline.call_ai")
+def test_divergent_call_is_never_directional(mock_ai, _div, sample_article, mock_ai_response):
+    mock_ai.return_value = {**mock_ai_response, "signal_score": 5}
+    event = FinScrapePipeline(MemoryEvents())._analyze_article("yahoo", sample_article)
+    assert event.divergence_flag and event.signal_score == 2 and event.verdict == "OBSERVE"

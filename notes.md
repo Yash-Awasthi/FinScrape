@@ -66,7 +66,6 @@ As of 3 Oct 2026: live and demo-ready. A fresh clone starts with `make demo`
 
 - The rate limiter and response cache live in process memory; on more than one replica each
   keeps its own counts. The upgrade path is Redis.
-- `is_public_ip` treats documentation ranges such as `203.0.113.0/24` as private.
 - The vendored `finscrape/` tree has its own ruff debt and sits outside `NEW_DIRS`.
 
 ## Local hazards

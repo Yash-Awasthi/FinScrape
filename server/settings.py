@@ -101,8 +101,10 @@ class Settings(BaseSettings):
     )
     # Days kept in correlations / scrape_runs / ai_analysis_cache; 0 keeps forever.
     retention_days: int = Field(default=90, validation_alias="WORLDFIN_RETENTION_DAYS")
+    # Production ingests once a day (INGEST_EVERY_HOURS=24), so a source is stale only
+    # after a missed run plus an hour of slack; scripts/check_prod.py alerts sooner.
     source_stale_after_minutes: int = Field(
-        default=60, validation_alias="WORLDFIN_SOURCE_STALE_MIN"
+        default=25 * 60, validation_alias="WORLDFIN_SOURCE_STALE_MIN"
     )
     # Build the scenario cache at boot so the first caller doesn't pay the full
     # Ollama embedding pass. Off in tests, which have neither Ollama nor a DB.

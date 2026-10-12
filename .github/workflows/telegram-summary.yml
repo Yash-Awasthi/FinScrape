@@ -18,9 +18,5 @@ jobs:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.2.0
-        with:
-          enable-cache: true
-      - run: uv python install 3.13
-      - run: uv sync -p 3.13 --group server
+      - uses: ./.github/actions/setup-python
       - run: uv run --no-sync python -m worker.telegram_summary
