@@ -29,12 +29,7 @@ function esc(s: string): string {
  * a 200-dollar stock moving 2 dollars is a flat line against a zero baseline, so pass
  * false and let the series fill its own band.
  */
-export function sparkline(
-  values: number[],
-  label = "trend",
-  stroke = UP,
-  fromZero = true,
-): string {
+export function sparkline(values: number[], label = "trend", stroke = UP, fromZero = true): string {
   if (values.length < 2) return "";
   const w = 240;
   const h = 48;
@@ -79,11 +74,7 @@ export function barChart(bars: Bar[], label = "breakdown"): string {
 }
 
 /** Vertical columns — daily volume and other evenly-spaced series. */
-export function columns(
-  values: number[],
-  label = "volume",
-  onPick?: string,
-): string {
+export function columns(values: number[], label = "volume", onPick?: string): string {
   if (!values.length) return "";
   const max = Math.max(1, ...values);
   const cols = values
@@ -100,9 +91,7 @@ export function columns(
 }
 
 /** One bar split into proportional segments — parts of a whole, in place. */
-export function stackedBar(
-  segments: { value: number; color: string; label: string }[],
-): string {
+export function stackedBar(segments: { value: number; color: string; label: string }[]): string {
   const total = segments.reduce((a, s) => a + s.value, 0);
   if (total <= 0) return "";
   const parts = segments
@@ -160,7 +149,10 @@ export function calibration(points: CalPoint[], label = "calibration"): string {
     })
     .join("");
   const aria = usable
-    .map((p) => `${p.label} predicted ${Math.round(p.predicted * 100)}% observed ${Math.round(p.observed * 100)}%`)
+    .map(
+      (p) =>
+        `${p.label} predicted ${Math.round(p.predicted * 100)}% observed ${Math.round(p.observed * 100)}%`,
+    )
     .join(", ");
 
   return (

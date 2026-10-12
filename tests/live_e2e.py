@@ -139,7 +139,7 @@ def main() -> None:
             node = shutil.which("node")
             if node is None:
                 raise RuntimeError("Node.js is required")
-            vite = str(ROOT / "web/node_modules/vite/bin/vite.js")
+            vite = str(ROOT / "web/node_modules/vite-plus/bin/vp")
             config = str(ROOT / "web/vite.live.config.ts")
             subprocess.run(
                 [node, vite, "build", "--config", config], cwd=ROOT / "web", check=True

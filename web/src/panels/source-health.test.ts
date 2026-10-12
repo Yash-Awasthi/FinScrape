@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 import { api, type HealthResponse } from "../api";
 import { timeAgo } from "../util";
@@ -32,10 +32,29 @@ describe("timeAgo", () => {
 
 describe("SourceHealthPanel", () => {
   it("keeps the last known statuses with a stale warning and retries", async () => {
-    const request = vi.spyOn(api, "health")
-      .mockResolvedValueOnce(health([{ source: "world/test", status: "STALE", fetched_at: "2026-01-01T00:00:00Z", record_count: 3 }]))
+    const request = vi
+      .spyOn(api, "health")
+      .mockResolvedValueOnce(
+        health([
+          {
+            source: "world/test",
+            status: "STALE",
+            fetched_at: "2026-01-01T00:00:00Z",
+            record_count: 3,
+          },
+        ]),
+      )
       .mockRejectedValueOnce(new Error("offline"))
-      .mockResolvedValueOnce(health([{ source: "world/test", status: "OK", fetched_at: new Date().toISOString(), record_count: 4 }]));
+      .mockResolvedValueOnce(
+        health([
+          {
+            source: "world/test",
+            status: "OK",
+            fetched_at: new Date().toISOString(),
+            record_count: 4,
+          },
+        ]),
+      );
     const panel = new SourceHealthPanel();
     await panel.load();
     await painted();
@@ -43,7 +62,9 @@ describe("SourceHealthPanel", () => {
     await painted();
     expect(panel.body.textContent).toContain("world/test");
     expect(panel.body.textContent).toContain("last known");
-    expect(panel.body.querySelector('[role="status"]')?.textContent).toContain("Health unavailable");
+    expect(panel.body.querySelector('[role="status"]')?.textContent).toContain(
+      "Health unavailable",
+    );
     panel.body.querySelector<HTMLButtonElement>("button")!.click();
     await painted();
     expect(request).toHaveBeenCalledTimes(3);
@@ -52,14 +73,18 @@ describe("SourceHealthPanel", () => {
   });
 
   it("summarizes stale and failing sources without claiming everything is live", async () => {
-    vi.spyOn(api, "health").mockResolvedValue(health([
-      { source: "late", status: "STALE", fetched_at: null, record_count: 1 },
-      { source: "broken", status: "WARN", fetched_at: null, record_count: 0 },
-    ]));
+    vi.spyOn(api, "health").mockResolvedValue(
+      health([
+        { source: "late", status: "STALE", fetched_at: null, record_count: 1 },
+        { source: "broken", status: "WARN", fetched_at: null, record_count: 0 },
+      ]),
+    );
     const panel = new SourceHealthPanel();
     await panel.load();
     await painted();
-    expect(panel.body.querySelector('[role="status"]')?.textContent).toContain("2 sources need attention");
+    expect(panel.body.querySelector('[role="status"]')?.textContent).toContain(
+      "2 sources need attention",
+    );
   });
 
   it("surfaces a failing source above healthy ones", async () => {

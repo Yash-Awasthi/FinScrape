@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { api, type Scenario } from "../api";
 import { ScenarioPanel } from "./panels";
@@ -84,7 +84,9 @@ describe("ScenarioPanel", () => {
 
   it("shows how many outcomes back the tier", async () => {
     const panel = await mount([scenario({ data_tier: "thin-data", sample_size: 13 })]);
-    expect(panel.el.querySelector(".sc-meta")!.textContent).toContain("thin record (13 scored calls)");
+    expect(panel.el.querySelector(".sc-meta")!.textContent).toContain(
+      "thin record (13 scored calls)",
+    );
   });
 
   it("does not say '1 reports'", async () => {
@@ -98,7 +100,7 @@ describe("ScenarioPanel", () => {
   });
 
   it("escapes a hostile title instead of executing it", async () => {
-    const panel = await mount([scenario({ title: '<img src=x onerror=alert(1)>' })]);
+    const panel = await mount([scenario({ title: "<img src=x onerror=alert(1)>" })]);
     expect(panel.el.querySelector("img")).toBeNull();
     expect(panel.el.querySelector(".sc-title")!.textContent).toContain("<img");
   });

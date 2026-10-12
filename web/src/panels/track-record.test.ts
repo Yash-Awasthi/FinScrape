@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { type Accuracy, api, type Outcome } from "../api";
 import { AccuracyPanel, OutcomesPanel, wilson } from "./panels";

@@ -1,6 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
-import { VIZ_COLORS, barChart, calibration, columns, signColor, sparkline, stackedBar } from "./viz";
+import {
+  VIZ_COLORS,
+  barChart,
+  calibration,
+  columns,
+  signColor,
+  sparkline,
+  stackedBar,
+} from "./viz";
 
 describe("viz primitives", () => {
   it("draws nothing rather than a degenerate figure", () => {
@@ -62,14 +70,12 @@ describe("viz primitives", () => {
   });
 
   it("escapes labels into the aria text", () => {
-    expect(barChart([{ label: '<img src=x>', value: 1 }])).not.toContain("<img");
+    expect(barChart([{ label: "<img src=x>", value: 1 }])).not.toContain("<img");
   });
 
   it("draws no calibration curve without a usable point", () => {
     expect(calibration([])).toBe("");
-    expect(
-      calibration([{ predicted: 0.5, observed: Number.NaN, weight: 1, label: "x" }]),
-    ).toBe("");
+    expect(calibration([{ predicted: 0.5, observed: Number.NaN, weight: 1, label: "x" }])).toBe("");
   });
 
   it("places a calibration point by predicted x and observed y", () => {

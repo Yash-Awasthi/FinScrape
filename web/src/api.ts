@@ -116,7 +116,7 @@ export interface HealthResponse {
 export interface Correlation {
   signal_type: string;
   confidence: number;
-  payload: Record<string, unknown>;
+  payload: { id?: string; value?: number } & Record<string, unknown>;
   detected_at: string;
 }
 
@@ -136,7 +136,12 @@ export interface Accuracy extends HitRate {
 
 export interface AIAnalysis {
   summary: string;
-  ticker_impacts: Array<{ ticker: string; direction: string; estimated_pct: string; reason: string }>;
+  ticker_impacts: Array<{
+    ticker: string;
+    direction: string;
+    estimated_pct: string;
+    reason: string;
+  }>;
   verdict_reason: string;
   /** No model answered; the text is the stored-signal summary. */
   heuristic?: boolean;
@@ -210,7 +215,6 @@ export interface Reliability {
   brier: { brier: number | null; n: number };
 }
 
-
 /** One scored call: the move after it, signed toward the call, and vs SPY at +2/+4 days. */
 export interface Outcome {
   event_id: number;
@@ -244,7 +248,9 @@ export async function getJSON<T>(path: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-function qs(params: Record<string, unknown>): string {
+type Param = string | number | undefined | null;
+
+function qs(params: Record<string, Param>): string {
   const sp = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== null && v !== "") sp.set(k, String(v));
@@ -255,18 +261,14 @@ function qs(params: Record<string, unknown>): string {
 
 export const api = {
   events: (q: EventQuery = {}) =>
-    getJSON<{ events: EventOut[] }>(`/api/events${qs(q as Record<string, unknown>)}`).then(
-      (r) => r.events,
-    ),
+    getJSON<{ events: EventOut[] }>(`/api/events${qs({ ...q })}`).then((r) => r.events),
   stats: () => getJSON<DashboardStats>("/api/stats"),
   dates: () => getJSON<{ dates: DateCount[] }>("/api/dates").then((r) => r.dates),
   sectors: () => getJSON<{ sectors: Sector[] }>("/api/sectors").then((r) => r.sectors),
   storylines: () =>
     getJSON<{ storylines: Storyline[] }>("/api/storylines").then((r) => r.storylines),
   scenarios: (limit = 6) =>
-    getJSON<{ scenarios: Scenario[] }>(`/api/scenarios${qs({ limit })}`).then(
-      (r) => r.scenarios,
-    ),
+    getJSON<{ scenarios: Scenario[] }>(`/api/scenarios${qs({ limit })}`).then((r) => r.scenarios),
   correlations: (date?: string) =>
     getJSON<{ correlations: Correlation[] }>(`/api/correlations${qs({ date })}`).then(
       (r) => r.correlations,

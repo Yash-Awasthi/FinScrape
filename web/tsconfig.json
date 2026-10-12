@@ -11,7 +11,7 @@
     "noFallthroughCasesInSwitch": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "types": ["vitest/globals"],
+    "types": ["vite-plus/test/globals", "node"],
     "isolatedModules": true,
     "verbatimModuleSyntax": false
   },

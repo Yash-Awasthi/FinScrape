@@ -4,13 +4,41 @@ import { API_BASE } from "../api";
 
 // ---- content ----------------------------------------------------------------
 const FEATURES: [string, string, string][] = [
-  ["🌍", "Live globe", "Every event geolocated, colored by verdict. Click a point for the full reasoning chain."],
-  ["🎯", "Event → ticker resolution", "A Strait-of-Hormuz headline becomes XOM, CVX, RTX, ZIM — with per-entity impact."],
-  ["🔗", "Second-order effects", "The knock-on chain: war-risk premiums, rerouting, LNG spillover, insurer exposure."],
-  ["⚖️", "Multi-agent AI council", "On demand, analyst personas deliberate a call and surface consensus and dissent."],
-  ["📈", "Accuracy proof", "Every call scored next day and against SPY at +2 and +4 days, with confidence intervals and the full list of calls."],
-  ["🛰️", "Correlation engine", "Flags when 3+ independent source-types corroborate a story — before it's news."],
-  ["⚡", "Breaking-news detection", "Wire + gov + intel triangulation fires a banner the moment a story converges."],
+  [
+    "🌍",
+    "Live globe",
+    "Every event geolocated, colored by verdict. Click a point for the full reasoning chain.",
+  ],
+  [
+    "🎯",
+    "Event → ticker resolution",
+    "A Strait-of-Hormuz headline becomes XOM, CVX, RTX, ZIM — with per-entity impact.",
+  ],
+  [
+    "🔗",
+    "Second-order effects",
+    "The knock-on chain: war-risk premiums, rerouting, LNG spillover, insurer exposure.",
+  ],
+  [
+    "⚖️",
+    "Multi-agent AI council",
+    "On demand, analyst personas deliberate a call and surface consensus and dissent.",
+  ],
+  [
+    "📈",
+    "Accuracy proof",
+    "Every call scored next day and against SPY at +2 and +4 days, with confidence intervals and the full list of calls.",
+  ],
+  [
+    "🛰️",
+    "Correlation engine",
+    "Flags when 3+ independent source-types corroborate a story — before it's news.",
+  ],
+  [
+    "⚡",
+    "Breaking-news detection",
+    "Wire + gov + intel triangulation fires a banner the moment a story converges.",
+  ],
   ["🔔", "Telegram alerts", "Push INVEST / PULL_OUT signals straight to your phone."],
   ["📊", "Ticker view", "Every ticker the news named, its chart, and the calls that moved it."],
   ["⏱️", "Freshness guaranteed", "Only news ≤24h old, with per-source health monitoring."],
@@ -25,8 +53,7 @@ function fill(): void {
 
   const mini = document.getElementById("hero-stats");
   if (mini)
-    mini.innerHTML =
-      `<span><b id="mini-events">9,700+</b> events analysed</span><span><b>32</b> world feeds</span><span><b>$0</b> free-tier</span>`;
+    mini.innerHTML = `<span><b id="mini-events">9,700+</b> events analysed</span><span><b>32</b> world feeds</span><span><b>$0</b> free-tier</span>`;
 }
 
 // ---- live numbers from the API (the static copy stands in while it wakes) ----
@@ -37,8 +64,7 @@ interface LiveEvent {
   tickers: string[];
 }
 
-const esc = (s: string) =>
-  s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 async function getJSON<T>(path: string): Promise<T | null> {
   const ctl = new AbortController();
@@ -71,7 +97,11 @@ function callRow(e: LiveEvent): string {
 async function live(): Promise<void> {
   const [stats, accuracy, feeds, recent] = await Promise.all([
     getJSON<{ total_events: number }>("/api/stats"),
-    getJSON<{ scored: number; hit_rate: number; vs_spy?: Record<"d2" | "d4", { scored: number; hit_rate: number }> }>("/api/accuracy"),
+    getJSON<{
+      scored: number;
+      hit_rate: number;
+      vs_spy?: Record<"d2" | "d4", { scored: number; hit_rate: number }>;
+    }>("/api/accuracy"),
     getJSON<{ feeds: unknown[] }>("/api/feeds"),
     getJSON<{ events: LiveEvent[] }>("/api/events?limit=60"),
   ]);
@@ -88,7 +118,10 @@ async function live(): Promise<void> {
   // A handful of scored calls is not a track record; say so rather than quote it.
   if (accuracy && accuracy.scored >= 30) {
     setText("stat-hit", `${Math.round(accuracy.hit_rate * 100)}%`);
-    setText("stat-hit-label", `next day: of ${accuracy.scored} INVEST/PULL_OUT calls whose ticker moved 1% or more, the share that moved the way called`);
+    setText(
+      "stat-hit-label",
+      `next day: of ${accuracy.scored} INVEST/PULL_OUT calls whose ticker moved 1% or more, the share that moved the way called`,
+    );
   } else if (accuracy) {
     setText("stat-hit", String(accuracy.scored));
     setText("stat-hit-label", "calls scored so far against realized moves");
@@ -162,14 +195,25 @@ async function globe(): Promise<void> {
   try {
     const { default: Globe } = await import("globe.gl");
     const pts = [
-      [26.5, 56.2, "#ef4444"], [24.0, 121.0, "#f59e0b"], [40.7, -74.0, "#16c784"],
-      [51.5, -0.1, "#3b82f6"], [35.7, 139.7, "#16c784"], [25.2, 55.3, "#ef4444"],
-      [1.35, 103.8, "#16c784"], [-23.5, -46.6, "#f59e0b"], [55.7, 37.6, "#ef4444"],
-      [37.6, -122.4, "#16c784"], [19.4, -99.1, "#3b82f6"], [-33.9, 151.2, "#16c784"],
+      [26.5, 56.2, "#ef4444"],
+      [24.0, 121.0, "#f59e0b"],
+      [40.7, -74.0, "#16c784"],
+      [51.5, -0.1, "#3b82f6"],
+      [35.7, 139.7, "#16c784"],
+      [25.2, 55.3, "#ef4444"],
+      [1.35, 103.8, "#16c784"],
+      [-23.5, -46.6, "#f59e0b"],
+      [55.7, 37.6, "#ef4444"],
+      [37.6, -122.4, "#16c784"],
+      [19.4, -99.1, "#3b82f6"],
+      [-33.9, 151.2, "#16c784"],
     ].map(([lat, lng, color]) => ({ lat, lng, color }));
     const arcs = [
-      [26.5, 56.2, 51.5, -0.1], [24.0, 121.0, 37.6, -122.4], [55.7, 37.6, 51.5, -0.1],
-      [25.2, 55.3, 1.35, 103.8], [40.7, -74.0, 51.5, -0.1],
+      [26.5, 56.2, 51.5, -0.1],
+      [24.0, 121.0, 37.6, -122.4],
+      [55.7, 37.6, 51.5, -0.1],
+      [25.2, 55.3, 1.35, 103.8],
+      [40.7, -74.0, 51.5, -0.1],
     ].map(([sl, sg, el, eg]) => ({ sl, sg, el, eg }));
 
     const g = (Globe as any)()(host)
@@ -178,12 +222,21 @@ async function globe(): Promise<void> {
       .atmosphereColor("#16c784")
       .atmosphereAltitude(0.18)
       .pointsData(pts)
-      .pointLat("lat").pointLng("lng").pointColor("color")
-      .pointAltitude(0.04).pointRadius(0.42)
+      .pointLat("lat")
+      .pointLng("lng")
+      .pointColor("color")
+      .pointAltitude(0.04)
+      .pointRadius(0.42)
       .arcsData(arcs)
-      .arcStartLat("sl").arcStartLng("sg").arcEndLat("el").arcEndLng("eg")
+      .arcStartLat("sl")
+      .arcStartLng("sg")
+      .arcEndLat("el")
+      .arcEndLng("eg")
       .arcColor(() => ["#16c784", "rgba(22,199,132,0)"])
-      .arcDashLength(0.5).arcDashGap(1).arcDashAnimateTime(2200).arcStroke(0.5);
+      .arcDashLength(0.5)
+      .arcDashGap(1)
+      .arcDashAnimateTime(2200)
+      .arcStroke(0.5);
 
     const sz = () => g.width(host.clientWidth).height(host.clientHeight);
     sz();

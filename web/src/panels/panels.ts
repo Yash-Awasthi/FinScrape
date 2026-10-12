@@ -82,7 +82,8 @@ export class SectorPanel extends Panel {
         // chip size scales with event_count; color runs green→red by avg score
         const em = (0.95 + (s.event_count / maxCount) * 0.6).toFixed(2);
         const score = s.avg_score;
-        const color = score <= -2 ? "#ea3943" : score < 0 ? "#f58d3f" : score <= 2 ? "#3b82f6" : "#16c784";
+        const color =
+          score <= -2 ? "#ea3943" : score < 0 ? "#f58d3f" : score <= 2 ? "#3b82f6" : "#16c784";
         const tickers = s.top_tickers.length ? s.top_tickers.join(", ") : "—";
         const ratio = s.bull_bear_ratio == null ? "—" : `${s.bull_bear_ratio.toFixed(1)}:1`;
         return (
@@ -97,7 +98,8 @@ export class SectorPanel extends Panel {
       .join("");
     wrap.addEventListener("click", (e) => {
       const sector = (e.target as HTMLElement).closest<HTMLElement>(".sector-chip")?.dataset.sector;
-      if (sector) window.dispatchEvent(new CustomEvent("worldfin:select-sector", { detail: sector }));
+      if (sector)
+        window.dispatchEvent(new CustomEvent("worldfin:select-sector", { detail: sector }));
     });
     const chart = document.createElement("div");
     chart.innerHTML = barChart(
@@ -156,7 +158,8 @@ export class SuggestionsPanel extends Panel {
     }
   }
   private render(sugs: Suggestion[]): void {
-    if (!sugs.length) return this.setContent('<p class="empty">No tickers yet — ingest more events.</p>');
+    if (!sugs.length)
+      return this.setContent('<p class="empty">No tickers yet — ingest more events.</p>');
     const rows = sugs
       .map((s) => {
         const color = s.latest_verdict ? verdictColor(s.latest_verdict) : VIZ_COLORS.muted;
@@ -232,7 +235,9 @@ export class CandlesPanel extends Panel {
       `<div class="candles-body"><p class="muted">Loading…</p></div>` +
       `<div class="candles-calls"></div>`;
     wrap.addEventListener("click", (e) => {
-      const id = Number((e.target as HTMLElement).closest<HTMLElement>("[data-event-id]")?.dataset.eventId);
+      const id = Number(
+        (e.target as HTMLElement).closest<HTMLElement>("[data-event-id]")?.dataset.eventId,
+      );
       const event = this.events().find((ev) => ev.id === id);
       if (event) this.onSelect(event);
     });
@@ -240,7 +245,7 @@ export class CandlesPanel extends Panel {
       e.preventDefault();
       const input = wrap.querySelector<HTMLInputElement>(".candles-symbol")!;
       this.symbol = input.value.toUpperCase().trim() || this.symbol;
-      this.period = (wrap.querySelector<HTMLSelectElement>(".candles-period")!).value;
+      this.period = wrap.querySelector<HTMLSelectElement>(".candles-period")!.value;
       void this.refresh();
     });
     this.shell = wrap;
@@ -304,7 +309,9 @@ export class CandlesPanel extends Panel {
       const avg = candles.slice(i - 19, i + 1).reduce((s, c) => s + c.c, 0) / 20;
       sma.push({ x: pad + i * step + step / 2, v: avg });
     }
-    const smaPath = sma.map((s, i) => `${i === 0 ? "M" : "L"}${s.x.toFixed(1)},${y(s.v).toFixed(1)}`).join(" ");
+    const smaPath = sma
+      .map((s, i) => `${i === 0 ? "M" : "L"}${s.x.toFixed(1)},${y(s.v).toFixed(1)}`)
+      .join(" ");
 
     const maxVol = Math.max(...candles.map((c) => c.v), 1);
     const volY = h - pad;
@@ -329,7 +336,10 @@ export class CandlesPanel extends Panel {
       })
       .join("");
 
-    const smaLine = sma.length > 1 ? `<path d="${smaPath}" fill="none" stroke="#f5a623" stroke-width="1.4"/>` : "";
+    const smaLine =
+      sma.length > 1
+        ? `<path d="${smaPath}" fill="none" stroke="#f5a623" stroke-width="1.4"/>`
+        : "";
 
     const last = candles[candles.length - 1];
     const first = candles[0];
@@ -360,7 +370,12 @@ const TIER_NOTE: Record<string, string> = {
 
 export class PredictionPanel extends Panel {
   constructor() {
-    super({ id: "prediction", title: "Calibration — is the stated confidence honest?", w: 6, h: 7 });
+    super({
+      id: "prediction",
+      title: "Calibration — is the stated confidence honest?",
+      w: 6,
+      h: 7,
+    });
   }
   async load(): Promise<void> {
     this.el.addEventListener("click", (e) => {
@@ -369,7 +384,9 @@ export class PredictionPanel extends Panel {
     });
     try {
       const rel = await api.reliability();
-      const events = (await api.events({ limit: 30 })).filter((e) => e.verdict !== "OBSERVE").slice(0, 5);
+      const events = (await api.events({ limit: 30 }))
+        .filter((e) => e.verdict !== "OBSERVE")
+        .slice(0, 5);
       const predictions = await Promise.allSettled(events.map((e) => api.predict(e.id)));
 
       const relTable = rel.reliability;
@@ -422,15 +439,15 @@ export class PredictionPanel extends Panel {
         `<div class="pred-summary">` +
           `<span>Global base rate: <b>${relTable.global_hit_rate == null ? "—" : Math.round(relTable.global_hit_rate * 100)}%</b></span>` +
           `<span class="muted"> · ${n} outcomes · Brier ${brier} · recency-decayed</span></div>` +
-        `<div class="pred-grid">${cards || '<p class="empty">No directional signals yet.</p>'}</div>` +
-        `<div class="pred-charts">` +
+          `<div class="pred-grid">${cards || '<p class="empty">No directional signals yet.</p>'}</div>` +
+          `<div class="pred-charts">` +
           `<div class="pred-table">${verds || '<p class="empty">No scored verdicts yet.</p>'}</div>` +
           (curve
             ? `<figure class="pred-cal">${curve}` +
               `<figcaption class="muted">Confidence vs outcome · dashed line is perfect ` +
               `calibration; above it is underconfident, below it overconfident.</figcaption></figure>`
             : "") +
-        `</div>`,
+          `</div>`,
       );
     } catch {
       this.setContent('<p class="empty">Prediction engine unavailable.</p>');
@@ -457,7 +474,10 @@ export class CalendarPanel extends Panel {
     const wrap = document.createElement("div");
     wrap.className = "cal";
     wrap.innerHTML =
-      columns(series.map((d) => d.count), "events per day") +
+      columns(
+        series.map((d) => d.count),
+        "events per day",
+      ) +
       `<div class="muted cal-meta">${total} events over ${series.length} days · ` +
       `peak ${peak.count} on ${escapeHtml(peak.day)}</div>` +
       items;
@@ -483,7 +503,9 @@ export class AccuracyPanel extends Panel {
   }
   private render(a: Accuracy): void {
     if (!a.scored) {
-      this.setContent('<p class="empty">No scored calls yet — a call is scored once its window closes.</p>');
+      this.setContent(
+        '<p class="empty">No scored calls yet — a call is scored once its window closes.</p>',
+      );
       return;
     }
     const horizons: Array<[string, HitRate | undefined, string]> = [
@@ -493,7 +515,8 @@ export class AccuracyPanel extends Panel {
     ];
     const cards = horizons
       .map(([label, h, rule]) => {
-        if (!h?.scored) return `<div class="kpi"><span class="kpi-label">${label}</span><b>—</b></div>`;
+        if (!h?.scored)
+          return `<div class="kpi"><span class="kpi-label">${label}</span><b>—</b></div>`;
         const [lo, hi] = wilson(h.hits, h.scored);
         return (
           `<div class="kpi" title="${escapeHtml(rule)}"><span class="kpi-label">${label}</span>` +
@@ -526,7 +549,9 @@ export class AccuracyPanel extends Panel {
       `<h4 class="sub-head">Hits minus misses, in event order</h4>` +
       sparkline(a.equity_curve, "hits minus misses", signColor(a.equity_curve.at(-1) ?? 0)) +
       `<p class="muted note">${a.total - a.scored} of ${a.total} calls moved less than 1% and are not counted next day.` +
-      (dd == null ? "" : ` Following every call with equal stakes: worst drawdown ${fmtPct(dd * 100)}.`) +
+      (dd == null
+        ? ""
+        : ` Following every call with equal stakes: worst drawdown ${fmtPct(dd * 100)}.`) +
       `</p>`;
     this.setContent(wrap);
   }
@@ -619,7 +644,9 @@ export class SourceHealthPanel extends Panel {
     status.setAttribute("role", "status");
     status.className = "muted";
     if (failed) {
-      status.textContent = health ? "Health unavailable, showing last known statuses. " : "Health unavailable. ";
+      status.textContent = health
+        ? "Health unavailable, showing last known statuses. "
+        : "Health unavailable. ";
       const retry = document.createElement("button");
       retry.type = "button";
       retry.textContent = "Retry";
@@ -634,10 +661,17 @@ export class SourceHealthPanel extends Panel {
       const rank = (s: string) => (s === "WARN" ? 0 : s === "STALE" || s === "EMPTY" ? 1 : 2);
       return rank(a.status) - rank(b.status) || a.source.localeCompare(b.source);
     });
-    const db = health.db ? "" : '<li class="src-row"><span class="src-dot bad"></span><b>database</b><span class="muted">unreachable</span></li>';
+    const db = health.db
+      ? ""
+      : '<li class="src-row"><span class="src-dot bad"></span><b>database</b><span class="muted">unreachable</span></li>';
     if (!failed) {
       const attention = sources.filter((s) => s.status !== "OK").length;
-      const newest = sources.map((s) => s.fetched_at).filter(Boolean).sort().at(-1) ?? null;
+      const newest =
+        sources
+          .map((s) => s.fetched_at)
+          .filter((t): t is string => Boolean(t))
+          .sort((a, b) => a.localeCompare(b))
+          .at(-1) ?? null;
       status.textContent = attention
         ? `${plural(attention, "source")} need${attention === 1 ? "s" : ""} attention`
         : `All ${plural(sources.length, "source")} live · last fetch ${timeAgo(newest)}`;
@@ -662,7 +696,8 @@ export class SourceHealthPanel extends Panel {
     list.className = "src-list";
     list.innerHTML = `${db}${rows}`;
     list.addEventListener("click", (e) => {
-      const source = (e.target as HTMLElement).closest<HTMLElement>("[data-source]")?.dataset.source;
+      const source = (e.target as HTMLElement).closest<HTMLElement>("[data-source]")?.dataset
+        .source;
       if (source) {
         window.dispatchEvent(new CustomEvent("worldfin:select-source", { detail: source }));
       }
@@ -672,7 +707,6 @@ export class SourceHealthPanel extends Panel {
     this.setContent(wrap);
   }
 }
-
 
 const STANCE_COLOR: Record<string, string> = {
   "risk-on": VIZ_COLORS.up,
@@ -698,7 +732,6 @@ function legBars(legs: ScenarioLeg[], label: string): string {
 }
 
 export class ScenarioPanel extends Panel {
-
   constructor() {
     super({ id: "scenarios", title: "Scenarios — what to do about it", w: 12, h: 6 });
     this.el.addEventListener("click", (e) => {
@@ -723,9 +756,7 @@ export class ScenarioPanel extends Panel {
       );
       return;
     }
-    this.setContent(
-      `<div class="sc-grid">${scenarios.map((s) => this.card(s)).join("")}</div>`,
-    );
+    this.setContent(`<div class="sc-grid">${scenarios.map((s) => this.card(s)).join("")}</div>`);
   }
 
   private card(scenario: Scenario): string {
@@ -738,9 +769,7 @@ export class ScenarioPanel extends Panel {
           `${escapeHtml(leg.name)} ${leg.direction === "up" ? "▲" : "▼"}</button>`,
       )
       .join("");
-    const chain = scenario.chain
-      .map((fx) => `<li>${escapeHtml(fx)}</li>`)
-      .join("");
+    const chain = scenario.chain.map((fx) => `<li>${escapeHtml(fx)}</li>`).join("");
     // Divergence means the sources disagreed — the one caveat worth the space.
     const caveat =
       scenario.divergent_members > 0

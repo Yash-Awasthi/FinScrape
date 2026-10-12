@@ -12,7 +12,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- Preload critical font weights (Inter 400-800, JetBrains Mono 400-700) -->
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" as="style" />
+    <link
+      rel="preload"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      as="style"
+    />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
       rel="stylesheet"
@@ -34,7 +38,9 @@
         <a href="#features">Features</a>
         <a href="#proof">Proof</a>
         <a href="#depth">Under the hood</a>
-        <a href="https://github.com/Yash-Awasthi/fin-scrape" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/Yash-Awasthi/fin-scrape" target="_blank" rel="noopener"
+          >GitHub</a
+        >
       </nav>
       <a class="btn btn-primary" href="/app/">Launch dashboard →</a>
     </header>
@@ -42,16 +48,25 @@
     <!-- HERO -->
     <section class="hero" id="top">
       <div class="hero-copy">
-        <div class="eyebrow"><span class="pulse"></span> <span id="live-eyebrow">LIVE · WORLD EVENTS → MARKET CALLS</span></div>
+        <div class="eyebrow">
+          <span class="pulse"></span>
+          <span id="live-eyebrow">LIVE · WORLD EVENTS → MARKET CALLS</span>
+        </div>
         <h1>See what moves markets — <span class="grad">before it's news.</span></h1>
         <p class="lede">
-          WorldFin ingests geopolitics + world news, resolves <em>which tickers and
-          sectors</em> each event moves, judges first- and second-order impact on a live
-          globe — and <em>proves the calls were right</em> over time.
+          WorldFin ingests geopolitics + world news, resolves
+          <em>which tickers and sectors</em> each event moves, judges first- and second-order impact
+          on a live globe — and <em>proves the calls were right</em> over time.
         </p>
         <div class="hero-cta">
           <a class="btn btn-primary lg" href="/app/">Launch the dashboard →</a>
-          <a class="btn btn-ghost lg" href="https://github.com/Yash-Awasthi/fin-scrape" target="_blank" rel="noopener">View the source</a>
+          <a
+            class="btn btn-ghost lg"
+            href="https://github.com/Yash-Awasthi/fin-scrape"
+            target="_blank"
+            rel="noopener"
+            >View the source</a
+          >
         </div>
         <div class="hero-mini" id="hero-stats"></div>
       </div>
@@ -59,8 +74,12 @@
         <div class="globe-host" id="globe"></div>
         <div class="float-card fc-1">
           <div id="fc-calls">
-            <div class="fc-row"><span class="chip invest">INVEST</span><b>NVDA</b><span class="up">+4</span></div>
-            <div class="fc-row"><span class="chip pull">PULL_OUT</span><b>XOM</b><span class="down">−3</span></div>
+            <div class="fc-row">
+              <span class="chip invest">INVEST</span><b>NVDA</b><span class="up">+4</span>
+            </div>
+            <div class="fc-row">
+              <span class="chip pull">PULL_OUT</span><b>XOM</b><span class="down">−3</span>
+            </div>
           </div>
           <div class="fc-meta" id="fc-meta">example calls · live ones load from the API</div>
         </div>
@@ -80,9 +99,16 @@
     <section class="band">
       <div class="band-grid">
         <div class="stat"><b id="stat-events">9,700+</b><label>world events analysed</label></div>
-        <div class="stat"><b id="stat-feeds">32</b><span>+2</span><label>world feeds + GDELT and USGS</label></div>
-        <div class="stat"><b id="stat-hit">—</b><label id="stat-hit-label">next-day raw hit-rate on scored calls</label></div>
-        <div class="stat"><b id="stat-spy">—</b><label id="stat-spy-label">+2 / +4 days vs SPY hit-rate</label></div>
+        <div class="stat">
+          <b id="stat-feeds">32</b><span>+2</span><label>world feeds + GDELT and USGS</label>
+        </div>
+        <div class="stat">
+          <b id="stat-hit">—</b
+          ><label id="stat-hit-label">next-day raw hit-rate on scored calls</label>
+        </div>
+        <div class="stat">
+          <b id="stat-spy">—</b><label id="stat-spy-label">+2 / +4 days vs SPY hit-rate</label>
+        </div>
       </div>
     </section>
 
@@ -93,10 +119,38 @@
         <h2>Turn global events into auditable market calls.</h2>
       </div>
       <div class="steps">
-        <div class="step"><span class="step-n">01</span><h3>Ingest</h3><p>Geopolitics + world news across wire, gov, and intel tiers, plus keyless data APIs — GDELT conflict events and USGS earthquakes.</p></div>
-        <div class="step"><span class="step-n">02</span><h3>Resolve</h3><p>Which companies, tickers, and sectors the event moves — role-tagged primary / competitor / supplier / regulator.</p></div>
-        <div class="step"><span class="step-n">03</span><h3>Judge</h3><p>First- and second-order impact, a verdict (INVEST / PULL_OUT / OBSERVE / CAUTIOUS) and a −5…+5 score.</p></div>
-        <div class="step"><span class="step-n">04</span><h3>Prove</h3><p>Every call scored against the realized price move — hit-rate, by-verdict, and an equity curve you can audit.</p></div>
+        <div class="step">
+          <span class="step-n">01</span>
+          <h3>Ingest</h3>
+          <p>
+            Geopolitics + world news across wire, gov, and intel tiers, plus keyless data APIs —
+            GDELT conflict events and USGS earthquakes.
+          </p>
+        </div>
+        <div class="step">
+          <span class="step-n">02</span>
+          <h3>Resolve</h3>
+          <p>
+            Which companies, tickers, and sectors the event moves — role-tagged primary / competitor
+            / supplier / regulator.
+          </p>
+        </div>
+        <div class="step">
+          <span class="step-n">03</span>
+          <h3>Judge</h3>
+          <p>
+            First- and second-order impact, a verdict (INVEST / PULL_OUT / OBSERVE / CAUTIOUS) and a
+            −5…+5 score.
+          </p>
+        </div>
+        <div class="step">
+          <span class="step-n">04</span>
+          <h3>Prove</h3>
+          <p>
+            Every call scored against the realized price move — hit-rate, by-verdict, and an equity
+            curve you can audit.
+          </p>
+        </div>
       </div>
     </section>
 
@@ -111,7 +165,14 @@
           <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
           <span class="frame-url">winfin.pages.dev/app</span>
         </div>
-        <iframe class="frame-app" src="/app/" title="WorldFin live dashboard" loading="lazy" width="100%" height="500"></iframe>
+        <iframe
+          class="frame-app"
+          src="/app/"
+          title="WorldFin live dashboard"
+          loading="lazy"
+          width="100%"
+          height="500"
+        ></iframe>
         <a class="frame-launch btn btn-primary" href="/app/">Open the live dashboard →</a>
       </div>
     </section>
@@ -132,9 +193,27 @@
         <h2>Every verdict has a chain of custody.</h2>
       </div>
       <div class="pillars">
-        <div class="pillar"><h3>Calibrated</h3><p>Scores are −5…+5 with explicit thresholds; ±5 reserved for genuinely extraordinary events. AI and heuristics cross-check.</p></div>
-        <div class="pillar"><h3>Explainable</h3><p>Every call carries its reasoning, affected companies and second-order effects; an on-demand multi-agent council adds consensus <em>and</em> dissent — never a black box.</p></div>
-        <div class="pillar"><h3>Open proof</h3><p>Hit-rate is backtested against realized moves and shown openly, with an equity curve. Open-source core (MIT).</p></div>
+        <div class="pillar">
+          <h3>Calibrated</h3>
+          <p>
+            Scores are −5…+5 with explicit thresholds; ±5 reserved for genuinely extraordinary
+            events. AI and heuristics cross-check.
+          </p>
+        </div>
+        <div class="pillar">
+          <h3>Explainable</h3>
+          <p>
+            Every call carries its reasoning, affected companies and second-order effects; an
+            on-demand multi-agent council adds consensus <em>and</em> dissent — never a black box.
+          </p>
+        </div>
+        <div class="pillar">
+          <h3>Open proof</h3>
+          <p>
+            Hit-rate is backtested against realized moves and shown openly, with an equity curve.
+            Open-source core (MIT).
+          </p>
+        </div>
       </div>
     </section>
 
@@ -145,11 +224,15 @@
         <h2>The depth is the product.</h2>
       </div>
       <div class="depth-grid">
-        <div class="dg"><b id="dg-feeds">32</b><label>curated world feeds (wire · gov · intel)</label></div>
+        <div class="dg">
+          <b id="dg-feeds">32</b><label>curated world feeds (wire · gov · intel)</label>
+        </div>
         <div class="dg"><b>4</b><label>keyless live data APIs</label></div>
         <div class="dg"><b>8</b><label>analyst-persona AI agents</label></div>
         <div class="dg"><b>4</b><label>dashboard views</label></div>
-        <div class="dg"><b>Qwen · MiMo</b><label>analysis models, primary + fallback (free tier)</label></div>
+        <div class="dg">
+          <b>Qwen · MiMo</b><label>analysis models, primary + fallback (free tier)</label>
+        </div>
         <div class="dg"><b>1,200+</b><label>tests · ruff · pyright green in CI</label></div>
         <div class="dg"><b>Postgres</b><label>asyncpg + content-hash dedup</label></div>
         <div class="dg"><b>$0</b><label>fully free-tier deployment</label></div>
@@ -163,9 +246,13 @@
     </section>
 
     <footer class="footer">
-      <div class="brand"><span class="brand-dot"></span> WORLD<span class="brand-fin">FIN</span></div>
+      <div class="brand">
+        <span class="brand-dot"></span> WORLD<span class="brand-fin">FIN</span>
+      </div>
       <div class="foot-links">
-        <a href="https://github.com/Yash-Awasthi/fin-scrape" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/Yash-Awasthi/fin-scrape" target="_blank" rel="noopener"
+          >GitHub</a
+        >
         <a href="/app/">Dashboard</a>
         <a href="#top">Top</a>
       </div>

@@ -50,9 +50,11 @@ export class PanelLayoutManager {
   checkViews(ids: string[]): void {
     const listed = new Set(ids);
     const orphans = [...this.panels.keys()].filter((id) => !listed.has(id));
-    if (orphans.length) console.warn(`[layout] registered panels in no view: ${orphans.join(", ")}`);
+    if (orphans.length)
+      console.warn(`[layout] registered panels in no view: ${orphans.join(", ")}`);
     const phantom = ids.filter((id) => !this.panels.has(id));
-    if (phantom.length) console.warn(`[layout] views name panels that do not exist: ${phantom.join(", ")}`);
+    if (phantom.length)
+      console.warn(`[layout] views name panels that do not exist: ${phantom.join(", ")}`);
   }
 
   mount(parent: HTMLElement): void {
