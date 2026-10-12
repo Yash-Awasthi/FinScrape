@@ -1,4 +1,4 @@
-"""Phase 13 — sentiment / telegram / prompt-A-B (no DB, no network).
+"""Phase 13 — telegram / prompt-A-B (no DB, no network).
 
 Each route is mounted on a throwaway FastAPI app (like test_hardening) so we exercise
 behaviour without the DB lifespan; network + Telegram sends are monkeypatched/no-op.
@@ -16,8 +16,6 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from finscrape.analysis import prompt_registry as pr
-from server import cache
-from server.routes import sentiment as sentiment_routes
 from server.routes import telegram as tg
 from server.settings import get_settings
 
@@ -38,21 +36,6 @@ def test_pick_variant_ab_deterministic_and_prompts_resolve(monkeypatch):
     for v in pr.VARIANT_IDS:
         system, analysis = pr.get_prompts(v)
         assert system and "{{title}}" in analysis
-
-
-# --- sentiment route --------------------------------------------------------
-def _sentiment_client() -> TestClient:
-    app = FastAPI()
-    app.include_router(sentiment_routes.router)
-    cache.clear()
-    return TestClient(app)
-
-
-def test_sentiment_degrades_to_empty_without_the_database():
-    r = _sentiment_client().get("/api/sentiment?ticker=aapl")
-    assert r.status_code == 200
-    body = r.json()
-    assert body["ticker"] == "AAPL" and body["total_posts"] == 0
 
 
 # --- telegram webhook -------------------------------------------------------

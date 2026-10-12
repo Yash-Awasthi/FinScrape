@@ -1,116 +1,22 @@
-"""Auxiliary data routes for Phase 6 panels: RSS proxy, ticker rollup, suggestions.
-
-Network calls (RSS) run in a threadpool with a short in-memory cache so they don't
-block the event loop or hammer upstreams. The RSS proxy is SSRF-guarded: it only
-fetches URLs from the world feed registry (no arbitrary user URLs).
-"""
+"""Auxiliary data routes: feed registry, suggestions, sectors, storylines."""
 
 from __future__ import annotations
 
-import asyncio
+from fastapi import APIRouter, Query
 
-import requests
-from fastapi import APIRouter, HTTPException, Query
-
-from finscrape.scrapers.world.feeds import FEEDS, get_feed
-from server import cache, db
-from server.circuit import CircuitBreaker
-from server.ssrf import assert_public_url
+from finscrape.scrapers.world.feeds import FEEDS
+from server import db
 
 router = APIRouter()
-
-_HEADERS = {"User-Agent": "finscrape-worldfin/0.1"}
-_TIMEOUT = 15
-
-# Per-upstream breakers: a dead host fails fast instead of burning a thread + 15s timeout
-# on every request until its TTL cache entry would refill.
-_rss_cb = CircuitBreaker("rss")
-
-
-# --- RSS proxy (allowlisted by feed key — SSRF guard) ---
-
-
-def _fetch_rss(url: str, limit: int) -> list[dict]:
-    import feedparser
-
-    # SSRF guard: validate before fetch, then re-validate every redirect hop so a
-    # registry host that 302s to a private address is still rejected. We fetch the
-    # bytes ourselves (requests) instead of letting feedparser open the socket.
-    assert_public_url(url)
-    resp = requests.get(url, headers=_HEADERS, timeout=_TIMEOUT, stream=False)
-    for hop in (*resp.history, resp):
-        assert_public_url(hop.url)
-    resp.raise_for_status()
-    feed = feedparser.parse(resp.content)
-    items = []
-    for e in feed.entries[:limit]:
-        items.append(
-            {
-                "title": (e.get("title") or "").strip(),
-                "link": (e.get("link") or "").strip(),
-                "published": e.get("published", ""),
-            }
-        )
-    return items
-
-
-@router.get("/api/rss-proxy")
-async def rss_proxy(
-    feed: str = Query(...), limit: int = Query(20, ge=1, le=50)
-) -> dict:
-    f = get_feed(feed)
-    if f is None:
-        # only registry feeds are proxied — blocks arbitrary-URL SSRF
-        raise HTTPException(status_code=400, detail="unknown feed key")
-    try:
-        items = await asyncio.to_thread(
-            lambda: cache.get_or_set(
-                f"rss:{feed}:{limit}",
-                cache.MEDIUM,
-                lambda: _rss_cb.call(lambda: _fetch_rss(f.url, limit)),
-            )
-        )
-    except Exception:  # noqa: BLE001 — feed failures degrade to empty
-        items = []
-    return {"feed": feed, "name": f.name, "tier": f.tier, "items": items}
 
 
 @router.get("/api/feeds")
 async def feeds() -> dict:
-    """The world feed registry (for the WorldNews panel's source picker)."""
+    """The world feed registry; the landing page counts it."""
     return {
         "feeds": [
             {"key": f.key, "name": f.name, "tier": f.tier, "region": f.region}
             for f in FEEDS
-        ]
-    }
-
-
-# --- markets (ticker frequency from stored events; live quotes deferred to Phase 8) ---
-
-
-@router.get("/api/markets")
-async def markets(limit: int = Query(20, ge=1, le=100)) -> dict:
-    """Most-mentioned tickers across recent events. Live price quotes are deferred
-    (yfinance hot-path cost, RISKS R1) — this is the cheap event-derived rollup."""
-    rows = await db.pool().fetch(
-        """
-        SELECT t.ticker, COUNT(*) AS mentions,
-               AVG(signal_score)::float AS avg_score
-        FROM events e, jsonb_array_elements_text(e.tickers) AS t(ticker)
-        WHERE e.timestamp >= now() - interval '7 days'
-        GROUP BY t.ticker ORDER BY mentions DESC LIMIT $1
-        """,
-        limit,
-    )
-    return {
-        "tickers": [
-            {
-                "ticker": r["ticker"],
-                "mentions": r["mentions"],
-                "avg_score": round(r["avg_score"], 2),
-            }
-            for r in rows
         ]
     }
 

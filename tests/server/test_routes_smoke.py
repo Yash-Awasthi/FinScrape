@@ -26,15 +26,10 @@ pytestmark = pytest.mark.skipif(
 
 # Reach outside the process, so a failure here is not a SQL defect.
 _EXTERNAL = {
-    "/api/agents/analyze",
     "/api/ai/analyze",
     "/api/ai/council",
     "/api/candles",
-    "/api/markets",
-    "/api/quotes",
-    "/api/rss-proxy",
     "/api/scenarios",
-    "/api/sentiment",
     "/api/storylines",
     "/api/v1/geopolitical/alerts",
     "/api/v1/geopolitical/dashboard",

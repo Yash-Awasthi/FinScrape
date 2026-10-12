@@ -93,8 +93,7 @@ Feed(
 ```
 
 That single entry wires everything: `WorldRSSScraper` reads `feed_urls()`, so the worker
-starts pulling it next cycle; `/api/feeds` lists it for the source picker; `/api/rss-proxy`
-will proxy it (the registry *is* the SSRF allowlist — an unknown key is a 400); and the
+starts pulling it next cycle; `/api/feeds` lists it; and the
 `tier` becomes the `source_type` the correlation engine scores.
 
 Validate before adding. HTTP 200 is not enough — CSIS served 200 for a feed whose newest

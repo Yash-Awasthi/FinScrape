@@ -44,7 +44,6 @@ from worker.health import (
     record_source_health,
     start_scrape_run,
 )
-from worker.social import refresh_social
 from worker.sources import Item, build_enrichers, build_sources
 
 log = logging.getLogger("worldfin.worker")
@@ -354,7 +353,6 @@ class Worker:
         await forget_retired_sources(self.pool, list(self.sources))
         await asyncio.gather(
             *(self.run_source(n) for n in self.sources),
-            refresh_social(self.pool),
             return_exceptions=True,
         )
         await self._merge([])
