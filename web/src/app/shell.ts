@@ -1,5 +1,6 @@
-// App shell: header (brand, live clock, connection dot, refresh) + banner slot.
+// App shell: header (brand, view tabs, live clock, connection dot, refresh) + banner slot.
 
+import { escapeHtml } from "../util";
 import type { WSStatus } from "../ws";
 
 export class Shell {
@@ -10,8 +11,13 @@ export class Shell {
   readonly bannerSlot: HTMLElement;
   private dot: HTMLElement;
   private clock: HTMLElement;
+  private tabs: HTMLElement;
 
-  constructor(onRefresh: () => void) {
+  constructor(
+    onRefresh: () => void,
+    views: Array<{ id: string; label: string }>,
+    onView: (id: string) => void,
+  ) {
     this.root = document.createElement("div");
     this.root.className = "app";
 
@@ -35,9 +41,24 @@ export class Shell {
     refresh.title = "refresh";
     refresh.addEventListener("click", onRefresh);
 
+    this.tabs = document.createElement("nav");
+    this.tabs.className = "tabs";
+    this.tabs.setAttribute("aria-label", "views");
+    for (const v of views) {
+      const a = document.createElement("a");
+      a.href = `#${v.id}`;
+      a.dataset.view = v.id;
+      a.textContent = v.label;
+      a.addEventListener("click", (e) => {
+        e.preventDefault();
+        onView(v.id);
+      });
+      this.tabs.append(a);
+    }
+
     const left = document.createElement("div");
     left.className = "head-left";
-    left.append(brand);
+    left.append(brand, this.tabs);
 
     const right = document.createElement("div");
     right.className = "head-right";
@@ -61,6 +82,14 @@ export class Shell {
     this.installPalette();
   }
 
+  setView(id: string): void {
+    this.content.dataset.view = id;
+    for (const a of this.tabs.querySelectorAll<HTMLElement>("a")) {
+      if (a.dataset.view === id) a.setAttribute("aria-current", "page");
+      else a.removeAttribute("aria-current");
+    }
+  }
+
   setConnection(status: WSStatus): void {
     this.dot.dataset.status = status;
   }
@@ -73,12 +102,12 @@ export class Shell {
     setInterval(tick, 1000);
   }
 
-  // ⌘K / Ctrl+K palette: chart any symbol, run agent analysis on it.
+  // ⌘K / Ctrl+K palette: chart any symbol, or find an event by subject or ticker.
   private installPalette(): void {
     const overlay = document.createElement("div");
     overlay.className = "palette hidden";
     const input = document.createElement("input");
-    input.placeholder = "chart AAPL · analyze NVDA · goto 600519.SS …";
+    input.placeholder = "chart XOM · or search events…";
     const results = document.createElement("div");
     results.className = "palette-results";
     overlay.append(input, results);
@@ -93,13 +122,6 @@ export class Shell {
       const lower = verb.toLowerCase();
       if (lower === "chart" && arg) {
         window.dispatchEvent(new CustomEvent("worldfin:select-symbol", { detail: arg }));
-        document.querySelector<HTMLElement>('.panel[data-id="candles"]')?.scrollIntoView({ behavior: "smooth" });
-      } else if (lower === "analyze" && arg) {
-        window.dispatchEvent(new CustomEvent("worldfin:analyze-symbol", { detail: arg }));
-        document.querySelector<HTMLElement>('.panel[data-id="agents"]')?.scrollIntoView({ behavior: "smooth" });
-      } else if (lower === "goto" && arg) {
-        // jump to first event mentioning the term
-        window.dispatchEvent(new CustomEvent("worldfin:search-events", { detail: rest.join(" ").toLowerCase() }));
       } else {
         window.dispatchEvent(new CustomEvent("worldfin:search-events", { detail: cmd.toLowerCase() }));
       }
@@ -112,7 +134,7 @@ export class Shell {
       const hits = events
         .filter((e) => !q || e.subject.toLowerCase().includes(q))
         .slice(0, 6)
-        .map((e) => `<div class="palette-item">▸ ${e.subject.slice(0, 70)}</div>`)
+        .map((e) => `<div class="palette-item">▸ ${escapeHtml(e.subject.slice(0, 70))}</div>`)
         .join("");
       results.innerHTML = hits;
     };

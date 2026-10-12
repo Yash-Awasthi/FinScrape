@@ -1,32 +1,26 @@
 import "./styles.css";
 
 import { api } from "./api";
-import { PAGE_LAYOUT, pagePanelIds } from "./app/variants";
+import { VIEWS, allPanelIds, isView, type ViewId } from "./app/variants";
 import { Shell } from "./app/shell";
 import { BreakingNewsBanner } from "./components/banner";
 import { Inspector } from "./components/inspector";
-import { TickerTape } from "./components/ticker-tape";
 import type { GlobeView } from "./globe/globe";
 import type { EventOut } from "./api";
 import { PanelLayoutManager } from "./panels/layout";
 import { Panel } from "./panels/panel";
 import {
   AccuracyPanel,
-  AgentPanel,
   CalendarPanel,
   CandlesPanel,
   CorrelationPanel,
-  LiveTVPanel,
-  MarketsLivePanel,
-  NewsLobbyPanel,
+  OutcomesPanel,
   PredictionPanel,
   ScenarioPanel,
   SectorPanel,
-  SentimentPanel,
   SourceHealthPanel,
   StatsPanel,
   SuggestionsPanel,
-  WatchlistPanel,
 } from "./panels/panels";
 import { SignalFeedPanel } from "./panels/signal-feed";
 import { Store } from "./state";
@@ -36,51 +30,45 @@ const store = new Store();
 const inspector = new Inspector(() => store.select(null));
 const banner = new BreakingNewsBanner();
 
-const shell = new Shell(() => void loadAll());
+const views = Object.entries(VIEWS).map(([id, v]) => ({ id, label: v.label }));
+const shell = new Shell(() => void loadAll(), views, (id) => showView(id));
 const layout = new PanelLayoutManager();
 
-// Panels — one page, in the order the layout declares.
-const candlesPanel = new CandlesPanel();
-const agentPanel = new AgentPanel();
-const marketsLivePanel = new MarketsLivePanel();
-const watchlistPanel = new WatchlistPanel();
 const feedPanel = new SignalFeedPanel((e) => store.select(e));
-const globePanel = new Panel({ id: "globe", title: "Globe", w: 8, h: 8 });
+const globePanel = new Panel({ id: "globe", title: "Globe", w: 7, h: 9 });
 const statsPanel = new StatsPanel();
-const sectorPanel = new SectorPanel();
-const suggestionsPanel = new SuggestionsPanel();
 const datesPanel = new CalendarPanel((day) => void loadDay(day));
-const newsLobbyPanel = new NewsLobbyPanel();
-const liveTVPanel = new LiveTVPanel();
-const correlationPanel = new CorrelationPanel();
-const accuracyPanel = new AccuracyPanel();
-const sentimentPanel = new SentimentPanel();
-const predictionPanel = new PredictionPanel();
 const scenarioPanel = new ScenarioPanel();
+const suggestionsPanel = new SuggestionsPanel();
+const candlesPanel = new CandlesPanel(
+  () => store.get().events,
+  (e) => store.select(e),
+);
+const sectorPanel = new SectorPanel();
+const accuracyPanel = new AccuracyPanel();
+const predictionPanel = new PredictionPanel();
+const outcomesPanel = new OutcomesPanel();
 const sourceHealthPanel = new SourceHealthPanel();
+const correlationPanel = new CorrelationPanel();
 
 for (const p of [
-  candlesPanel,
-  agentPanel,
-  marketsLivePanel,
-  watchlistPanel,
+  scenarioPanel,
   feedPanel,
   globePanel,
   statsPanel,
-  sectorPanel,
-  suggestionsPanel,
   datesPanel,
-  newsLobbyPanel,
-  liveTVPanel,
-  correlationPanel,
+  suggestionsPanel,
+  candlesPanel,
+  sectorPanel,
   accuracyPanel,
-  sentimentPanel,
   predictionPanel,
-  scenarioPanel,
+  outcomesPanel,
   sourceHealthPanel,
+  correlationPanel,
 ]) {
   layout.add(p);
 }
+layout.checkViews(allPanelIds());
 
 const app = document.getElementById("app")!;
 shell.mount(app);
@@ -88,18 +76,15 @@ shell.bannerSlot.append(banner.el);
 layout.mount(shell.grid);
 shell.railSlot.append(inspector.el);
 
-// Live market tape (always on) + 15s quote polling.
-const tape = new TickerTape();
-shell.content.before(tape.el);
-const quotesTimer = window.setInterval(() => {
-  void tape.refresh();
-  void marketsLivePanel.refresh();
-  void watchlistPanel.refresh();
-}, 15_000);
-window.addEventListener("beforeunload", () => {
-  window.clearInterval(quotesTimer);
-  tape.stop();
-});
+function showView(id: string): void {
+  const view: ViewId = isView(id) ? id : "today";
+  layout.applyVariant(VIEWS[view].slots);
+  shell.setView(view);
+  if (location.hash !== `#${view}`) history.replaceState(null, "", `#${view}`);
+  // The globe measures its panel, which has no size while its view is hidden.
+  if (view === "today") requestAnimationFrame(sizeGlobe);
+}
+window.addEventListener("hashchange", () => showView(location.hash.slice(1)));
 
 // globe.gl (+three.js) is ~1.8MB — lazy chunk so the shell paints immediately.
 let globe: GlobeView | null = null;
@@ -139,10 +124,9 @@ store.subscribe((s) => {
     feedPanel.clearActive();
   }
 });
-requestAnimationFrame(sizeGlobe);
 
 // j/k walks the feed, Esc clears. Ignored while typing or while the palette is open,
-// so the command bar and the watchlist/ticker inputs keep their keys.
+// so the command bar and the chart's symbol input keep their keys.
 window.addEventListener("keydown", (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   if ((e.target as HTMLElement | null)?.closest("input, textarea, select")) return;
@@ -170,46 +154,27 @@ async function loadAll(): Promise<void> {
   if (stats.status === "fulfilled") store.setStats(stats.value);
   if (correlations.status === "fulfilled") store.setCorrelations(correlations.value);
   if (dates.status === "fulfilled") datesPanel.update(dates.value);
-  // A2/A5 caches resolve before the pull-once panels below (some hit slow remote
-  // RSS): the feed's final re-render gets momentum 🔥 badges + storyline
-  // collapse the moment they're ready, never gated on external fetches.
-  try {
-    window.__wfSuggestions = await api.suggestions(10);
-  } catch {
-    window.__wfSuggestions = [];
-  }
-  try {
-    window.__wfStorylines = await api.storylines();
-  } catch {
-    window.__wfStorylines = [];
-  }
-  feedPanel.update(store.get().events); // re-render rows with badges + collapse
-  await loadPanelsData();
-}
-
-// Pull-once panels (each handles its own errors).
-async function loadPanelsData(): Promise<void> {
-  const shown = pagePanelIds();
-  const jobs: Promise<unknown>[] = [];
-  if (shown.has("markets-live")) jobs.push(marketsLivePanel.load());
-  if (shown.has("candles")) jobs.push(candlesPanel.load());
-  if (shown.has("agents")) jobs.push(agentPanel.load());
-  if (shown.has("watchlist")) jobs.push(watchlistPanel.load());
-  if (shown.has("suggestions")) jobs.push(suggestionsPanel.load());
-  if (shown.has("sectors")) jobs.push(sectorPanel.load());
-  if (shown.has("prediction")) jobs.push(predictionPanel.load());
-  if (shown.has("scenarios")) jobs.push(scenarioPanel.load());
-  // A3: the reliability tables grow as outcomes score themselves — refresh the
-  // prediction panel every minute so calibration reflects new evidence.
-  window.setInterval(() => {
-    if (predictionPanel.el.offsetParent) void predictionPanel.load();
-  }, 60_000);
-  if (shown.has("lobby")) jobs.push(newsLobbyPanel.load());
-  if (shown.has("accuracy")) jobs.push(accuracyPanel.load());
-  if (shown.has("sentiment")) jobs.push(sentimentPanel.load());
-  if (shown.has("sources")) jobs.push(sourceHealthPanel.load());
-  if (shown.has("livetv")) liveTVPanel.render();
-  await Promise.allSettled(jobs);
+  // Momentum badges and storyline collapse need these before the feed's last render.
+  const [suggestions, storylines] = await Promise.allSettled([
+    api.suggestions(10),
+    api.storylines(),
+  ]);
+  window.__wfSuggestions = (suggestions.status === "fulfilled" && suggestions.value) || [];
+  window.__wfStorylines = (storylines.status === "fulfilled" && storylines.value) || [];
+  feedPanel.update(store.get().events);
+  // The chart opens on the most-covered ticker rather than a fixed symbol.
+  const top = window.__wfSuggestions[0]?.ticker;
+  if (top) candlesPanel.setSymbol(top);
+  await Promise.allSettled([
+    scenarioPanel.load(),
+    suggestionsPanel.load(),
+    candlesPanel.load(),
+    sectorPanel.load(),
+    accuracyPanel.load(),
+    predictionPanel.load(),
+    outcomesPanel.load(),
+    sourceHealthPanel.load(),
+  ]);
 }
 
 async function loadDay(day: string): Promise<void> {
@@ -231,25 +196,27 @@ function onMessage(msg: WSMessage): void {
 store.subscribe((s) => {
   (window as unknown as { __wfEvents?: EventOut[] }).__wfEvents = s.events;
 });
-window.addEventListener("worldfin:analyze-symbol", (e) => {
-  const sym = (e as CustomEvent<string>).detail;
-  if (sym) {
-    const input = document.querySelector<HTMLInputElement>(".agents-ticker");
-    if (input) {
-      input.value = sym;
-      input.closest("form")?.dispatchEvent(new Event("submit"));
-    }
-  }
-});
+// Any ticker chip opens the Tickers view with that symbol charted.
+window.addEventListener("worldfin:select-symbol", () => showView("tickers"));
+// Sector chips and source rows filter the feed, which lives on Today.
+window.addEventListener("worldfin:select-sector", () => showView("today"));
+window.addEventListener("worldfin:select-source", () => showView("today"));
 window.addEventListener("worldfin:search-events", (e) => {
   const q = (e as CustomEvent<string>).detail;
   const hit = store
     .get()
     .events.find((ev) => ev.subject.toLowerCase().includes(q) || ev.tickers.some((t) => t.toLowerCase().includes(q)));
-  if (hit) store.select(hit);
+  if (hit) {
+    showView("today");
+    store.select(hit);
+  }
 });
+// The prediction panel's calibration grows as outcomes score themselves.
+window.setInterval(() => {
+  if (predictionPanel.el.offsetParent) void predictionPanel.load();
+}, 60_000);
 const rt = new RealtimeClient(wsUrl(), onMessage, (status) => store.setConnection(status));
 
-layout.applyVariant(PAGE_LAYOUT);
+showView(location.hash.slice(1));
 void loadAll();
 rt.connect();
