@@ -26,27 +26,31 @@ def test_score_zero_reads_observe_and_social_posts_is_gone():
     async def body():
         await db.disconnect()
         pool = await db.connect(PG_DSN)
-        await db.run_migrations(pool)
-        await pool.execute("TRUNCATE events RESTART IDENTITY CASCADE")
-        for h, score, verdict in (
-            ("a", 0, "CAUTIOUS"),
-            ("b", -1, "CAUTIOUS"),
-            ("c", 0, "OBSERVE"),
-        ):
+        try:
+            await db.run_migrations(pool)
+            await pool.execute("TRUNCATE events RESTART IDENTITY CASCADE")
+            for h, score, verdict in (
+                ("a", 0, "CAUTIOUS"),
+                ("b", -1, "CAUTIOUS"),
+                ("c", 0, "OBSERVE"),
+            ):
+                await pool.execute(
+                    "INSERT INTO events (content_hash, subject, event_type, signal_score, verdict, timestamp) "
+                    "VALUES ($1, $1, 'other', $2, $3, now())",
+                    h,
+                    score,
+                    verdict,
+                )
             await pool.execute(
-                "INSERT INTO events (content_hash, subject, signal_score, verdict) "
-                "VALUES ($1, $1, $2, $3)",
-                h,
-                score,
-                verdict,
-            )
-        await pool.execute(SQL)  # rerunning is safe: the update and drop are idempotent
-        rows = {
-            r["content_hash"]: r["verdict"]
-            for r in await pool.fetch("SELECT content_hash, verdict FROM events")
-        }
-        gone = await pool.fetchval("SELECT to_regclass('social_posts') IS NULL")
-        await db.disconnect()
+                SQL
+            )  # rerunning is safe: the update and drop are idempotent
+            rows = {
+                r["content_hash"]: r["verdict"]
+                for r in await pool.fetch("SELECT content_hash, verdict FROM events")
+            }
+            gone = await pool.fetchval("SELECT to_regclass('social_posts') IS NULL")
+        finally:
+            await db.disconnect()
         return rows, gone
 
     rows, gone = asyncio.run(body())
