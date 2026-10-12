@@ -22,7 +22,6 @@ from server.auth import require_api_key
 from server.middleware import configure_hardening
 from server.obs import install_observability
 from server.routes import accuracy as accuracy_routes
-from server.routes import agents as agents_routes
 from server.routes import ai as ai_routes
 from server.routes import alerts as alerts_routes
 from server.routes import correlations as correlations_routes
@@ -31,7 +30,6 @@ from server.routes import events as events_routes
 from server.routes import health as health_routes
 from server.routes import insight as insight_routes
 from server.routes import market as market_routes
-from server.routes import sentiment as sentiment_routes
 from server.routes import telegram as telegram_routes
 from server.schemas import HealthResponse
 from server.settings import get_settings
@@ -165,9 +163,7 @@ def create_app() -> FastAPI:
     app.include_router(data_routes.router)
     app.include_router(market_routes.router)
     app.include_router(insight_routes.router)
-    app.include_router(agents_routes.router)
     app.include_router(accuracy_routes.router)
-    app.include_router(sentiment_routes.router)
     app.include_router(alerts_routes.router)
     app.include_router(telegram_routes.router)
     _guard_mutating_routes(geopolitical_router)

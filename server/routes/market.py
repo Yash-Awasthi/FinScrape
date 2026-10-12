@@ -1,8 +1,7 @@
-"""Live market-data routes: quotes + candles for every tracked exchange.
+"""Candles for the Tickers view's chart.
 
-View-only market data served from the same global exchange layer the local
-server uses (finscrape.exchanges). Network calls run in a threadpool so they
-never block the event loop; failures degrade to empty/502, never crash.
+Network calls run in a threadpool so they never block the event loop; failures
+degrade to 502, never crash.
 """
 
 from __future__ import annotations
@@ -16,33 +15,6 @@ if TYPE_CHECKING:
     import pandas as pd
 
 router = APIRouter()
-
-
-@router.get("/api/quotes")
-async def quotes(
-    symbols: str = Query(..., description="comma-separated Yahoo symbols"),
-) -> dict:
-    """Live quotes across all markets. Symbols carry their Yahoo suffix
-    ('RELIANCE.NS', '600519.SS'); bare 6-digit codes infer China; bare = US."""
-    from finscrape.exchanges import get_global_quotes
-
-    wanted = []
-    for raw in symbols.split(","):
-        symbol = raw.strip().upper()
-        if not symbol:
-            continue
-        if "." in symbol:
-            wanted.append(("", symbol))  # suffix already carries the exchange
-        elif len(symbol) == 6 and symbol.isdigit():
-            code = "SSE" if symbol.startswith(("5", "6", "9")) else "SZSE"
-            wanted.append((code, symbol))
-        else:
-            wanted.append(("", symbol))
-    try:
-        result = await asyncio.to_thread(get_global_quotes, wanted)
-    except Exception:  # noqa: BLE001 — degrade to empty, never crash the panel
-        result = {}
-    return {"quotes": list(result.values())}
 
 
 @router.get("/api/candles")

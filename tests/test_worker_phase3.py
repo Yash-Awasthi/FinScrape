@@ -70,7 +70,6 @@ def test_scheduler_covers_every_source_plus_correlate_and_backtest():
     assert ids == {
         "world_rss",
         "gdelt",
-        "social",
         "correlations",
         "backtest",
         "retention",

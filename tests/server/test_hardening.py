@@ -21,12 +21,6 @@ from server import cache
 from server.circuit import CircuitBreaker, CircuitOpen
 from server.rate_limit import Limiter, client_key
 from server.settings import DEFAULT_API_KEY, get_settings
-from server.ssrf import (
-    SSRFError,
-    assert_public_host,
-    assert_public_url,
-    is_public_ip,
-)
 
 
 def _request(peer: str, xff: str | None = None) -> object:
@@ -35,37 +29,6 @@ def _request(peer: str, xff: str | None = None) -> object:
     return types.SimpleNamespace(
         client=types.SimpleNamespace(host=peer), headers=headers
     )
-
-
-# --- SSRF guard -------------------------------------------------------------
-
-
-def test_is_public_ip_rejects_private_and_loopback():
-    for bad in (
-        "127.0.0.1",
-        "10.0.0.1",
-        "192.168.1.1",
-        "169.254.0.1",
-        "::1",
-        "0.0.0.0",
-    ):
-        assert is_public_ip(bad) is False, bad
-    for good in ("8.8.8.8", "1.1.1.1", "93.184.216.34"):
-        assert is_public_ip(good) is True, good
-
-
-def test_assert_public_host_blocks_loopback_literal():
-    with pytest.raises(SSRFError):
-        assert_public_host("127.0.0.1")
-    # a public literal resolves to itself and passes
-    assert_public_host("8.8.8.8")
-
-
-def test_assert_public_url_rejects_bad_scheme_and_private():
-    with pytest.raises(SSRFError):
-        assert_public_url("file:///etc/passwd")
-    with pytest.raises(SSRFError):
-        assert_public_url("http://169.254.169.254/latest/meta-data/")  # cloud metadata
 
 
 # --- rate limiter -----------------------------------------------------------
