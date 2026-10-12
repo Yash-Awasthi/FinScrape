@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { Panel, type PanelConfig } from "./panel";
 
 const base: PanelConfig = { id: "t", title: "T", w: 4, h: 3 };

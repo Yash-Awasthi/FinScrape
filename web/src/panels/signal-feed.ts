@@ -168,9 +168,7 @@ export class SignalFeedPanel extends Panel {
 
     const byId = new Map(shown.map((e) => [e.id, e]));
     const othersOf = (cl: Storyline, leadId: number): EventOut[] =>
-      cl.members
-        .filter((m) => m.id !== leadId && byId.has(m.id))
-        .map((m) => byId.get(m.id)!);
+      cl.members.filter((m) => m.id !== leadId && byId.has(m.id)).map((m) => byId.get(m.id)!);
 
     let rendered = 0; // lead rows count toward the 60-row cap
     for (const e of shown) {
@@ -241,11 +239,14 @@ export class SignalFeedPanel extends Panel {
     const sources = new Set<string>();
     for (const m of others) for (const s of m.sources ?? []) sources.add(s);
     const n = sources.size || others.length;
-    const label = sources.size ? [...sources].slice(0, 4).join(", ") : others.map((m) => m.subject).join(" · ");
+    const label = sources.size
+      ? [...sources].slice(0, 4).join(", ")
+      : others.map((m) => m.subject).join(" · ");
     btn.textContent = `${open ? "▾" : "▸"} +${n} source${n === 1 ? "" : "s"}`;
-    btn.title = others.length === 1
-      ? "same story, one more source"
-      : `same story from ${others.length} more rows — ${label}${sources.size > 4 ? "…" : ""}`;
+    btn.title =
+      others.length === 1
+        ? "same story, one more source"
+        : `same story from ${others.length} more rows — ${label}${sources.size > 4 ? "…" : ""}`;
     btn.className = "story-toggle";
     btn.addEventListener("click", (ev) => {
       ev.stopPropagation();
@@ -258,4 +259,3 @@ export class SignalFeedPanel extends Panel {
     return tr;
   }
 }
-

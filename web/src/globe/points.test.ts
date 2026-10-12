@@ -1,14 +1,31 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import type { EventOut } from "../api";
 import { toPoints } from "./points";
 
 function ev(id: number, lat: number | null, lon: number | null, verdict = "INVEST"): EventOut {
   return {
-    id, subject: `e${id}`, event_type: "geopolitical_event", verdict,
-    impact_direction: "positive", signal_score: 4, confidence: 0.7, reasoning: "",
-    magnitude: "high", novelty: "breaking", actionability: "high", sector_impact: "",
-    tickers: [], sources: [], articles: [], affected_entities: [], second_order_effects: [],
-    key_metrics: {}, lat, lon, timestamp: null, created_at: "2026-01-01T00:00:00Z",
+    id,
+    subject: `e${id}`,
+    event_type: "geopolitical_event",
+    verdict,
+    impact_direction: "positive",
+    signal_score: 4,
+    confidence: 0.7,
+    reasoning: "",
+    magnitude: "high",
+    novelty: "breaking",
+    actionability: "high",
+    sector_impact: "",
+    tickers: [],
+    sources: [],
+    articles: [],
+    affected_entities: [],
+    second_order_effects: [],
+    key_metrics: {},
+    lat,
+    lon,
+    timestamp: null,
+    created_at: "2026-01-01T00:00:00Z",
   };
 }
 
@@ -25,4 +42,3 @@ describe("toPoints", () => {
     expect(p.event.id).toBe(1);
   });
 });
-

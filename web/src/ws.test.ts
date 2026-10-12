@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { RealtimeClient, type WSMessage } from "./ws";
 
 // Minimal fake WebSocket driven manually.
@@ -29,7 +29,11 @@ class FakeWS {
 
 describe("RealtimeClient", () => {
   it("backoff grows and caps at 15s", () => {
-    const rt = new RealtimeClient("ws://x", () => {}, () => {});
+    const rt = new RealtimeClient(
+      "ws://x",
+      () => {},
+      () => {},
+    );
     expect(rt.backoffMs(0)).toBeGreaterThanOrEqual(400);
     expect(rt.backoffMs(0)).toBeLessThanOrEqual(600);
     expect(rt.backoffMs(20)).toBeLessThanOrEqual(15_000 * 1.2);
