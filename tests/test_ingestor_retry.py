@@ -6,7 +6,7 @@ seconds. One un-retried 429 used to cost a whole scrape cycle's articles.
 
 from __future__ import annotations
 
-import requests
+from curl_cffi.requests.exceptions import HTTPError, Timeout
 
 from finscrape.ingestors import base
 from finscrape.ingestors.base import BaseIngestor, RawGeoEvent
@@ -28,7 +28,7 @@ class FakeResponse:
 
     def raise_for_status(self):
         if self.status_code >= 400:
-            raise requests.HTTPError(f"{self.status_code} error")
+            raise HTTPError(f"{self.status_code} error")
 
     def json(self):
         return self._payload
@@ -99,7 +99,7 @@ def test_retries_a_timeout(monkeypatch):
     def flaky(*_a, **_k):
         calls.append(1)
         if len(calls) == 1:
-            raise requests.Timeout("slow upstream")
+            raise Timeout("slow upstream")
         return FakeResponse(200, {"articles": [1]})
 
     monkeypatch.setattr(base.requests, "get", flaky)

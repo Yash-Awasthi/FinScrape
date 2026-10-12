@@ -54,7 +54,8 @@ def test_transports_cannot_escape_database_allowlist():
     code = """
 from tests.live_e2e import block_outbound
 import socket
-import requests
+from curl_cffi import requests
+from curl_cffi.requests.exceptions import RequestException
 from curl_cffi import Curl, CurlOpt, CurlError
 block_outbound(55440)
 for operation in (
@@ -64,7 +65,7 @@ for operation in (
 ):
     try:
         operation()
-    except (OSError, requests.RequestException):
+    except (OSError, RequestException):
         pass
     else:
         raise AssertionError("network escaped")

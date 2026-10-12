@@ -16,7 +16,8 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from typing import Any
 
-import requests
+from curl_cffi import requests
+from curl_cffi.requests.exceptions import RequestException
 
 logger = logging.getLogger(__name__)
 
@@ -265,7 +266,7 @@ class AlertEngine:
             else:
                 logger.warning("Telegram API error %d", resp.status_code)
                 return {"action_type": "telegram", "status": "error", "http_status": resp.status_code}
-        except requests.RequestException as e:
+        except RequestException as e:
             logger.error("Telegram request failed: %s", e)
             return {"action_type": "telegram", "status": "error", "error": str(e)}
 
@@ -303,7 +304,7 @@ class AlertEngine:
             resp = requests.post(url, json=payload, headers=headers, timeout=10)
             logger.info("Webhook POST to %s: HTTP %d", url, resp.status_code)
             return {"action_type": "webhook", "status": "ok", "http_status": resp.status_code}
-        except requests.RequestException as e:
+        except RequestException as e:
             logger.error("Webhook POST failed: %s", e)
             return {"action_type": "webhook", "status": "error", "error": str(e)}
 
@@ -463,7 +464,7 @@ class AlertEngine:
                 return {"action_type": "discord", "status": "ok"}
             logger.warning("Discord webhook error %d: %s", resp.status_code, resp.text[:200])
             return {"action_type": "discord", "status": "error", "http_status": resp.status_code}
-        except requests.RequestException as e:
+        except RequestException as e:
             logger.error("Discord request failed: %s", e)
             return {"action_type": "discord", "status": "error", "error": str(e)}
 
@@ -520,7 +521,7 @@ class AlertEngine:
                 return {"action_type": "slack", "status": "ok"}
             logger.warning("Slack webhook error %d: %s", resp.status_code, resp.text[:200])
             return {"action_type": "slack", "status": "error", "http_status": resp.status_code}
-        except requests.RequestException as e:
+        except RequestException as e:
             logger.error("Slack request failed: %s", e)
             return {"action_type": "slack", "status": "error", "error": str(e)}
 

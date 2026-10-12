@@ -16,13 +16,14 @@ Scrapling engine.
 
 from __future__ import annotations
 
+import http.client
 import logging
 import random
 import threading
 import time
+import urllib.request
 
 import curl_cffi.requests as curl_requests
-import requests
 
 logger = logging.getLogger(__name__)
 
@@ -115,9 +116,8 @@ def _plain_get(url: str, timeout: float) -> bytes | None:
     """Some hosts (ec.europa.eu) drop every curl_cffi TLS handshake, impersonated or
     not, yet answer a stock client."""
     try:
-        resp = requests.get(url, timeout=timeout)
-        resp.raise_for_status()
-        return resp.content
-    except requests.RequestException as e:
+        with urllib.request.urlopen(url, timeout=timeout) as resp:
+            return resp.read()
+    except (OSError, http.client.HTTPException) as e:
         logger.warning("[fastfetch] %s failed permanently: %s", url, e)
         return None

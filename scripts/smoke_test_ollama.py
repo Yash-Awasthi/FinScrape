@@ -46,7 +46,7 @@ check("FINSCRAPE_MODEL set",       bool(model), model or "not set")
 
 # ── Step 2: Ollama reachable ───────────────────────────────────────────────
 print("\n2. Ollama connectivity")
-import requests
+from curl_cffi import requests
 try:
     r = requests.get(base_url.replace("/v1", "") + "/api/tags", timeout=5)
     check("Ollama /api/tags responds", r.status_code == 200, f"HTTP {r.status_code}")

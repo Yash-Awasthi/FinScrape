@@ -20,7 +20,7 @@ PowerShell, in the repo:
 ```powershell
 git checkout master
 git pull
-uv sync -p 3.13 --group server --group dev
+uv sync -p 3.14 --group server --group dev
 cd web
 node --version        # Vite+ needs ^22.18.0 or ^24.11.0; upgrade Node first if older
 npm ci                # web/ now runs on Vite+ (vp); the old node_modules will not work
@@ -30,10 +30,10 @@ cd ..
 Gates (all green on 12 Oct):
 
 ```powershell
-uv run -p 3.13 pytest -q                       # 663 cases; 688 with WORLDFIN_TEST_DATABASE_URL set
+uv run -p 3.14 pytest -q                       # 663 cases; 688 with WORLDFIN_TEST_DATABASE_URL set
 make lint; make fmt-check                      # or the ruff commands in the Makefile
-uv run -p 3.13 pyright
-uv run -p 3.13 python -m tests.server.selfcheck
+uv run -p 3.14 pyright
+uv run -p 3.14 python -m tests.server.selfcheck
 cd web; npm run typecheck; npm run test; npm run build   # typecheck is now `vp check`
 ```
 

@@ -6,9 +6,9 @@ Current work is tracked in [task.md](../task.md).
 
 ## Requirements
 
-- Python 3.13 and uv.
-- Node 24 and npm.
-- PostgreSQL 16/17 for integration tests or a seeded backend.
+- Python 3.14 and uv.
+- Node 26 and npm.
+- PostgreSQL 18 for integration tests or a seeded backend.
 - Playwright's matching Chromium headless shell for browser tests.
 - GNU Make is convenient; equivalent commands are listed below.
 
@@ -20,7 +20,7 @@ Docker is an alternative for the demo, not a prerequisite for native checks.
 ## Install in a fresh checkout
 
 ```powershell
-uv sync --locked -p 3.13 --group server --group dev
+uv sync --locked -p 3.14 --group server --group dev
 Push-Location web
 npm ci
 $env:PLAYWRIGHT_SKIP_BROWSER_GC = '1'

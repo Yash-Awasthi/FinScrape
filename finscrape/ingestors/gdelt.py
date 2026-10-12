@@ -15,7 +15,8 @@ import zipfile
 from typing import Any
 from urllib.parse import urlparse
 
-import requests
+from curl_cffi import requests
+from curl_cffi.requests.exceptions import RequestException
 
 from finscrape.entity_map import resolve_company_tickers, resolve_tickers
 from finscrape.ingestors.base import _HEADERS, _TIMEOUT, BaseIngestor, RawGeoEvent
@@ -71,7 +72,7 @@ class GDELTIngestor(BaseIngestor):
             )
             resp.raise_for_status()
             return resp.content
-        except (requests.RequestException, StopIteration) as exc:
+        except (RequestException, StopIteration) as exc:
             logger.warning("[ingestor/gdelt] export fetch failed: %s", exc)
             return None
 

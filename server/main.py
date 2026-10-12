@@ -1,8 +1,9 @@
-"""Uvicorn entrypoint: `python -m server.main` or `uvicorn server.main:app`."""
+"""Granian entrypoint: `python -m server.main`, or point any ASGI server at `server.main:app`."""
 
 from __future__ import annotations
 
-import uvicorn
+from granian import Granian
+from granian.constants import Interfaces
 
 from finscrape.logging_config import setup_logging
 from server.app import create_app
@@ -14,7 +15,9 @@ app = create_app()
 
 def main() -> None:
     s = get_settings()
-    uvicorn.run("server.main:app", host=s.host, port=s.port, log_level="info")
+    Granian(
+        "server.main:app", address=s.host, port=s.port, interface=Interfaces.ASGI
+    ).serve()
 
 
 if __name__ == "__main__":

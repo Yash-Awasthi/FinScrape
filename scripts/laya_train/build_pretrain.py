@@ -27,7 +27,7 @@ from collections import Counter
 from pathlib import Path
 
 import pandas as pd
-import requests
+from curl_cffi import requests
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
@@ -111,9 +111,15 @@ def open_fnspid():
         with local.open(encoding="utf-8", errors="replace", newline="") as fh:
             yield fh
         return
-    with requests.get(FNSPID, stream=True, timeout=60) as resp:
-        resp.raise_for_status()
-        yield io.TextIOWrapper(resp.raw, encoding="utf-8", errors="replace")
+    with requests.Session() as session:
+        resp = session.get(FNSPID, stream=True, timeout=60)
+        with contextlib.closing(resp):
+            resp.raise_for_status()
+            # Keep the newline: csv needs it to rebuild quoted fields that span lines.
+            yield (
+                line.decode("utf-8", "replace") + "\n"
+                for line in resp.iter_lines(delimiter=b"\n")
+            )
 
 
 def fnspid(per_sector: int, max_rows: int, skip: set[str]) -> list[dict]:

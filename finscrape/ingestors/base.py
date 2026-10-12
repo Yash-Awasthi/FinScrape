@@ -8,7 +8,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
 
-import requests
+from curl_cffi import requests
+from curl_cffi.requests import exceptions
 
 from finscrape.models import ScrapedArticle
 
@@ -98,13 +99,13 @@ class BaseIngestor(ABC):
                     continue
                 resp.raise_for_status()
                 return resp.json()
-            except (requests.Timeout, requests.ConnectionError) as exc:
+            except (exceptions.Timeout, exceptions.ConnectionError) as exc:
                 if attempt < _RETRIES:
                     time.sleep(_BACKOFF_S * (attempt + 1))
                     continue
                 logger.warning("[ingestor/%s] fetch failed: %s", self.name, exc)
                 return None
-            except (requests.RequestException, ValueError) as exc:
+            except (exceptions.RequestException, ValueError) as exc:
                 logger.warning("[ingestor/%s] fetch failed: %s", self.name, exc)
                 return None
         return None

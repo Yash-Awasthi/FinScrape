@@ -68,7 +68,7 @@ How the WorldFin backend defends its trust boundaries. All knobs are env vars (s
 
 ```bash
 # unit + middleware integration (no DB):
-uv run -p 3.13 --group server --group dev pytest tests/server/test_hardening.py -q
+uv run -p 3.14 --group server --group dev pytest tests/server/test_hardening.py -q
 ```
 - **429 past threshold:** `WORLDFIN_RATE_LIMIT_PER_MIN=3`, fire 5 requests → 3×200, 2×429
   (`test_rate_limit_returns_429_with_retry_after`).

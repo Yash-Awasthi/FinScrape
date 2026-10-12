@@ -83,7 +83,7 @@ def parse_timestamp(ts: str | None) -> datetime:
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=UTC)
             return dt.astimezone(UTC)
-        except (ValueError, OverflowError, TypeError):
+        except ValueError, OverflowError, TypeError:
             pass
     return datetime.now(UTC)
 

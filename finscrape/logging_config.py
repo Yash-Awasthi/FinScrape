@@ -24,7 +24,7 @@ _LOG_RESERVED = frozenset(
 class JsonFormatter(logging.Formatter):
     """One JSON object per line: ts, level, logger, msg, correlation id + any extras.
 
-    Loki/promtail ingest these directly; no regex parsing of the human format.
+    Loki/Alloy ingest these directly; no regex parsing of the human format.
     """
 
     def format(self, record: logging.LogRecord) -> str:
@@ -86,7 +86,7 @@ def setup_logging(
     """Configure logging for the whole process (root logger).
 
     Attaches one stream handler — human format by default, one-line JSON when
-    json_format=True (containers, so promtail/Loki get structured records).
+    json_format=True (containers, so Alloy/Loki get structured records).
     Idempotent: clears prior handlers so repeated calls don't double-log.
     """
     formatter = JsonFormatter() if json_format else FinScrapeFormatter()

@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 import pandas as pd
-import requests
+from curl_cffi import requests
 
 from finscrape.analysis.sp500 import TABLE, norm
 from finscrape.analysis.ticker_map import COMPANY_TO_TICKER

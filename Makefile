@@ -1,8 +1,8 @@
 # WorldFin developer commands. `make help` lists them.
-# Python tasks run via uv pinned to 3.13 (spacy has no 3.14 wheel yet) with the
-# server + dev groups so FastAPI/asyncpg/ruff are present.
+# Python tasks run via uv pinned to 3.14 with the server + dev groups so
+# FastAPI/asyncpg/ruff are present.
 .DEFAULT_GOAL := help
-PY := uv run -p 3.13 --group server --group dev
+PY := uv run -p 3.14 --group server --group dev
 COMPOSE := docker compose
 
 # New (WorldFin) code only — pre-existing finscrape source isn't ruff-format clean,
