@@ -7,13 +7,12 @@ const FEATURES: [string, string, string][] = [
   ["🌍", "Live globe", "Every event geolocated, colored by verdict. Click a point for the full reasoning chain."],
   ["🎯", "Event → ticker resolution", "A Strait-of-Hormuz headline becomes XOM, CVX, RTX, ZIM — with per-entity impact."],
   ["🔗", "Second-order effects", "The knock-on chain: war-risk premiums, rerouting, LNG spillover, insurer exposure."],
-  ["⚖️", "Multi-agent AI council", "On demand, eight analyst personas deliberate a call and surface consensus and dissent."],
-  ["📈", "Accuracy proof", "Historical hit-rate, by-verdict breakdown, and an equity-curve sparkline you can audit."],
+  ["⚖️", "Multi-agent AI council", "On demand, analyst personas deliberate a call and surface consensus and dissent."],
+  ["📈", "Accuracy proof", "Every call scored next day and against SPY at +2 and +4 days, with confidence intervals and the full list of calls."],
   ["🛰️", "Correlation engine", "Flags when 3+ independent source-types corroborate a story — before it's news."],
   ["⚡", "Breaking-news detection", "Wire + gov + intel triangulation fires a banner the moment a story converges."],
-  ["💬", "Social sentiment", "Bullish and bearish Reddit posts per ticker, from r/stocks, r/investing and r/wallstreetbets."],
   ["🔔", "Telegram alerts", "Push INVEST / PULL_OUT signals straight to your phone."],
-  ["📊", "Markets Live", "Live quotes across 28 exchanges — US, India, China, Europe, Asia — with a watchlist and a scrolling tape."],
+  ["📊", "Ticker view", "Every ticker the news named, its chart, and the calls that moved it."],
   ["⏱️", "Freshness guaranteed", "Only news ≤24h old, with per-source health monitoring."],
 ];
 
@@ -89,7 +88,7 @@ async function live(): Promise<void> {
   // A handful of scored calls is not a track record; say so rather than quote it.
   if (accuracy && accuracy.scored >= 30) {
     setText("stat-hit", `${Math.round(accuracy.hit_rate * 100)}%`);
-    setText("stat-hit-label", `next-day raw: of ${accuracy.scored} INVEST/PULL_OUT calls, a move of 1% or more their way by the next close`);
+    setText("stat-hit-label", `next day: of ${accuracy.scored} INVEST/PULL_OUT calls whose ticker moved 1% or more, the share that moved the way called`);
   } else if (accuracy) {
     setText("stat-hit", String(accuracy.scored));
     setText("stat-hit-label", "calls scored so far against realized moves");

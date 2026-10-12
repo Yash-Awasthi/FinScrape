@@ -21,6 +21,7 @@ export interface EventOut {
   magnitude: string;
   novelty: string;
   actionability: string;
+  divergence_flag?: boolean;
   sector_impact: string;
   sector?: string;
   tickers: string[];
@@ -119,32 +120,18 @@ export interface Correlation {
   detected_at: string;
 }
 
-export interface RssItem {
-  title: string;
-  link: string;
-  published: string;
-}
-
-export interface FeedInfo {
-  key: string;
-  name: string;
-  tier: string;
-  region: string;
-}
-
-export interface MarketTicker {
-  ticker: string;
-  mentions: number;
-  avg_score: number;
-}
-
-export interface Accuracy {
-  total: number;
+export interface HitRate {
   scored: number;
   hits: number;
   hit_rate: number;
   by_verdict: Record<string, { hits: number; total: number; hit_rate: number }>;
+}
+
+export interface Accuracy extends HitRate {
+  total: number;
   equity_curve: number[];
+  equity_metrics?: { sharpe_ratio: number; sortino_ratio: number; max_drawdown: number };
+  vs_spy?: { d2: HitRate; d4: HitRate };
 }
 
 export interface AIAnalysis {
@@ -169,19 +156,6 @@ export interface EventQuery {
   dir?: string;
 }
 
-export interface Sentiment {
-  ticker: string;
-  sentiment_score: number;
-  bullish_count: number;
-  bearish_count: number;
-  neutral_count: number;
-  total_posts: number;
-  bullish_pct: number;
-  volume_spike: boolean;
-  platforms: string[];
-  top_posts: { text: string; author: string; platform: string; url: string }[];
-}
-
 export interface Suggestion {
   ticker: string;
   score: number;
@@ -196,15 +170,6 @@ export interface Suggestion {
   last_seen: string | null;
 }
 
-export interface Quote {
-  symbol: string;
-  price: number | null;
-  change_pct: number | null;
-  name?: string | null;
-  currency?: string | null;
-  source: string;
-}
-
 export interface Candle {
   t: string;
   o: number;
@@ -212,15 +177,6 @@ export interface Candle {
   l: number;
   c: number;
   v: number;
-}
-
-export interface AgentAnalysis {
-  ticker: string;
-  trade_date: string;
-  signal: string;
-  decision: string;
-  duration_seconds: number;
-  errors: string[];
 }
 
 export interface Prediction {
@@ -254,6 +210,30 @@ export interface Reliability {
   brier: { brier: number | null; n: number };
 }
 
+
+/** One scored call: the move after it, signed toward the call, and vs SPY at +2/+4 days. */
+export interface Outcome {
+  event_id: number;
+  subject: string;
+  verdict: string;
+  tickers: string[];
+  timestamp: string;
+  price_move_pct: number | null;
+  correct: boolean | null;
+  ex2: number | null;
+  ex4: number | null;
+  correct2: boolean | null;
+  correct4: boolean | null;
+}
+
+export interface Council {
+  consensus_verdict: string;
+  consensus_score: number;
+  agreement_level: number;
+  dissenting_agents: string[];
+  key_risks: string[];
+  key_opportunities: string[];
+}
 
 // Empty = same-origin (dev proxy / nginx). Set VITE_API_BASE for split hosting.
 export const API_BASE = (import.meta.env.VITE_API_BASE ?? "").replace(/\/$/, "");
@@ -297,26 +277,13 @@ export const api = {
     getJSON<{ suggestions: Suggestion[] }>(`/api/suggestions${qs({ limit })}`).then(
       (r) => r.suggestions,
     ),
-  quotes: (symbols: string[]) =>
-    getJSON<{ quotes: Quote[] }>(`/api/quotes${qs({ symbols: symbols.join(",") })}`).then(
-      (r) => r.quotes,
-    ),
-  markets: (limit = 20) =>
-    getJSON<{ tickers: MarketTicker[] }>(`/api/markets${qs({ limit })}`).then((r) => r.tickers),
-  feeds: () => getJSON<{ feeds: FeedInfo[] }>("/api/feeds").then((r) => r.feeds),
-  rss: (feed: string, limit = 20) =>
-    getJSON<{ feed: string; name: string; tier: string; items: RssItem[] }>(
-      `/api/rss-proxy${qs({ feed, limit })}`,
-    ),
   accuracy: () => getJSON<Accuracy>("/api/accuracy"),
-  sentiment: (ticker: string) => getJSON<Sentiment>(`/api/sentiment${qs({ ticker })}`),
+  outcomes: (q: { limit?: number; event_id?: number } = {}) =>
+    getJSON<{ outcomes: Outcome[] }>(`/api/outcomes${qs(q)}`).then((r) => r.outcomes),
+  council: (id: number) => getJSON<Council>(`/api/ai/council${qs({ id })}`),
   candles: (symbol: string, period = "1mo", interval = "1d") =>
     getJSON<{ symbol: string; candles: Candle[] }>(
       `/api/candles${qs({ symbol, period, interval })}`,
-    ),
-  agentAnalyze: (ticker: string, analysts = "market,news", debate_rounds = 1) =>
-    getJSON<AgentAnalysis>(
-      `/api/agents/analyze${qs({ ticker, analysts, debate_rounds })}`,
     ),
   predict: (id: number) => getJSON<Prediction>(`/api/predict/${id}`),
   reliability: () => getJSON<Reliability>("/api/reliability"),

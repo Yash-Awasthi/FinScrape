@@ -59,11 +59,13 @@ async function mockBackend(page: import("@playwright/test").Page) {
       if (path.endsWith("/api/correlations")) return { correlations: [] };
       if (path.endsWith("/api/health"))
         return { status: "ok", db: true, llm: false, sources: [] };
-      if (path.endsWith("/api/markets")) return { tickers: [] };
-      if (path.endsWith("/api/crypto")) return { coins: [] };
-      if (path.endsWith("/api/feeds")) return { feeds: [] };
       if (path.endsWith("/api/accuracy"))
         return { total: 0, scored: 0, hits: 0, hit_rate: 0, by_verdict: {}, equity_curve: [] };
+      if (path.endsWith("/api/outcomes")) return { outcomes: [] };
+      if (path.endsWith("/api/suggestions")) return { suggestions: [] };
+      if (path.endsWith("/api/storylines")) return { storylines: [] };
+      if (path.endsWith("/api/scenarios")) return { scenarios: [] };
+      if (path.endsWith("/api/sectors")) return { sectors: [] };
       return {};
     })();
     await route.fulfill({ json });
@@ -90,10 +92,10 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/app/");
 });
 
-test("every registered panel is actually shown", async ({ page, browser }) => {
-  // The layout warns when a panel is registered but left out of PAGE_LAYOUT, or when
-  // a slot names a panel that does not exist. Both are invisible in the UI itself:
-  // the panel is simply display:none, or the slot renders nothing.
+test("every registered panel belongs to a view", async ({ page, browser }) => {
+  // The layout warns when a panel is registered but in no view, or when a view names
+  // a panel that does not exist. Both are invisible in the UI itself: the panel is
+  // simply display:none, or the slot renders nothing.
   const context = await browser.newContext();
   const fresh = await context.newPage();
   const warnings: string[] = [];
@@ -154,4 +156,30 @@ test("WS update: new_events frame appends a row live", async ({ page }) => {
   // The mocked socket pushes a third event ~1.2s in.
   await expect(rows).toHaveCount(3);
   await expect(page.locator("table.feed")).toContainText("central bank surprise hike");
+});
+
+test("tabs switch views and the URL hash follows", async ({ page }) => {
+  await page.getByRole("link", { name: "Track record" }).click();
+  await expect(page).toHaveURL(/#record$/);
+  await expect(page.locator(".panel-head", { hasText: "Scored calls" })).toBeVisible();
+  await expect(page.locator(".panel-head", { hasText: "Signal Feed" })).toBeHidden();
+  // No event is picked on this view, so the inspector rail gives up its width.
+  await expect(page.locator(".inspector")).toBeHidden();
+  await page.getByRole("link", { name: "Today" }).click();
+  await expect(page.locator(".panel-head", { hasText: "Signal Feed" })).toBeVisible();
+});
+
+test("a deep link opens its view", async ({ page }) => {
+  await page.goto("/app/#sources");
+  await expect(page.locator(".panel-head", { hasText: "Source health" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Sources" })).toHaveAttribute("aria-current", "page");
+});
+
+test("charting a ticker opens Tickers with the calls that named it", async ({ page }) => {
+  await expect(page.locator("table.feed")).toContainText("Chip export controls");
+  await page.evaluate(() =>
+    window.dispatchEvent(new CustomEvent("worldfin:select-symbol", { detail: "AAPL" })),
+  );
+  await expect(page).toHaveURL(/#tickers$/);
+  await expect(page.locator(".candles-calls")).toContainText("Chip export controls");
 });

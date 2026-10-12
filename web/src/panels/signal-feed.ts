@@ -1,12 +1,12 @@
 // SignalFeedPanel: analyzed intelligence — verdicts, scores, reasoning preview,
 // and the source article link. Compact rows with verdict filters.
-// (World News shows raw RSS; this panel shows what the pipeline *concluded*.)
 //
 // A5: rows that belong to the same storyline (embedding cluster: same story
 // from several sources within a 48h window) collapse under their top row as a
 // "+N sources" expander, so five syndicated copies stop becoming five rows.
 
 import { type EventOut, type Storyline, verdictColor } from "../api";
+import { escapeHtml, timeAgo } from "../util";
 import { Panel } from "./panel";
 
 export class SignalFeedPanel extends Panel {
@@ -20,7 +20,7 @@ export class SignalFeedPanel extends Panel {
   private readonly expanded = new Set<number>();
 
   constructor(private readonly onSelect: (e: EventOut) => void) {
-    super({ id: "feed", title: "Signal Feed — analyzed events", w: 4, h: 8 });
+    super({ id: "feed", title: "Signal Feed — analyzed events", w: 5, h: 9 });
     // Sector Heat chips re-aim the feed; clicking the active chip again clears it.
     window.addEventListener("worldfin:select-sector", (e) => {
       const sector = (e as CustomEvent<string>).detail;
@@ -218,7 +218,8 @@ export class SignalFeedPanel extends Panel {
     tr.innerHTML =
       `<td><span class="dot" style="background:${verdictColor(e.verdict)}"></span>` +
       `${e.verdict} <b>${e.signal_score >= 0 ? "+" : ""}${e.signal_score}</b>` +
-      `<span class="row-meta">${badge}${chainBadge}${Math.round(e.confidence * 100)}% · ${escapeHtml(e.tickers.slice(0, 4).join(", ")) || "—"}</span>` +
+      `<span class="row-meta">${badge}${chainBadge}${Math.round(e.confidence * 100)}% · ${escapeHtml(e.tickers.slice(0, 4).join(", ")) || "—"}` +
+      ` · ${timeAgo(e.timestamp)} · ${e.sources.length} src${e.divergence_flag ? ' · <span class="warn" title="the model and the text disagree on direction">divergent</span>' : ""}</span>` +
       `<div class="subj">${subject}</div>${reasoning}</td>`;
     tr.addEventListener("click", () => {
       // Text selection means the user is copying, not clicking. Otherwise the whole
@@ -258,8 +259,3 @@ export class SignalFeedPanel extends Panel {
   }
 }
 
-function escapeHtml(s: string): string {
-  const d = document.createElement("div");
-  d.textContent = s;
-  return d.innerHTML;
-}

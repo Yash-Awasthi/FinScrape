@@ -3,37 +3,58 @@
 import {
   type Accuracy,
   api,
+  type Candle,
   type Correlation,
   type DashboardStats,
   type DateCount,
-  type FeedInfo,
+  type EventOut,
   type HealthResponse,
-  type RssItem,
+  type HitRate,
+  type Outcome,
+  type Prediction,
+  type Scenario,
+  type ScenarioLeg,
   type Sector,
-  type Sentiment,
   type Suggestion,
+  verdictColor,
 } from "../api";
-import { CHANNELS, countries, embedUrl } from "../data/channels";
-import { escapeHtml, sourceLabel, timeAgo } from "../util";
-import { VIZ_COLORS, barChart, calibration, columns, signColor, sparkline, stackedBar } from "./viz";
-import { history, record } from "./series";
-import { type Candle, type Prediction, type Quote, type Scenario, type ScenarioLeg } from "../api";
-import { verdictColor } from "../api";
+import { escapeHtml, fmtPct, sourceLabel, timeAgo } from "../util";
+import { VIZ_COLORS, barChart, calibration, columns, signColor, sparkline } from "./viz";
 import { Panel } from "./panel";
+
+// What each detector in server/correlate.py means, for a reader who never saw it.
+const SIGNAL_MEANING: Record<string, string> = {
+  convergence: "three or more source types carried this story within an hour",
+  triangulation: "wire, government and intelligence sources all carried it",
+  flow_drop: "a supply or flow disruption is being reported",
+  velocity_spike: "coverage of this topic is over 3× its 7-day normal",
+  explained_market_move: "a 2%+ price move with news that explains it",
+  silent_divergence: "a 2%+ price move with no news to explain it",
+  flow_price_divergence: "an energy price moved with little supply news behind it",
+  prediction_leads_news: "the analysis expects a large move the news has barely covered",
+};
 
 export class CorrelationPanel extends Panel {
   constructor() {
-    super({ id: "correlations", title: "Correlations", w: 4, h: 3 });
+    super({ id: "correlations", title: "Correlation signals", w: 6, h: 8 });
   }
   update(signals: Correlation[]): void {
     if (!signals.length) {
-      this.setContent('<p class="empty">No correlation signals yet.</p>');
+      this.setContent('<p class="empty">No correlation signals in this window.</p>');
       return;
     }
     const rows = signals
       .map((s) => {
         const id = escapeHtml(String(s.payload?.id ?? ""));
-        return `<li><b>${escapeHtml(s.signal_type)}</b> · ${Math.round(s.confidence * 100)}%<br><span class="muted">${id}</span></li>`;
+        const value = s.payload?.value;
+        const meaning = SIGNAL_MEANING[s.signal_type] ?? "";
+        return (
+          `<li><span><b>${escapeHtml(s.signal_type.replace(/_/g, " "))}</b> · ${id}` +
+          (typeof value === "number" ? ` · ${value.toFixed(1)}` : "") +
+          ` <span class="muted">${Math.round(s.confidence * 100)}% · ${timeAgo(s.detected_at)} ago</span></span>` +
+          (meaning ? `<span class="muted">${escapeHtml(meaning)}</span>` : "") +
+          `</li>`
+        );
       })
       .join("");
     this.setContent(`<ul class="corr-list">${rows}</ul>`);
@@ -42,7 +63,7 @@ export class CorrelationPanel extends Panel {
 
 export class SectorPanel extends Panel {
   constructor() {
-    super({ id: "sectors", title: "Sector Heat", w: 4, h: 4 });
+    super({ id: "sectors", title: "Sector heat", w: 12, h: 5 });
   }
   async load(): Promise<void> {
     try {
@@ -96,7 +117,7 @@ export class SectorPanel extends Panel {
 
 export class StatsPanel extends Panel {
   constructor() {
-    super({ id: "stats", title: "Stats", w: 4, h: 3 });
+    super({ id: "stats", title: "Calls by verdict", w: 4, h: 4 });
   }
   update(stats: DashboardStats): void {
     const verdicts = Object.entries(stats.by_verdict);
@@ -121,147 +142,39 @@ export class StatsPanel extends Panel {
 
 export class SuggestionsPanel extends Panel {
   constructor() {
-    super({ id: "suggestions", title: "Suggestions", w: 4, h: 3 });
+    super({ id: "suggestions", title: "Tickers in the news", w: 4, h: 8 });
+    this.el.addEventListener("click", (e) => {
+      const sym = (e.target as HTMLElement).closest<HTMLElement>(".sug-click")?.dataset.sym;
+      if (sym) window.dispatchEvent(new CustomEvent("worldfin:select-symbol", { detail: sym }));
+    });
   }
   async load(): Promise<void> {
     try {
-      this.render(await api.suggestions(10));
+      this.render(await api.suggestions(25));
     } catch {
-      this.setContent('<p class="empty">Suggestions unavailable.</p>');
+      this.setContent('<p class="empty">Ticker list unavailable.</p>');
     }
   }
   private render(sugs: Suggestion[]): void {
-    if (!sugs.length) return this.setContent('<p class="empty">No suggestions yet — ingest more events.</p>');
+    if (!sugs.length) return this.setContent('<p class="empty">No tickers yet — ingest more events.</p>');
     const rows = sugs
       .map((s) => {
-        const color = s.latest_verdict ? verdictColor(s.latest_verdict) : "#8a8f98";
+        const color = s.latest_verdict ? verdictColor(s.latest_verdict) : VIZ_COLORS.muted;
+        const surge = (s.momentum ?? 1) >= 1.5 ? ` · ${Number(s.momentum).toFixed(1)}× surge` : "";
         return (
-          `<div class="sug-row sug-click" data-sym="${escapeHtml(s.ticker)}">` +
+          `<button class="sug-row sug-click" data-sym="${escapeHtml(s.ticker)}" title="chart ${escapeHtml(s.ticker)} and its calls">` +
           `<span class="sug-dot" style="background:${color}"></span>` +
           `<b>${escapeHtml(s.ticker)}</b>` +
           `<span class="muted">${s.mentions} events · avg ${s.avg_score >= 0 ? "+" : ""}${s.avg_score}` +
-          ` · trust ${Math.round(s.trust * 100)}%` +
-          `${(s.momentum ?? 1) >= 1.5 ? ` · 🔥 ${Number(s.momentum).toFixed(1)}× surge` : ""}</span>` +
-          `<span class="sug-score">+${s.score.toFixed(1)}</span>` +
-          (s.latest_subject ? `<div class="muted sug-sub">${escapeHtml(s.latest_subject.slice(0, 80))}</div>` : "") +
-          `</div>`
+          ` · ${escapeHtml(s.sector ?? "—")} · trust ${Math.round(s.trust * 100)}%${surge}</span>` +
+          (s.latest_subject
+            ? `<span class="muted sug-sub">${escapeHtml(s.latest_verdict ?? "")} · ${escapeHtml(s.latest_subject.slice(0, 90))}</span>`
+            : "") +
+          `</button>`
         );
       })
       .join("");
     this.setContent(`<div class="sug-list">${rows}</div>`);
-  }
-}
-
-export class NewsLobbyPanel extends Panel {
-  private feeds: FeedInfo[] = [];
-  private activeFeed = "";
-  constructor() {
-    super({ id: "lobby", title: "News Lobby", w: 12, h: 4 });
-  }
-  async load(): Promise<void> {
-    try {
-      if (!this.feeds.length) {
-        this.feeds = await api.feeds();
-        this.activeFeed = this.feeds[0]?.key ?? "";
-      }
-      await this.renderFeed();
-    } catch {
-      this.setContent('<p class="empty">Lobby unavailable.</p>');
-    }
-  }
-  private async renderFeed(): Promise<void> {
-    const tabs = this.feeds
-      .map(
-        (f) =>
-          `<button class="lobby-tab${f.key === this.activeFeed ? " active" : ""}" data-feed="${f.key}">` +
-          `${escapeHtml(f.name)}</button>`,
-      )
-      .join("");
-    const body = document.createElement("div");
-    body.className = "lobby";
-    body.innerHTML = `<div class="lobby-tabs">${tabs}</div><div class="lobby-body"><p class="muted">Loading…</p></div>`;
-    body.addEventListener("click", (e) => {
-      const feed = (e.target as HTMLElement).closest<HTMLElement>(".lobby-tab")?.dataset.feed;
-      if (feed && feed !== this.activeFeed) {
-        this.activeFeed = feed;
-        void this.load();
-      }
-    });
-    const list = body.querySelector<HTMLElement>(".lobby-body")!;
-    this.setContent(body);
-    try {
-      const res = await api.rss(this.activeFeed, 30);
-      list.innerHTML = this.renderItems(res.items);
-    } catch {
-      list.innerHTML = '<p class="empty">Feed unavailable.</p>';
-    }
-  }
-  private renderItems(items: RssItem[]): string {
-    if (!items.length) return '<p class="empty">No items.</p>';
-    return (
-      '<ul class="news lobby-list">' +
-      items
-        .map(
-          (i) =>
-            `<li><a href="${escapeHtml(i.link)}" target="_blank" rel="noopener">${escapeHtml(i.title)}</a>` +
-            `<span class="muted lobby-time">${escapeHtml(i.published)}</span></li>`,
-        )
-        .join("") +
-      "</ul>"
-    );
-  }
-}
-
-export class MarketsLivePanel extends Panel {
-  private symbols = [
-    // US
-    "AAPL", "MSFT", "NVDA", "JPM", "XOM",
-    // India
-    "RELIANCE.NS", "TCS.NS", "INFY.NS", "HDFCBANK.NS",
-    // China
-    "600519.SS", "601398.SS", "300750.SZ",
-    // Europe
-    "SHEL.L", "SAP.DE", "MC.PA", "ASML.AS",
-    // Asia-Pacific
-    "7203.T", "0700.HK", "005930.KS", "BHP.AX",
-  ];
-
-  constructor() {
-    super({ id: "markets-live", title: "Markets Live", w: 8, h: 5 });
-  }
-
-  async load(): Promise<void> {
-    await this.refresh();
-  }
-
-  async refresh(): Promise<void> {
-    try {
-      const quotes = await api.quotes(this.symbols);
-      for (const q of quotes) record(q.symbol, q.price);
-      this.render(quotes);
-    } catch {
-      // keep last known prices on the screen
-    }
-  }
-
-  private render(quotes: Quote[]): void {
-    const groups: Record<string, Quote[]> = { Americas: [], Asia: [], Europe: [] };
-    for (const q of quotes) {
-      groups[regionOf(q.symbol)].push(q);
-    }
-    const cards = Object.entries(groups)
-      .filter(([, qs]) => qs.length)
-      .map(
-        ([region, qs]) =>
-          `<div class="ml-region"><h4>${region}</h4><div class="ml-cards">` +
-          qs.map((q) => quoteCard(q)).join("") +
-          `</div></div>`,
-      )
-      .join("");
-    this.setContent(
-      cards ||
-        '<p class="empty">No quotes yet — the quotes API needs a moment.</p>',
-    );
   }
 }
 
@@ -273,121 +186,6 @@ export function evidence(scenario: Pick<Scenario, "data_tier" | "sample_size">):
   return "analysis only, no scored record for this call";
 }
 
-function quoteCard(q: Quote): string {
-  const up = (q.change_pct ?? 0) > 0;
-  const down = (q.change_pct ?? 0) < 0;
-  const cls = up ? "up" : down ? "down" : "flat";
-  const arrow = up ? "▲" : down ? "▼" : "·";
-  const price = q.price == null ? "—" : q.price >= 1000 ? q.price.toFixed(0) : q.price.toFixed(2);
-  const change = q.change_pct == null ? "—" : `${q.change_pct >= 0 ? "+" : ""}${q.change_pct.toFixed(2)}%`;
-  // Prices sit in a narrow band far from zero, so the spark scales to its own range.
-  const spark = sparkline(history(q.symbol), `${q.symbol} session prices`, signColor(q.change_pct ?? 0), false);
-  return (
-    `<div class="ml-card ml-click" data-sym="${escapeHtml(q.symbol)}"><div class="ml-sym">${escapeHtml(q.symbol)}</div>` +
-    `<div class="ml-price">${price}</div>` +
-    `<div class="ml-change ${cls}">${arrow} ${change}</div>` +
-    `<div class="ml-spark">${spark}</div>` +
-    `<div class="ml-src">${escapeHtml(q.source)}</div></div>`
-  );
-}
-
-function regionOf(symbol: string): string {
-  const suffix = symbol.includes(".") ? symbol.split(".").pop()! : "";
-  if (["NS", "BO", "SS", "SZ", "HK", "T", "KS", "KQ", "TW", "SI", "AX", "JK", "BK"].includes(suffix)) return "Asia";
-  if (["L", "DE", "PA", "AS", "BR", "MC", "MI", "SW", "SR", "IS"].includes(suffix)) return "Europe";
-  return "Americas";
-}
-
-const WATCHLIST_KEY = "worldfin.watchlist";
-
-export class WatchlistPanel extends Panel {
-  private symbols: string[];
-
-  constructor() {
-    super({ id: "watchlist", title: "Watchlist", w: 4, h: 5 });
-    try {
-      this.symbols = JSON.parse(localStorage.getItem(WATCHLIST_KEY) ?? "[]");
-    } catch {
-      this.symbols = [];
-    }
-    if (!this.symbols.length) this.symbols = ["NVDA", "RELIANCE.NS", "600519.SS"];
-  }
-
-  private persist(): void {
-    try {
-      localStorage.setItem(WATCHLIST_KEY, JSON.stringify(this.symbols));
-    } catch {
-      /* ignore */
-    }
-  }
-
-  async load(): Promise<void> {
-    await this.refresh();
-  }
-
-  async refresh(): Promise<void> {
-    if (!this.symbols.length) {
-      this.setContent('<p class="empty">Add symbols: AAPL, RELIANCE.NS, 600519.SS …</p>');
-      return;
-    }
-    try {
-      const quotes = await api.quotes(this.symbols);
-      for (const q of quotes) record(q.symbol, q.price);
-      this.render(quotes);
-    } catch {
-      // keep last known prices
-    }
-  }
-
-  private render(quotes: Quote[]): void {
-    const rows = quotes
-      .map((q) => {
-        const up = (q.change_pct ?? 0) > 0;
-        const down = (q.change_pct ?? 0) < 0;
-        const cls = up ? "up" : down ? "down" : "flat";
-        const change = q.change_pct == null ? "—" : `${q.change_pct >= 0 ? "+" : ""}${q.change_pct.toFixed(2)}%`;
-        const price = q.price == null ? "—" : q.price >= 1000 ? q.price.toFixed(0) : q.price.toFixed(2);
-        const spark = sparkline(history(q.symbol), `${q.symbol} session prices`, signColor(q.change_pct ?? 0), false);
-        return (
-          `<tr class="wl-click" data-sym="${escapeHtml(q.symbol)}"><td>${escapeHtml(q.symbol)}</td><td>${price}</td>` +
-          `<td class="${cls}">${change}</td>` +
-          `<td class="wl-spark">${spark}</td>` +
-          `<td><button class="wl-remove" data-sym="${escapeHtml(q.symbol)}" title="remove">×</button></td></tr>`
-        );
-      })
-      .join("");
-    const wrap = document.createElement("div");
-    wrap.className = "watchlist";
-    wrap.innerHTML =
-      `<form class="wl-form"><input class="wl-input" placeholder="add symbol…" maxlength="16" />` +
-      `<button type="submit">+</button></form>` +
-      `<table class="feed"><thead><tr><th>Symbol</th><th>Price</th><th>Chg</th><th>Trend</th><th></th></tr></thead>` +
-      `<tbody>${rows}</tbody></table>`;
-    wrap.querySelector("form")!.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const input = wrap.querySelector<HTMLInputElement>(".wl-input")!;
-      const symbol = input.value.toUpperCase().trim();
-      if (symbol && !this.symbols.includes(symbol)) this.symbols.push(symbol);
-      input.value = "";
-      this.persist();
-      void this.refresh();
-    });
-    wrap.addEventListener("click", (e) => {
-      const target = e.target as HTMLElement;
-      const rem = target.closest<HTMLElement>(".wl-remove")?.dataset.sym;
-      if (rem) {
-        this.symbols = this.symbols.filter((s) => s !== rem);
-        this.persist();
-        void this.refresh();
-        return;
-      }
-      const sym = target.closest<HTMLElement>(".wl-click")?.dataset.sym;
-      if (sym) window.dispatchEvent(new CustomEvent("worldfin:select-symbol", { detail: sym }));
-    });
-    this.setContent(wrap);
-  }
-}
-
 export class CandlesPanel extends Panel {
   private symbol = "AAPL";
   private period = "1mo";
@@ -395,8 +193,11 @@ export class CandlesPanel extends Panel {
   // the first refresh runs; keep the element itself.
   private shell: HTMLElement | null = null;
 
-  constructor() {
-    super({ id: "candles", title: "Chart", w: 8, h: 6 });
+  constructor(
+    private readonly events: () => EventOut[] = () => [],
+    private readonly onSelect: (e: EventOut) => void = () => {},
+  ) {
+    super({ id: "candles", title: "Chart", w: 8, h: 8 });
     // any panel can point the chart at a symbol
     window.addEventListener("worldfin:select-symbol", (e) => {
       const sym = (e as CustomEvent<string>).detail?.toUpperCase();
@@ -412,6 +213,11 @@ export class CandlesPanel extends Panel {
     await this.refresh();
   }
 
+  /** Aim the chart without loading it; `load` draws it. */
+  setSymbol(symbol: string): void {
+    this.symbol = symbol.toUpperCase();
+  }
+
   private renderShell(): void {
     const wrap = document.createElement("div");
     wrap.className = "candles";
@@ -423,7 +229,13 @@ export class CandlesPanel extends Panel {
         .map((p) => `<option${p === this.period ? " selected" : ""}>${p}</option>`)
         .join("") +
       `</select><button type="submit">Load</button></form>` +
-      `<div class="candles-body"><p class="muted">Loading…</p></div>`;
+      `<div class="candles-body"><p class="muted">Loading…</p></div>` +
+      `<div class="candles-calls"></div>`;
+    wrap.addEventListener("click", (e) => {
+      const id = Number((e.target as HTMLElement).closest<HTMLElement>("[data-event-id]")?.dataset.eventId);
+      const event = this.events().find((ev) => ev.id === id);
+      if (event) this.onSelect(event);
+    });
     wrap.querySelector("form")!.addEventListener("submit", (e) => {
       e.preventDefault();
       const input = wrap.querySelector<HTMLInputElement>(".candles-symbol")!;
@@ -440,6 +252,7 @@ export class CandlesPanel extends Panel {
     const title = this.el.querySelector<HTMLElement>(".panel-head");
     if (title) title.textContent = `Chart — ${this.symbol} (${this.period})`;
     if (!body) return;
+    this.renderCalls();
     body.innerHTML = '<p class="muted">Loading…</p>';
     try {
       const data = await api.candles(this.symbol, this.period);
@@ -447,6 +260,26 @@ export class CandlesPanel extends Panel {
     } catch {
       body.innerHTML = '<p class="empty">No candle data for this symbol/period.</p>';
     }
+  }
+
+  /** The calls that named this symbol, so the chart reads against the news. */
+  private renderCalls(): void {
+    const box = this.shell?.querySelector<HTMLElement>(".candles-calls");
+    if (!box) return;
+    const calls = this.events().filter((e) => e.tickers.includes(this.symbol));
+    box.innerHTML =
+      `<h4 class="sub-head">Calls naming ${escapeHtml(this.symbol)} (${calls.length})</h4>` +
+      (calls.length
+        ? `<ul class="call-list">${calls
+            .slice(0, 12)
+            .map(
+              (e) =>
+                `<li data-event-id="${e.id}"><span class="dot" style="background:${verdictColor(e.verdict)}"></span>` +
+                `<b>${escapeHtml(e.verdict)} ${e.signal_score >= 0 ? "+" : ""}${e.signal_score}</b> ` +
+                `<span>${escapeHtml(e.subject)}</span> <span class="muted">${timeAgo(e.timestamp)}</span></li>`,
+            )
+            .join("")}</ul>`
+        : '<p class="muted">No loaded event names this symbol.</p>');
   }
 
   private renderCandles(candles: Candle[]): string {
@@ -512,52 +345,6 @@ export class CandlesPanel extends Panel {
   }
 }
 
-export class AgentPanel extends Panel {
-  private ticker = "NVDA";
-
-  constructor() {
-    super({ id: "agents", title: "Agent Analysis — multi-agent research (view-only)", w: 4, h: 6 });
-    window.addEventListener("worldfin:select-symbol", (e) => {
-      const sym = (e as CustomEvent<string>).detail?.toUpperCase();
-      if (sym) {
-        this.ticker = sym;
-        const input = this.el.querySelector<HTMLInputElement>(".agents-ticker");
-        if (input) input.value = sym;
-      }
-    });
-  }
-
-  async load(): Promise<void> {
-    const wrap = document.createElement("div");
-    wrap.className = "agents";
-    wrap.innerHTML =
-      `<form class="agents-form"><input class="agents-ticker" value="${escapeHtml(this.ticker)}" maxlength="16" />` +
-      `<button type="submit">Run council</button></form>` +
-      `<div class="agents-body"><p class="muted">Enter a ticker and run the analyst council — commentary only, nothing is executed.</p></div>`;
-    const body = wrap.querySelector<HTMLElement>(".agents-body")!;
-    wrap.querySelector("form")!.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const input = wrap.querySelector<HTMLInputElement>(".agents-ticker")!;
-      this.ticker = input.value.toUpperCase().trim() || this.ticker;
-      void this.run(body);
-    });
-    this.setContent(wrap);
-  }
-
-  private async run(body: HTMLElement): Promise<void> {
-    body.innerHTML = '<p class="muted">Council deliberating… analysts debate with live market facts. Local models can take 1–3 minutes.</p>';
-    try {
-      const a = await api.agentAnalyze(this.ticker);
-      body.innerHTML =
-        `<div class="agents-signal">Signal: <b>${escapeHtml(String(a.signal))}</b>` +
-        ` <span class="muted">· ${a.duration_seconds}s${a.errors.length ? ` · ${a.errors.length} errors` : ""}</span></div>` +
-        `<pre class="agents-decision">${escapeHtml(a.decision.slice(0, 4000))}</pre>`;
-    } catch {
-      body.innerHTML = '<p class="empty">Analysis failed — is the AI provider running?</p>';
-    }
-  }
-}
-
 /** ".25-.5" and friends collapse to the midpoint the bucket stands for. */
 function bucketMidpoint(bucket: string): number {
   const [lo, hi] = bucket.split("-").map(Number.parseFloat);
@@ -573,7 +360,7 @@ const TIER_NOTE: Record<string, string> = {
 
 export class PredictionPanel extends Panel {
   constructor() {
-    super({ id: "prediction", title: "Prediction — calibrated event impact", w: 6, h: 5 });
+    super({ id: "prediction", title: "Calibration — is the stated confidence honest?", w: 6, h: 7 });
   }
   async load(): Promise<void> {
     this.el.addEventListener("click", (e) => {
@@ -653,7 +440,7 @@ export class PredictionPanel extends Panel {
 
 export class CalendarPanel extends Panel {
   constructor(private readonly onPick: (day: string) => void) {
-    super({ id: "calendar", title: "Dates", w: 4, h: 2 });
+    super({ id: "calendar", title: "Events per day — pick a day to load it", w: 8, h: 4 });
   }
   update(dates: DateCount[]): void {
     if (!dates.length) return this.setContent('<p class="empty">No dates.</p>');
@@ -685,159 +472,119 @@ export class CalendarPanel extends Panel {
 
 export class AccuracyPanel extends Panel {
   constructor() {
-    super({ id: "accuracy", title: "Accuracy", w: 5, h: 3 });
+    super({ id: "accuracy", title: "Track record", w: 6, h: 7 });
   }
   async load(): Promise<void> {
     try {
       this.render(await api.accuracy());
     } catch {
-      this.setContent('<p class="empty">Accuracy unavailable.</p>');
+      this.setContent('<p class="empty">Track record unavailable.</p>');
     }
   }
   private render(a: Accuracy): void {
     if (!a.scored) {
-      this.setContent('<p class="empty">No scored outcomes yet (run the backtest).</p>');
+      this.setContent('<p class="empty">No scored calls yet — a call is scored once its window closes.</p>');
       return;
     }
-    const pct = Math.round(a.hit_rate * 100);
-    const byV = Object.entries(a.by_verdict)
-      .map(
-        ([v, b]) =>
-          `<li>${escapeHtml(v)}: <b>${Math.round(b.hit_rate * 100)}%</b> <span class="muted">(${b.hits}/${b.total})</span></li>`,
-      )
+    const horizons: Array<[string, HitRate | undefined, string]> = [
+      ["Next day", a, "move toward the call ≥ 1%"],
+      ["+2 days vs SPY", a.vs_spy?.d2, "beat SPY in the called direction"],
+      ["+4 days vs SPY", a.vs_spy?.d4, "beat SPY in the called direction"],
+    ];
+    const cards = horizons
+      .map(([label, h, rule]) => {
+        if (!h?.scored) return `<div class="kpi"><span class="kpi-label">${label}</span><b>—</b></div>`;
+        const [lo, hi] = wilson(h.hits, h.scored);
+        return (
+          `<div class="kpi" title="${escapeHtml(rule)}"><span class="kpi-label">${label}</span>` +
+          `<b>${pct(h.hit_rate)}</b><span class="muted">${h.hits}/${h.scored} · 95% ${pct(lo)}–${pct(hi)}</span></div>`
+        );
+      })
       .join("");
+    const verdicts = [...new Set(horizons.flatMap(([, h]) => Object.keys(h?.by_verdict ?? {})))];
+    const cell = (h: HitRate | undefined, v: string): string => {
+      const b = h?.by_verdict?.[v];
+      return b ? `<td>${pct(b.hit_rate)} <span class="muted">${b.total}</span></td>` : "<td>—</td>";
+    };
+    const table =
+      `<table class="grid-table"><thead><tr><th>Call</th>${horizons.map(([l]) => `<th>${l}</th>`).join("")}</tr></thead><tbody>` +
+      verdicts
+        .map(
+          (v) =>
+            `<tr><td><span class="dot" style="background:${verdictColor(v)}"></span>${escapeHtml(v)}</td>` +
+            horizons.map(([, h]) => cell(h, v)).join("") +
+            `</tr>`,
+        )
+        .join("") +
+      `</tbody></table>`;
+    const dd = a.equity_metrics?.max_drawdown;
     const wrap = document.createElement("div");
     wrap.className = "acc";
     wrap.innerHTML =
-      `<div class="acc-big">${pct}%<span class="muted"> hit-rate · ${a.hits}/${a.scored}</span></div>` +
-      `<ul class="acc-by">${byV}</ul>` +
-      sparkline(a.equity_curve);
+      `<div class="kpis">${cards}</div>` +
+      table +
+      `<h4 class="sub-head">Hits minus misses, in event order</h4>` +
+      sparkline(a.equity_curve, "hits minus misses", signColor(a.equity_curve.at(-1) ?? 0)) +
+      `<p class="muted note">${a.total - a.scored} of ${a.total} calls moved less than 1% and are not counted next day.` +
+      (dd == null ? "" : ` Following every call with equal stakes: worst drawdown ${fmtPct(dd * 100)}.`) +
+      `</p>`;
     this.setContent(wrap);
   }
 }
 
-/** Tiny inline-SVG equity curve. */
-
-export class SentimentPanel extends Panel {
-  private ticker = "NVDA"; // the most-discussed large cap on the tracked subreddits
+export class OutcomesPanel extends Panel {
   constructor() {
-    super({ id: "sentiment", title: "Sentiment", w: 4, h: 3 });
-    window.addEventListener("worldfin:select-symbol", (e) => {
-      const sym = (e as CustomEvent<string>).detail?.toUpperCase();
-      if (sym) {
-        this.ticker = sym;
-        const input = this.el.querySelector<HTMLInputElement>(".senti-tk");
-        if (input) input.value = sym;
-        const body = this.el.querySelector<HTMLElement>(".senti-body");
-        if (body) void this.fetch(body, sym);
-      }
-    });
+    super({ id: "outcomes", title: "Scored calls", w: 12, h: 8 });
   }
   async load(): Promise<void> {
-    const wrap = document.createElement("div");
-    wrap.className = "senti";
-    wrap.innerHTML =
-      `<form class="senti-form"><input class="senti-tk" value="${escapeHtml(this.ticker)}" maxlength="10" />` +
-      `<button type="submit">Load</button></form><div class="senti-body"><p class="muted">Enter a ticker.</p></div>`;
-    const body = wrap.querySelector<HTMLElement>(".senti-body")!;
-    const input = wrap.querySelector<HTMLInputElement>(".senti-tk")!;
-    wrap.querySelector("form")!.addEventListener("submit", (e) => {
-      e.preventDefault();
-      this.ticker = input.value.toUpperCase().trim() || this.ticker;
-      void this.fetch(body, this.ticker);
-    });
-    this.setContent(wrap);
-    void this.fetch(body, this.ticker);
-  }
-  private async fetch(body: HTMLElement, ticker: string): Promise<void> {
-    body.innerHTML = '<p class="muted">Loading…</p>';
     try {
-      this.render(body, await api.sentiment(ticker));
+      this.render(await api.outcomes({ limit: 100 }));
     } catch {
-      body.innerHTML = '<p class="empty">Sentiment unavailable.</p>';
+      this.setContent('<p class="empty">Scored calls unavailable.</p>');
     }
   }
-  private render(body: HTMLElement, s: Sentiment): void {
-    if (!s.total_posts) {
-      body.innerHTML = `<p class="empty">No Reddit post in the last 7 days mentions ${escapeHtml(s.ticker)}.</p>`;
-      return;
-    }
-    const cls = s.sentiment_score >= 0 ? "up" : "down";
-    const posts = s.top_posts
-      .slice(0, 5)
+  private render(rows: Outcome[]): void {
+    if (!rows.length) return this.setContent('<p class="empty">No call has been scored yet.</p>');
+    const body = rows
       .map(
-        (p) =>
-          `<li><a href="${escapeHtml(p.url)}" target="_blank" rel="noopener">${escapeHtml(p.text.slice(0, 90))}</a> <span class="muted">${escapeHtml(p.platform)}</span></li>`,
+        (o) =>
+          `<tr><td class="muted">${escapeHtml(o.timestamp.slice(0, 10))}</td>` +
+          `<td><span class="dot" style="background:${verdictColor(o.verdict)}"></span>${escapeHtml(o.verdict)}</td>` +
+          `<td class="subj-cell">${escapeHtml(o.subject)}</td>` +
+          `<td>${escapeHtml(o.tickers.slice(0, 4).join(", "))}</td>` +
+          `<td>${result(o.price_move_pct, o.correct)}</td>` +
+          `<td>${result(o.ex2, o.correct2)}</td>` +
+          `<td>${result(o.ex4, o.correct4)}</td></tr>`,
       )
       .join("");
-    body.innerHTML =
-      `<div class="senti-score ${cls}">${s.sentiment_score >= 0 ? "+" : ""}${s.sentiment_score.toFixed(2)}` +
-      ` <span class="muted">${Math.round(s.bullish_pct * 100)}% bullish · ${s.total_posts} posts${s.volume_spike ? " · 🔥 spike" : ""}</span></div>` +
-      stackedBar([
-        { value: s.bullish_count, color: VIZ_COLORS.up, label: "bullish" },
-        { value: s.neutral_count, color: VIZ_COLORS.muted, label: "neutral" },
-        { value: s.bearish_count, color: VIZ_COLORS.down, label: "bearish" },
-      ]) +
-      `<div class="muted">bull ${s.bullish_count} · bear ${s.bearish_count} · neut ${s.neutral_count} · ${escapeHtml(s.platforms.join(", ") || "—")}</div>` +
-      `<ul class="news">${posts}</ul>`;
+    this.setContent(
+      `<p class="muted note">Moves are signed toward the call: positive means the market went the way the call said.</p>` +
+        `<table class="grid-table"><thead><tr><th>Date</th><th>Call</th><th>Event</th><th>Tickers</th>` +
+        `<th>Next day</th><th>+2d vs SPY</th><th>+4d vs SPY</th></tr></thead><tbody>${body}</tbody></table>`,
+    );
   }
 }
 
-export class LiveTVPanel extends Panel {
-  private country = "All";
-  private playing = CHANNELS[0];
+function result(move: number | null, hit: boolean | null): string {
+  if (move == null) return '<span class="muted">open</span>';
+  const mark = hit == null ? "·" : hit ? "✓" : "✗";
+  const cls = hit == null ? "muted" : hit ? "up" : "down";
+  return `<span class="${cls}">${mark} ${fmtPct(move)}</span>`;
+}
 
-  constructor() {
-    super({ id: "livetv", title: "Live TV — world news channels", w: 12, h: 6 });
-  }
+function pct(x: number): string {
+  return `${Math.round(x * 100)}%`;
+}
 
-  render(): void {
-    // One player, not one per channel. Selecting "All countries" used to mount 26
-    // live YouTube iframes at once, which is the most expensive thing the page can do.
-    const wrap = document.createElement("div");
-    wrap.className = "tv";
-    wrap.innerHTML =
-      `<div class="tv-stage"><iframe class="tv-frame" allowfullscreen ` +
-      `title="${escapeHtml(this.playing.name)} live" src="${embedUrl(this.playing.channelId)}"></iframe>` +
-      `<div class="tv-now">${escapeHtml(this.playing.name)} · ${escapeHtml(this.playing.country)}</div></div>` +
-      `<div class="tv-side"><select class="tv-filter" aria-label="filter channels by country">` +
-      `<option value="All">All countries</option>` +
-      countries()
-        .map((c) => `<option${c === this.country ? " selected" : ""}>${escapeHtml(c)}</option>`)
-        .join("") +
-      `</select><div class="tv-rail" role="listbox"></div></div>`;
-
-    const rail = wrap.querySelector<HTMLElement>(".tv-rail")!;
-    const fillRail = (): void => {
-      const list =
-        this.country === "All" ? CHANNELS : CHANNELS.filter((c) => c.country === this.country);
-      rail.innerHTML = list
-        .map(
-          (c) =>
-            `<button class="tv-pick${c.channelId === this.playing.channelId ? " active" : ""}" ` +
-            `role="option" aria-selected="${c.channelId === this.playing.channelId}" ` +
-            `data-ch="${escapeHtml(c.channelId)}">${escapeHtml(c.name)}` +
-            `<span class="muted">${escapeHtml(c.country)}</span></button>`,
-        )
-        .join("");
-    };
-
-    wrap.querySelector(".tv-filter")!.addEventListener("change", (e) => {
-      this.country = (e.target as HTMLSelectElement).value;
-      fillRail();
-    });
-    rail.addEventListener("click", (e) => {
-      const id = (e.target as HTMLElement).closest<HTMLElement>(".tv-pick")?.dataset.ch;
-      const picked = CHANNELS.find((c) => c.channelId === id);
-      if (picked && picked.channelId !== this.playing.channelId) {
-        this.playing = picked;
-        this.render(); // swap the single player rather than adding another
-      }
-    });
-
-    fillRail();
-    this.setContent(wrap);
-  }
+/** 95% Wilson score interval for a hit rate. */
+export function wilson(hits: number, n: number): [number, number] {
+  if (!n) return [0, 0];
+  const z = 1.96;
+  const p = hits / n;
+  const d = 1 + (z * z) / n;
+  const mid = (p + (z * z) / (2 * n)) / d;
+  const half = (z * Math.sqrt((p * (1 - p)) / n + (z * z) / (4 * n * n))) / d;
+  return [Math.max(0, mid - half), Math.min(1, mid + half)];
 }
 
 // Per-source freshness. The worker has always recorded it and /api/health has always
@@ -852,7 +599,7 @@ const SOURCE_STATE: Record<string, { dot: string; label: string }> = {
 
 export class SourceHealthPanel extends Panel {
   constructor() {
-    super({ id: "sources", title: "Source Health", w: 4, h: 5 });
+    super({ id: "sources", title: "Source health", w: 6, h: 8 });
   }
 
   private last: HealthResponse | null = null;
@@ -918,7 +665,6 @@ export class SourceHealthPanel extends Panel {
       const source = (e.target as HTMLElement).closest<HTMLElement>("[data-source]")?.dataset.source;
       if (source) {
         window.dispatchEvent(new CustomEvent("worldfin:select-source", { detail: source }));
-        document.querySelector<HTMLElement>('.panel[data-id="feed"]')?.scrollIntoView({ behavior: "smooth" });
       }
     });
     const wrap = document.createElement("div");
@@ -954,7 +700,7 @@ function legBars(legs: ScenarioLeg[], label: string): string {
 export class ScenarioPanel extends Panel {
 
   constructor() {
-    super({ id: "scenarios", title: "Scenarios — what to do about it", w: 12, h: 7 });
+    super({ id: "scenarios", title: "Scenarios — what to do about it", w: 12, h: 6 });
     this.el.addEventListener("click", (e) => {
       const sym = (e.target as HTMLElement).closest<HTMLElement>(".sc-tk")?.dataset.sym;
       if (sym) window.dispatchEvent(new CustomEvent("worldfin:select-symbol", { detail: sym }));

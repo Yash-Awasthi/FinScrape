@@ -1,5 +1,5 @@
 // PanelLayoutManager: a deterministic CSS-grid host.
-// Variant switch shows exactly the requested panels, in that order, each
+// A view switch shows exactly the requested panels, in that order, each
 // spanning its declared w/h — no freeform dragging, no persisted overrides.
 
 import { Panel } from "./panel";
@@ -25,8 +25,8 @@ export class PanelLayoutManager {
     return this.panels.get(id);
   }
 
-  /** Show only the listed panels — in order, spanning the exact w/h the variant
-   *  prescribes. Deterministic: same variant, same layout, every time. */
+  /** Show only the listed panels — in order, spanning the exact w/h the view
+   *  prescribes. Deterministic: same view, same layout, every time. */
   applyVariant(slots: PanelSlot[]): void {
     const want = new Set(slots.map((s) => s.id));
     let order = 0;
@@ -38,24 +38,21 @@ export class PanelLayoutManager {
       panel.el.style.gridColumn = `span ${Math.min(slot.w, 12)}`;
       panel.el.style.gridRow = `span ${slot.h}`;
       panel.el.dataset.w = String(slot.w);
+      panel.el.style.setProperty("--h", String(slot.h));
     }
-    const hidden: string[] = [];
     for (const [id, panel] of this.panels) {
-      if (!want.has(id)) {
-        panel.el.style.display = "none";
-        hidden.push(id);
-      }
+      if (!want.has(id)) panel.el.style.display = "none";
     }
-    // A panel registered but left out of the layout is built and wired to its events,
-    // then never shown — the chart and agent panels sat like that while ⌘K still
-    // scrolled to them. Say so rather than hiding it silently.
-    if (hidden.length) {
-      console.warn(`[layout] registered panels missing from PAGE_LAYOUT: ${hidden.join(", ")}`);
-    }
-    const phantom = slots.map((s) => s.id).filter((id) => !this.panels.has(id));
-    if (phantom.length) {
-      console.warn(`[layout] PAGE_LAYOUT names panels that do not exist: ${phantom.join(", ")}`);
-    }
+  }
+
+  /** Warn about a registered panel no view shows, or a slot naming no panel. Both
+   *  are silent in the UI: the panel stays display:none, or the slot renders nothing. */
+  checkViews(ids: string[]): void {
+    const listed = new Set(ids);
+    const orphans = [...this.panels.keys()].filter((id) => !listed.has(id));
+    if (orphans.length) console.warn(`[layout] registered panels in no view: ${orphans.join(", ")}`);
+    const phantom = ids.filter((id) => !this.panels.has(id));
+    if (phantom.length) console.warn(`[layout] views name panels that do not exist: ${phantom.join(", ")}`);
   }
 
   mount(parent: HTMLElement): void {
