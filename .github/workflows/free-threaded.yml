@@ -1,0 +1,24 @@
+name: Free-threaded
+
+# Run by hand: the 3.14t build stays red until every native dependency ships a
+# free-threaded wheel, so it would only add noise to PRs.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  free-threaded:
+    # Side job for the 3.14t build: a native extension without free-threaded support
+    # silently re-enables the GIL, so the import check fails if that happens.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          version: "0.13.0"
+          enable-cache: true
+      - run: uv sync --locked -p 3.14t --group server --group dev
+      - run: uv run --no-sync python -c "import sys, lxml.etree, curl_cffi, orjson, msgspec; assert not sys._is_gil_enabled()"
+      - run: uv run --no-sync pytest -q
