@@ -2,8 +2,8 @@
 
 A5 acceptance: the greedy clustering used by /api/storylines must group the same
 story from several sources into one storyline, respect a cosine threshold and a
-48h time window, and degrade to singletons (feed unchanged) when embeddings are
-unavailable — which is what `build_storylines` produces when Ollama is down.
+48h time window, and fall back to shared tickers plus headline words when embeddings
+are unavailable, as on the Render API.
 """
 
 from datetime import datetime, timedelta, timezone
@@ -145,7 +145,7 @@ class TestClusterEvents:
 
 
 class TestBuildStorylines:
-    def test_singletons_when_embeddings_unavailable(self, monkeypatch):
+    def test_without_embeddings_untickered_stories_stay_apart(self, monkeypatch):
         from finscrape.analysis import embeddings
 
         monkeypatch.setattr(embeddings, "embed", lambda text: None)
@@ -156,6 +156,21 @@ class TestBuildStorylines:
         assert all(c["size"] == 1 for c in out)
         # members are the full event dicts (feed renders them unchanged)
         assert {c["members"][0]["id"] for c in out} == {1, 2}
+
+    def test_without_embeddings_shared_ticker_and_headline_merge(self, monkeypatch):
+        """Render has no Ollama, so every scenario was a single event."""
+        from finscrape.analysis import embeddings
+
+        monkeypatch.setattr(embeddings, "embed", lambda text: None)
+        events = [
+            _ev(1, "Houthis strike Riyadh airport, Saudi Arabia vows retaliation", created_at=_ts(-3), tickers=["RTX", "XOM"]),
+            _ev(2, "Houthi attack on Riyadh airport grounds Saudi flights", created_at=_ts(-2), tickers=["RTX"]),
+            _ev(3, "North Korea fires ballistic missile toward east sea", created_at=_ts(-1), tickers=["RTX"]),
+            _ev(4, "Riyadh airport reopens after strike", created_at=_ts(0), tickers=["AAPL"]),
+        ]
+        sizes = {c["size"]: sorted(m["id"] for m in c["members"]) for c in clusters.build_storylines(events)}
+        assert sizes[2] == [1, 2]
+        assert len(clusters.build_storylines(events)) == 3
 
     def test_merges_when_embeddings_available(self, monkeypatch):
         from finscrape.analysis import embeddings
