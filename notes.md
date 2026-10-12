@@ -58,8 +58,12 @@ A fresh clone starts with `make demo` (`docs/DEMO.md` is the walkthrough).
   writer until 28 Sep and stay in the record.
 - Cold `/api/scenarios?window=200` costs ~73 s, almost all Ollama embedding, once per
   process: `embeddings.embed` is LRU-cached and startup warm-up pays it.
-- Every scenario is a singleton by design: `_find_duplicate` merges same-story coverage at
-  ingest, so corroboration lives in one event's `articles` / `sources`.
+- `_find_duplicate` merges same-story coverage at ingest, so corroboration lives in one
+  event's `articles` / `sources`. Storylines group follow-up stories on top of that:
+  embeddings where Ollama runs, otherwise `clusters.same_story` (a shared ticker plus half
+  the headline's words), which on 12 Oct grouped 200 production events into 178 storylines.
+- Migration 0013 (12 Oct) relabelled score-0 CAUTIOUS rows to OBSERVE and dropped
+  `social_posts`; the backup run 38281322368 just before it holds the prior state.
 - The LLM's reasoning invents technology angles, so Laya reads article text, never the
   reasoning. Laya's checkpoint has no valid calibration for 11+ options, so it is offered
   ten and low confidence reads as `other`.

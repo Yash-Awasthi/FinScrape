@@ -8,14 +8,14 @@ single top row.
 Design:
 - `cluster_events` is pure: it takes a `similarity(subject_a, subject_b)` callable,
   so tests can inject fake embeddings (no network, no Ollama).
-- `build_storylines` wires it to `finscrape.analysis.embeddings` — the production
-  similarity. When Ollama is down `embed()` returns None and `cosine()` returns
-  None, so every event becomes its own singleton cluster and the feed renders
-  exactly as it did before (graceful degradation).
+- `build_storylines` wires it to `finscrape.analysis.embeddings`. Where Ollama is
+  unreachable (the Render API has none) it falls back to `same_story`: shared
+  tickers plus word overlap in the subjects.
 """
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Callable
 
@@ -25,6 +25,36 @@ DEFAULT_THRESHOLD = 0.75
 # Events further apart than this never merge, even with high similarity
 # (same phrase re-appearing months later is a new story, not a continuation).
 DEFAULT_WINDOW_HOURS = 48
+
+
+# Tuned on 200 production events (12 Oct 2026): it grouped repeat missile tests, strikes
+# on one airport and a ceasefire's follow-ups, and kept unrelated stories apart.
+LEXICAL_OVERLAP = 0.5
+_STOP = frozenset(
+    "the and for with from into over after amid says said will its their new more than "
+    "about against report".split()
+)
+
+
+def subject_words(subject: str) -> frozenset[str]:
+    """Content words of a headline, lowercased, with a plural 's' trimmed."""
+    words = set()
+    for w in re.findall(r"[a-z0-9]+", subject.lower()):
+        if len(w) < 3 or w in _STOP:
+            continue
+        words.add(w[:-1] if w.endswith("s") and len(w) > 4 else w)
+    return frozenset(words)
+
+
+def same_story(a: dict, b: dict) -> bool:
+    """Embedding-free match: the events share a ticker, and at least two content words
+    making up half of the shorter headline."""
+    if not set(a.get("tickers") or []) & set(b.get("tickers") or []):
+        return False
+    wa = subject_words(a.get("subject") or "")
+    wb = subject_words(b.get("subject") or "")
+    shared = len(wa & wb)
+    return shared >= 2 and shared / min(len(wa), len(wb)) >= LEXICAL_OVERLAP
 
 
 def _parse_ts(value: str | None):
@@ -137,8 +167,7 @@ def build_storylines(
 
     Each returned cluster carries `members` (the full event dicts, newest
     first) so the feed can render the top row and expand the rest. When
-    Ollama is unreachable every cluster is a singleton with one member —
-    the feed collapses nothing.
+    Ollama is unreachable, `same_story` decides instead.
     """
     from concurrent.futures import ThreadPoolExecutor
 
@@ -153,10 +182,15 @@ def build_storylines(
     except Exception:
         vectors = {}  # never fatal: fall through to per-call embed (or None)
 
+    by_subject = {e.get("subject") or "": e for e in events}
+
     def similarity(a: str, b: str) -> float | None:
         va = vectors[a] if a in vectors else embeddings.embed(a)
         vb = vectors[b] if b in vectors else embeddings.embed(b)
-        return embeddings.cosine(va, vb)
+        cosine = embeddings.cosine(va, vb)
+        if cosine is not None:
+            return cosine
+        return 1.0 if same_story(by_subject[a], by_subject[b]) else 0.0
 
     metas = cluster_events(events, similarity, threshold=threshold)
     member_by_id = {e.get("id"): e for e in events}

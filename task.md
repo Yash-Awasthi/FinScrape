@@ -63,18 +63,7 @@ Facts about the owner's setup that the items below rely on (as of 2 Oct 2026):
    the top ticker with the calls that named it; an event's inspector shows Outcome,
    Coverage and the council button. Merging PR #41 (the `deploy-web` workflow) first makes
    later web changes deploy on push.
-2. **Re-label score-0 events.** `Verdict.from_score(0)` is OBSERVE since 12 Oct, but older
-   rows keep CAUTIOUS. Count them with
-   `SELECT count(*) FROM events WHERE signal_score = 0 AND verdict = 'CAUTIOUS'`, then
-   decide on a migration that updates them. The backtest skips both verdicts, so the track
-   record is not affected; the feed and the verdict counts are.
-3. **Drop `social_posts`.** The Reddit job and `/api/sentiment` are gone; the table and
-   migration `0008` remain. Write a migration that drops the table after a backup run.
-4. **Scenarios cluster nothing.** Every scenario is one event (`notes.md`), and Render has no
-   Ollama for `embeddings.embed`, so the "related events clustered" claim does not hold in
-   production. Decide: cluster on stored fields (shared tickers plus sector within 48 h),
-   or describe them as single-event scenarios.
-5. **Unreachable vendored code.** Much of `finscrape/` (`services/`, `trading/`,
+2. **Unreachable vendored code.** Much of `finscrape/` (`services/`, `trading/`,
    `exchanges.py`, `sentiment/`, `edgar/`, the root `main.py` CLI) is reached from neither
    `server/` nor `worker/`. Map reachability from those entry points and the tests, then
    remove what only the retired CLI used.
