@@ -14,21 +14,21 @@ Cloudflare cron Worker (ops/ingest-cron)
 worker ──writes──▶ Supabase Postgres 17 ◀──reads/writes── FastAPI on Render ◀── SPA on Cloudflare Pages
 ```
 
-The same code runs locally under docker compose (Postgres 16, api, worker, web behind
+The same code runs locally under docker compose (Postgres 18, api, worker, web behind
 nginx) or natively (`python -m server.main`, `python -m worker.main`).
 
 ## Services (docker-compose)
 
 ```
             ┌──────────────┐         ┌────────────────────────────────────┐
-            │   worker     │  writes │             Postgres 16             │
+            │   worker     │  writes │             Postgres 18             │
             │ (APScheduler)│ ───────▶│ events · correlations · scrape_runs │
             │ scrape→judge │         │ source_health · accuracy · ai_cache │
             │ →geocode→corr│         └───────────────┬────────────────────┘
             └──────┬───────┘                         │ asyncpg pool (+jsonb codec)
                    │ reuses finscrape brain          │
                    ▼                    ┌────────────▼─────────────┐
-            FinScrapePipeline           │   api (FastAPI/uvicorn)  │
+            FinScrapePipeline           │   api (FastAPI/Granian)  │
             ._analyze_article           │  REST + WS               │
                                         │  /api/events /stats      │
                                         │  /dates /ai/analyze      │

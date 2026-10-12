@@ -3,7 +3,9 @@
 
 services:
   postgres:
-    image: postgres:16.4-alpine
+    # Major versions cannot share a data volume, so 18 starts on a new one; move data
+    # from the old `pgdata` volume with docs/RUNBOOK.md "Upgrading Postgres".
+    image: postgres:18-alpine
     container_name: worldfin-postgres
     restart: unless-stopped
     environment:
@@ -11,7 +13,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-worldfin}
       POSTGRES_DB: worldfin
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # 18+ images keep PGDATA in a versioned subdirectory of this mount.
+      - pgdata18:/var/lib/postgresql
     ports:
       - "127.0.0.1:${WORLDFIN_PG_HOST_PORT:-5433}:5432"
     healthcheck:
@@ -140,7 +143,7 @@ services:
           memory: 512M
 
   redis:
-    image: redis:7.2.5-alpine
+    image: redis:8.10-alpine
     container_name: worldfin-redis
     restart: unless-stopped
     profiles: ["redis"]
@@ -163,4 +166,4 @@ services:
           memory: 512M
 
 volumes:
-  pgdata:
+  pgdata18:

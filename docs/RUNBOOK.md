@@ -32,7 +32,7 @@ Usual causes of "no event": the cron Worker's `GH_TOKEN` expired (renew with
 The rest of this runbook covers the docker compose stack.
 
 Stack = **postgres** + **api** (FastAPI :8010 on the host) + **worker** (APScheduler) + **web** (nginx :8080).
-Optional observability overlay = **prometheus** + **grafana** + **loki** + **promtail**.
+Optional observability overlay = **prometheus** + **grafana** + **loki** + **alloy** (log shipper).
 
 ---
 
@@ -44,7 +44,7 @@ cp .env.example .env            # set OPENAI_BASE_URL/OPENAI_API_KEY/FINSCRAPE_M
 docker compose up -d            # core stack
 docker compose ps               # health
 docker compose logs -f api      # tail one service
-docker compose down             # stop (keeps the pgdata volume)
+docker compose down             # stop (keeps the pgdata18 volume)
 ```
 
 With observability:
@@ -100,7 +100,7 @@ per worker source-cycle — grep one id to trace a unit of work end to end.
 
 ## 4. Backup & restore (Postgres)
 
-Data lives in the `pgdata` volume. Logical backup:
+Data lives in the `pgdata18` volume. Logical backup:
 ```bash
 docker compose exec -T postgres pg_dump -U worldfin worldfin | gzip > backup-$(date +%F).sql.gz
 ```
@@ -111,6 +111,21 @@ gunzip -c backup-YYYY-MM-DD.sql.gz | docker compose exec -T postgres psql -U wor
 Migrations are idempotent and run on startup (`WORLDFIN_RUN_MIGRATIONS=true`); a restored dump
 already has the schema, so this is a no-op safety net. Events are content-deduped on ingest, so
 re-running the worker after a restore won't double-insert.
+
+### Upgrading Postgres (16 to 18)
+Postgres 16 stored its data in the `pgdata` volume; 18 uses `pgdata18`, because a data
+directory cannot cross major versions. Move it with a logical dump:
+```bash
+git checkout <commit before the upgrade>   # compose still on postgres:16 + pgdata
+docker compose up -d postgres
+make backup                                 # backups/worldfin-<utc>.dump
+docker compose down
+git checkout master
+docker compose up -d postgres               # fresh 18 cluster in pgdata18
+make restore FILE=backups/worldfin-<utc>.dump
+docker compose up -d
+```
+Once the stack checks out, drop the old volume with `docker volume rm <project>_pgdata`.
 
 ---
 
