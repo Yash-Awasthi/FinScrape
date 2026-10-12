@@ -8,7 +8,8 @@ import logging
 import time
 from collections import deque
 
-import requests
+from curl_cffi import requests
+from curl_cffi.requests.exceptions import RequestException
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
 
@@ -53,7 +54,7 @@ def _dispatch_job(event_id: int) -> bool:
             timeout=15,
         )
         resp.raise_for_status()
-    except requests.RequestException as exc:
+    except RequestException as exc:
         log.warning("analyze dispatch failed for event %s: %s", event_id, exc)
         return False
     _dispatched[event_id] = now

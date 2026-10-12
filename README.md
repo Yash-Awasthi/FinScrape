@@ -3,7 +3,7 @@
 > **See what moves markets — before it's news.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.13-3776AB.svg)](https://python.org)
+[![Python](https://img.shields.io/badge/Python-3.14-3776AB.svg)](https://python.org)
 [![Cost](https://img.shields.io/badge/Cost-$0%2Fmonth-brightgreen.svg)](docs/DEPLOY.md)
 [![Live](https://img.shields.io/badge/Live-Dashboard-blue.svg)](https://winfin.pages.dev/app/)
 
@@ -58,7 +58,7 @@ from inside compose) and run `docker compose up -d`.
 ### No Docker?
 
 ```bash
-uv sync --group server                          # Python 3.13
+uv sync --group server                          # Python 3.14
 # point WORLDFIN_DATABASE_URL in .env at a Postgres you run, then:
 uv run python -m server.seed                    # optional demo data
 uv run python -m server.main                    # API at :8010

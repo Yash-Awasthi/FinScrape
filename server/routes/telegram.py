@@ -14,7 +14,8 @@ import asyncio
 import hmac
 import logging
 
-import requests
+from curl_cffi import requests
+from curl_cffi.requests.exceptions import RequestException
 from fastapi import APIRouter, BackgroundTasks, Body, Header
 
 from server import db, queries
@@ -49,7 +50,7 @@ def send_message(chat_id: str | int, text: str) -> bool:
             timeout=10,
         )
         return resp.status_code == 200
-    except requests.RequestException as exc:  # pragma: no cover - network
+    except RequestException as exc:  # pragma: no cover - network
         log.warning("telegram send failed: %s", exc)
         return False
 

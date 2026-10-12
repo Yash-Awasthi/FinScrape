@@ -40,7 +40,7 @@ _MAX_CHAIN = 6
 def _clamp01(value: Any) -> float:
     try:
         return max(0.0, min(1.0, float(value)))
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return 0.0
 
 
@@ -77,7 +77,7 @@ def _analyzed_p(event: dict[str, Any]) -> float | None:
     """P(up) implied by the event's own analyzed signal_score (-5..5), or None."""
     try:
         score = max(-5.0, min(5.0, float(event.get("signal_score") or 0)))
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return None
     return 0.5 + 0.08 * score if score else None
 

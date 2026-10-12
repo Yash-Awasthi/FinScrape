@@ -70,7 +70,7 @@ def test_chat_call_leaves_reasoning_models_room_for_the_json(monkeypatch):
 
 def test_server_chat_tries_each_fallback_model_in_order(monkeypatch):
     """Free models are often rate-limited upstream; one refusal must not end the call."""
-    import requests
+    from curl_cffi.requests.exceptions import HTTPError
 
     from server import ai
     from server.settings import get_settings
@@ -83,7 +83,7 @@ def test_server_chat_tries_each_fallback_model_in_order(monkeypatch):
 
         def raise_for_status(self):
             if self.model != "third":
-                raise requests.HTTPError("429", response=None)
+                raise HTTPError("429", response=None)
 
         def json(self):
             return {"choices": [{"message": {"content": "{}"}}]}

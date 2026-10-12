@@ -131,7 +131,7 @@ class Settings(BaseSettings):
 
     # --- Observability (Phase 9) ---
     # Emit one-line JSON logs instead of the human format (set on in containers so
-    # promtail/Loki get structured records). Off by default for readable local dev.
+    # Alloy/Loki get structured records). Off by default for readable local dev.
     log_json: bool = Field(default=False, validation_alias="WORLDFIN_LOG_JSON")
     log_level: str = Field(default="INFO", validation_alias="WORLDFIN_LOG_LEVEL")
     # Port the worker exposes its Prometheus /metrics on (the API serves /metrics on

@@ -54,7 +54,7 @@ def _jsonish(value: Any, fallback: Any) -> Any:
     if isinstance(value, str):
         try:
             return json.loads(value)
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             return fallback
     return value if value is not None else fallback
 
@@ -79,7 +79,7 @@ async def _outcomes_from_pool() -> list[dict[str, Any]]:
                 if isinstance(r["sources"], str)
                 else (r["sources"] or [])
             )
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             sources = []
         outcomes.append(
             {
@@ -131,7 +131,7 @@ async def predict_event(event_id: int) -> dict:
             if isinstance(raw_sources, str)
             else (raw_sources or [])
         )
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         sources = []
     source = sources[0].split("/")[-1] if sources else "local"
     tickers: list[str] = []
@@ -142,7 +142,7 @@ async def predict_event(event_id: int) -> dict:
             if isinstance(raw_tickers, str)
             else (raw_tickers or [])
         )
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         tickers = []
 
     outcomes = await _outcomes_from_pool()

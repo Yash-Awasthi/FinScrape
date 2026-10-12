@@ -3,60 +3,64 @@ name = "fin-scrape"
 version = "0.3.0"
 description = "AI-powered financial news intelligence engine with vendored Scrapling"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 dependencies = [
     # Vendored Scrapling engine dependencies
-    "lxml>=5.0.0",
-    "cssselect>=1.2.0",
-    "curl-cffi>=0.7.0",
-    "orjson>=3.9.0",
-    "w3lib>=2.1.0",
-    "tld>=0.13.0",
-    "browserforge>=1.1.0",
-    "patchright>=1.0.0",
-    "msgspec>=0.18.0",
-    "typing-extensions>=4.0.0",
+    "lxml>=7.0.0b1",
+    "cssselect>=1.6.0",
+    "curl-cffi>=0.16.3",
+    "orjson>=3.13.0",
+    "w3lib>=2.5.0",
+    "tld>=0.13.2",
+    "browserforge>=1.2.4",
+    "patchright>=1.63.0",
+    "msgspec>=0.22.0",
+    "typing-extensions>=4.16.0",
     # Core
-    "python-dotenv>=1.0.0",
-    "python-dateutil>=2.9.0",
-    "requests>=2.31.0",
+    "python-dotenv>=1.2.4",
+    "python-dateutil>=2.9.0.post0",
     # RSS parsing
-    "feedparser>=6.0.0",
+    "feedparser>=6.0.14",
     # Financial data
-    "yfinance>=0.2.30",
-    "spacy>=3.8.14",
-    "trafilatura>=2.2.0",
-    "scipy>=1.17.1",
+    "yfinance>=1.7.0",
+    "pandas>=3.0.6",
+    "spacy>=3.8.16",
+    "trafilatura>=2.3.1",
+    "scipy>=1.18.1",
 ]
 
 [project.optional-dependencies]
 # Sector/direction classifier. `laya` runs on PyTorch anywhere; `laya-mlx` only on Apple Silicon.
 laya = [
-    "laya>=0.3.20; sys_platform != 'darwin' or platform_machine != 'arm64'",
-    "laya-mlx>=0.2.0; sys_platform == 'darwin' and platform_machine == 'arm64'",
+    "laya>=0.4.6; sys_platform != 'darwin' or platform_machine != 'arm64'",
+    "laya-mlx>=0.4.0; sys_platform == 'darwin' and platform_machine == 'arm64'",
 ]
 
 [dependency-groups]
 dev = [
-    "pytest>=9.0.3",
+    "pytest>=9.1.1",
     # Starlette's TestClient deprecates plain httpx in favour of httpx2.
-    "httpx2>=2.13",
+    "httpx2>=2.13.1",
     # Pinned so new default lint rules arrive deliberately, with their fixes.
-    "ruff==0.16.9",
-    "pyright==1.1.411",
-    "pyarrow>=25.0.1",
+    "ruff==0.17.0",
+    "pyright==1.1.414",
+    "pyarrow>=26.0.0",
+    # Second opinion next to pyright; CI runs it without gating the build.
+    "ty==0.0.86",
+    # tests/live_e2e.py serves the app in-process on uvicorn; the API itself runs on Granian.
+    "uvicorn[standard]>=0.54.0",
 ]
 # WorldFin backend (server/). Kept out of core deps so the finscrape CLI install
 # stays lean; `uv sync --group server` to work on the API.
 server = [
-    "fastapi>=0.110",
-    "uvicorn[standard]>=0.29",
-    "asyncpg>=0.29",
-    "pydantic>=2.6",
-    "pydantic-settings>=2.2",
-    "apscheduler>=3.10",
-    "prometheus-client>=0.20",
-    "redis>=5.0",
+    "fastapi>=0.143.0",
+    "granian>=2.8.4",
+    "asyncpg>=0.32.0",
+    "pydantic>=2.14.1",
+    "pydantic-settings>=2.15.0",
+    "apscheduler>=3.11.3,<4",
+    "prometheus-client>=0.26.0",
+    "redis>=8.1.0",
 ]
 
 # Scoped to the WorldFin backend only. The legacy finscrape/ core (~24k LOC) carries
@@ -66,7 +70,7 @@ server = [
 include = ["server", "worker"]
 venvPath = "."
 venv = ".venv"
-pythonVersion = "3.11"
+pythonVersion = "3.14"
 typeCheckingMode = "basic"
 reportMissingImports = true
 

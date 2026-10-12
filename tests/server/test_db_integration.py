@@ -29,7 +29,7 @@ def _pg_reachable() -> bool:
     async def _check() -> bool:
         try:
             conn = await asyncio.wait_for(asyncpg.connect(DSN), timeout=2)
-        except (TimeoutError, OSError, asyncpg.PostgresError):
+        except TimeoutError, OSError, asyncpg.PostgresError:
             return False
         await conn.close()
         return True

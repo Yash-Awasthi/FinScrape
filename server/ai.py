@@ -4,7 +4,7 @@ finscrape's `call_ai` validates against the *extraction* schema, so it can't ret
 this {summary, ticker_impacts, verdict_reason} shape — we make a small free-form chat
 call to the same backend (Ollama proxy or OpenRouter BYOK, same env as finscrape).
 Degrades gracefully to a deterministic fallback when no LLM is configured or the call
-fails, so the endpoint never 500s. Synchronous (requests) — call via asyncio.to_thread.
+fails, so the endpoint never 500s. Synchronous (curl_cffi) — call via asyncio.to_thread.
 """
 
 from __future__ import annotations
@@ -13,7 +13,8 @@ import json
 import logging
 import re
 
-import requests
+from curl_cffi import requests
+from curl_cffi.requests.exceptions import RequestException
 
 from server.obs import time_llm
 from server.settings import get_settings
@@ -133,7 +134,12 @@ def _chat(prompt: str) -> str | None:
                 )
                 resp.raise_for_status()
                 return resp.json()["choices"][0]["message"]["content"]
-        except (requests.RequestException, KeyError, IndexError, ValueError) as exc:
+        except (
+            RequestException,
+            KeyError,
+            IndexError,
+            ValueError,
+        ) as exc:
             # A bare status hides why a provider refused (bad key vs blocked network).
             body = getattr(getattr(exc, "response", None), "text", "") or ""
             log.warning("ai chat failed (%s): %s %s", model, exc, body[:300])

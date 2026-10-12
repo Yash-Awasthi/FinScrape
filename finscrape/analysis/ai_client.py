@@ -23,7 +23,8 @@ import re
 import threading
 import time
 
-import requests
+from curl_cffi import requests
+from curl_cffi.requests.exceptions import RequestException
 from dotenv import load_dotenv
 
 from finscrape.analysis.constants import (
@@ -419,7 +420,7 @@ def _call_openrouter(prompt: str, system_prompt: str, model: str | None = None) 
 
         return _parse_response(response.json())
 
-    except requests.exceptions.RequestException as e:
+    except RequestException as e:
         logger.error("AI request error: %s", e)
         return None
     except Exception as e:

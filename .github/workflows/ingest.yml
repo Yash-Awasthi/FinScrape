@@ -45,13 +45,13 @@ jobs:
       - name: Install CPU-only Laya
         run: |
           uv pip install -p .venv torch --index-url https://download.pytorch.org/whl/cpu
-          uv pip install -p .venv "laya>=0.3.20"
+          uv pip install -p .venv "laya>=0.4.6"
       # vars.LAYA_RELEASE names the release holding the promoted checkpoint
       # (scripts/laya_train/publish.py); unset runs without Laya.
       - name: Restore Laya checkpoint
         id: laya
         if: vars.LAYA_RELEASE != ''
-        uses: actions/cache@v4
+        uses: actions/cache@v6.1.0
         with:
           path: laya-model
           key: ${{ vars.LAYA_RELEASE }}

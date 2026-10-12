@@ -4,7 +4,7 @@
 
 ```bash
 git clone https://github.com/Yash-Awasthi/fin-scrape.git && cd fin-scrape
-uv sync -p 3.13 --group server --group dev
+uv sync -p 3.14 --group server --group dev
 cd web && npm ci && cd ..
 ```
 

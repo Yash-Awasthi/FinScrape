@@ -18,7 +18,8 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import pandas as pd
-import requests
+from curl_cffi import requests
+from curl_cffi.requests.exceptions import RequestException
 
 from finscrape.analysis.sp500 import compile_matcher
 from finscrape.ingestors.gdelt import (
@@ -68,7 +69,7 @@ def fetch(stamp: str) -> bytes | None:
                 return b""
             resp.raise_for_status()
             return resp.content
-        except requests.RequestException:
+        except RequestException:
             time.sleep(5 * (attempt + 1))
     return None
 
