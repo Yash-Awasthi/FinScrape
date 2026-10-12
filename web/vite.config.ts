@@ -1,7 +1,13 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "vite-plus";
 
 // Dev server proxies /api + /ws to the FastAPI backend so the SPA talks same-origin.
 export default defineConfig({
+  fmt: {},
+  lint: {
+    jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],
+    rules: { "vite-plus/prefer-vite-plus-imports": "error" },
+    options: { typeAware: true, typeCheck: true },
+  },
   // The globe.gl (+three.js) vendor chunk is ~1.8MB and is lazy-loaded on its own
   // (src/main.ts dynamic import), so it never blocks first paint — raise the warning
   // limit above it to keep the build output clean.

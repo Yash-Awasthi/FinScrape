@@ -3,7 +3,14 @@
 // Replaces the modal. A terminal keeps the detail beside the feed rather than over
 // it, so j/k can walk rows and read each one without a dialog opening and closing.
 
-import { type AIAnalysis, api, type Council, type EventOut, type Prediction, verdictColor } from "../api";
+import {
+  type AIAnalysis,
+  api,
+  type Council,
+  type EventOut,
+  type Prediction,
+  verdictColor,
+} from "../api";
 import { escapeHtml, fmtPct, sourceLabel, timeAgo } from "../util";
 
 // A backup analysis job takes 1-2 minutes; stop asking after 4.
@@ -139,7 +146,10 @@ export class Inspector {
     ul.innerHTML = ev.articles
       .slice(0, 8)
       // Articles and sources are deduped separately, so their positions do not pair up.
-      .map((url) => `<li><a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(host(url))}</a></li>`)
+      .map(
+        (url) =>
+          `<li><a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(host(url))}</a></li>`,
+      )
       .join("");
     const from = document.createElement("p");
     from.className = "muted";
@@ -164,7 +174,8 @@ export class Inspector {
       .then(([o]) => {
         if (this.current !== ev.id) return;
         if (!o) {
-          box.textContent = "Not scored yet: the next trading day has not closed, or no price data.";
+          box.textContent =
+            "Not scored yet: the next trading day has not closed, or no price data.";
           return;
         }
         const line = (label: string, move: number | null, hit: boolean | null): string =>
@@ -198,7 +209,9 @@ export class Inspector {
           out.innerHTML =
             `<b>${escapeHtml(c.consensus_verdict)}</b> · score ${c.consensus_score >= 0 ? "+" : ""}${c.consensus_score} · ` +
             `${Math.round(c.agreement_level * 100)}% agreement` +
-            (c.dissenting_agents.length ? ` · dissent: ${escapeHtml(c.dissenting_agents.join(", "))}` : "") +
+            (c.dissenting_agents.length
+              ? ` · dissent: ${escapeHtml(c.dissenting_agents.join(", "))}`
+              : "") +
             list("Risks", c.key_risks) +
             list("Opportunities", c.key_opportunities);
         })

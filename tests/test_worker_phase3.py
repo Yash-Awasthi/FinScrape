@@ -200,6 +200,7 @@ def test_first_correlation_run_can_emit(monkeypatch):
             "subject": title,
             "sources": [src],
             "articles": [f"https://{i}"],
+            "tickers": [],
             "timestamp": now,
             "lat": None,
             "lon": None,

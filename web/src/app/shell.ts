@@ -123,14 +123,18 @@ export class Shell {
       if (lower === "chart" && arg) {
         window.dispatchEvent(new CustomEvent("worldfin:select-symbol", { detail: arg }));
       } else {
-        window.dispatchEvent(new CustomEvent("worldfin:search-events", { detail: cmd.toLowerCase() }));
+        window.dispatchEvent(
+          new CustomEvent("worldfin:search-events", { detail: cmd.toLowerCase() }),
+        );
       }
     };
 
     // live suggestions from the events store
     const suggest = (): void => {
       const q = input.value.toLowerCase().trim();
-      const events = (window as unknown as { __wfEvents?: Array<{ subject: string; tickers: string[] }> }).__wfEvents ?? [];
+      const events =
+        (window as unknown as { __wfEvents?: Array<{ subject: string; tickers: string[] }> })
+          .__wfEvents ?? [];
       const hits = events
         .filter((e) => !q || e.subject.toLowerCase().includes(q))
         .slice(0, 6)

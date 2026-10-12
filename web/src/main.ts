@@ -31,7 +31,11 @@ const inspector = new Inspector(() => store.select(null));
 const banner = new BreakingNewsBanner();
 
 const views = Object.entries(VIEWS).map(([id, v]) => ({ id, label: v.label }));
-const shell = new Shell(() => void loadAll(), views, (id) => showView(id));
+const shell = new Shell(
+  () => void loadAll(),
+  views,
+  (id) => showView(id),
+);
 const layout = new PanelLayoutManager();
 
 const feedPanel = new SignalFeedPanel((e) => store.select(e));
@@ -205,7 +209,10 @@ window.addEventListener("worldfin:search-events", (e) => {
   const q = (e as CustomEvent<string>).detail;
   const hit = store
     .get()
-    .events.find((ev) => ev.subject.toLowerCase().includes(q) || ev.tickers.some((t) => t.toLowerCase().includes(q)));
+    .events.find(
+      (ev) =>
+        ev.subject.toLowerCase().includes(q) || ev.tickers.some((t) => t.toLowerCase().includes(q)),
+    );
   if (hit) {
     showView("today");
     store.select(hit);

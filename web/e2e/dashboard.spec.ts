@@ -46,9 +46,7 @@ async function mockBackend(page: import("@playwright/test").Page) {
   // Keep this suite local, including third-party images and embedded media.
   await page.route("**/*", (route) => {
     const url = new URL(route.request().url());
-    return url.origin === "http://127.0.0.1:4183"
-      ? route.continue()
-      : route.abort();
+    return url.origin === "http://127.0.0.1:4183" ? route.continue() : route.abort();
   });
   await page.route("**/api/**", async (route) => {
     const path = new URL(route.request().url()).pathname;
@@ -57,8 +55,7 @@ async function mockBackend(page: import("@playwright/test").Page) {
       if (path.endsWith("/api/stats")) return STATS;
       if (path.endsWith("/api/dates")) return { dates: [] };
       if (path.endsWith("/api/correlations")) return { correlations: [] };
-      if (path.endsWith("/api/health"))
-        return { status: "ok", db: true, llm: false, sources: [] };
+      if (path.endsWith("/api/health")) return { status: "ok", db: true, llm: false, sources: [] };
       if (path.endsWith("/api/accuracy"))
         return { total: 0, scored: 0, hits: 0, hit_rate: 0, by_verdict: {}, equity_curve: [] };
       if (path.endsWith("/api/outcomes")) return { outcomes: [] };
@@ -92,7 +89,7 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/app/");
 });
 
-test("every registered panel belongs to a view", async ({ page, browser }) => {
+test("every registered panel belongs to a view", async ({ browser }) => {
   // The layout warns when a panel is registered but in no view, or when a view names
   // a panel that does not exist. Both are invisible in the UI itself: the panel is
   // simply display:none, or the slot renders nothing.
