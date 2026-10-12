@@ -11,14 +11,11 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, Response, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Response, WebSocket, WebSocketDisconnect
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 
-from finscrape.api.geopolitical_api import router as geopolitical_router
-from finscrape.api.intelligence_api import router as intelligence_router
 from server import db, pubsub, queries
-from server.auth import require_api_key
 from server.middleware import configure_hardening
 from server.obs import install_observability
 from server.routes import accuracy as accuracy_routes
@@ -36,20 +33,6 @@ from server.settings import get_settings
 from server.ws import hub
 
 log = logging.getLogger("worldfin.app")
-
-
-def _guard_mutating_routes(router) -> None:
-    """Require the ingest key on a vendored router's write methods, leaving its reads open.
-
-    The finscrape routers are mounted whole, and two of their POSTs ingest signals into
-    shared analyser state — the same class of write `/api/events` already gates. Applied
-    here rather than in the routers so the vendored tree keeps no dependency on server/.
-    """
-    guard = Depends(require_api_key)
-    for route in router.routes:
-        methods = getattr(route, "methods", set()) or set()
-        if methods & {"POST", "PUT", "PATCH", "DELETE"}:
-            route.dependencies.append(guard)
 
 
 async def _warm_scenarios(s) -> None:
@@ -166,13 +149,6 @@ def create_app() -> FastAPI:
     app.include_router(accuracy_routes.router)
     app.include_router(alerts_routes.router)
     app.include_router(telegram_routes.router)
-    _guard_mutating_routes(geopolitical_router)
-    app.include_router(
-        geopolitical_router, prefix="/api/v1", tags=["Geopolitical & Sentiment"]
-    )
-    app.include_router(
-        intelligence_router, prefix="/api/v1", tags=["Intelligence Modules"]
-    )
 
     @app.websocket("/api/ws")
     async def ws(websocket: WebSocket) -> None:

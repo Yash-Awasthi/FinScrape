@@ -37,8 +37,7 @@ class Settings(BaseSettings):
     # "production" turns the warnings below into refusals to start.
     env: str = Field(default="development", validation_alias="WORLDFIN_ENV")
 
-    # --- Ingest auth (every mutating route: POST /api/events, the alert
-    # routes, and the vendored /api/v1 signal-ingest routes) ---
+    # --- Ingest auth (every mutating route: POST /api/events and the alert routes) ---
     api_key: str = Field(default=DEFAULT_API_KEY, validation_alias="FINSCRAPE_API_KEY")
 
     # --- LLM (shared with finscrape: BYOK or local Ollama) ---

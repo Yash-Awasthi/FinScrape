@@ -31,14 +31,6 @@ _EXTERNAL = {
     "/api/candles",
     "/api/scenarios",
     "/api/storylines",
-    "/api/v1/geopolitical/alerts",
-    "/api/v1/geopolitical/dashboard",
-    "/api/v1/geopolitical/global-risk",
-    "/api/v1/geopolitical/regions",
-    "/api/v1/geopolitical/top-risks",
-    "/api/v1/sentiment/divergences",
-    "/api/v1/sentiment/extremes",
-    "/api/v1/sentiment/market/overview",
 }
 
 

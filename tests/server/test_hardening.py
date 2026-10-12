@@ -291,35 +291,6 @@ def teardown_module(module):  # restore the cached settings singleton for other 
     get_settings.cache_clear()
 
 
-# --- vendored routers: writes carry the same key as /api/events ---------------
-def test_vendored_router_writes_require_the_api_key():
-    """The finscrape routers are mounted whole. Their signal-ingest POSTs mutate shared
-    analyser state, so they must not be a way around the key /api/events enforces."""
-    from fastapi import APIRouter
-
-    from server.app import _guard_mutating_routes
-
-    router = APIRouter()
-
-    @router.get("/probe")
-    async def _read() -> dict:
-        return {"ok": True}
-
-    @router.post("/probe")
-    async def _write() -> dict:
-        return {"ok": True}
-
-    _guard_mutating_routes(router)
-    app = FastAPI()
-    app.include_router(router)
-    c = TestClient(app)
-
-    assert c.get("/probe").status_code == 200  # reads stay open
-    assert c.post("/probe").status_code == 401
-    key = get_settings().api_key
-    assert c.post("/probe", headers={"X-API-Key": key}).status_code == 200
-
-
 # --- pubsub: a dropped Redis connection must not end the subscriber ------------
 def test_pubsub_subscriber_reconnects_after_a_failure(monkeypatch):
     """It runs as a detached task, so a single raise would silently strip
