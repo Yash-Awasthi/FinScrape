@@ -63,7 +63,3 @@ Facts about the owner's setup that the items below rely on (as of 2 Oct 2026):
    the top ticker with the calls that named it; an event's inspector shows Outcome,
    Coverage and the council button. Merging PR #41 (the `deploy-web` workflow) first makes
    later web changes deploy on push.
-2. **Unreachable vendored code.** Much of `finscrape/` (`services/`, `trading/`,
-   `exchanges.py`, `sentiment/`, `edgar/`, the root `main.py` CLI) is reached from neither
-   `server/` nor `worker/`. Map reachability from those entry points and the tests, then
-   remove what only the retired CLI used.

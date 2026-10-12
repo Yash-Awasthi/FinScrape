@@ -121,7 +121,7 @@ make test        # pytest; DB tests need WORLDFIN_TEST_DATABASE_URL naming a *_t
 make e2e-live    # the built SPA against the real API and a seeded, empty *_test database
 ```
 
-About 1,190 pytest cases, 69 vitest cases and 6 Playwright specs; CI runs all of them.
+About 690 pytest cases, 66 vitest cases and 9 Playwright specs; CI runs all of them.
 
 ---
 
@@ -131,7 +131,7 @@ About 1,190 pytest cases, 69 vitest cases and 6 Playwright specs; CI runs all of
 finscrape/     engine: scrapers/world, ingestors, analysis (LLM, Laya, tickers), scenarios, council
 server/        FastAPI app, routes, migrations, seed
 worker/        ingest cycle, sources, correlation, backtest
-web/           Vite SPA (landing + dashboard)
+web/           Vite+ SPA (landing + dashboard)
 scripts/       llm.py (switch LLM), check_prod.py, db_backup.py, laya_train/ (fine-tuning)
 ops/ingest-cron/  Cloudflare cron Worker that dispatches ingest and keeps the API warm
 docs/          architecture, deploy, runbook, data sources, demo, security

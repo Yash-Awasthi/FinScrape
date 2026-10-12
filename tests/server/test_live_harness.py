@@ -126,10 +126,8 @@ from tests.live_e2e import isolate_environment
 os.chdir(sys.argv[1])
 isolate_environment(sys.argv[1])
 from server.settings import Settings
-from finscrape.config import Config
 assert Settings().openai_api_key == ""
 assert not Settings().has_llm
-assert Config.from_env().openai_base_url == ""
 assert "OPENAI_API_KEY" not in os.environ
 """
     result = subprocess.run(
