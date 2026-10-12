@@ -1,0 +1,17 @@
+name: Python setup
+description: uv with its cache, Python 3.13 and the locked dependency groups
+inputs:
+  groups:
+    description: Arguments passed to uv sync
+    default: --group server
+runs:
+  using: composite
+  steps:
+    - uses: astral-sh/setup-uv@v10.2.0
+      with:
+        enable-cache: true
+    # 3.13: spacy has no 3.14 wheel yet.
+    - run: uv python install 3.13
+      shell: bash
+    - run: uv sync -p 3.13 ${{ inputs.groups }}
+      shell: bash

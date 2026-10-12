@@ -6,9 +6,17 @@ name: CI
 
 on:
   push:
-    branches: [master, fresh]
+    branches: [master]
   pull_request:
     branches: [master]
+
+permissions:
+  contents: read
+
+# A new push to a PR supersedes the run on the previous commit.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   backend:
@@ -29,12 +37,9 @@ jobs:
       WORLDFIN_REQUIRE_PG: "1"
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.2.0
-      # 3.13 to match the Makefile (spacy has no 3.14 wheel yet). The old 3.10/3.11/3.12
-      # matrix could not have worked: the codebase uses datetime.UTC, which is 3.11+.
-      - run: uv python install 3.13
-      - name: Install
-        run: uv sync -p 3.13 --group server --group dev
+      - uses: ./.github/actions/setup-python
+        with:
+          groups: --group server --group dev
 
       # NEW_DIRS from the Makefile — the vendored finscrape/ tree carries pre-existing
       # lint debt and is out of scope by design (see pyproject [tool.ruff]).
@@ -98,10 +103,7 @@ jobs:
         working-directory: web
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.2.0
-      - run: uv python install 3.13
-      - run: uv sync -p 3.13 --group server
-        working-directory: .
+      - uses: ./.github/actions/setup-python
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
@@ -117,15 +119,16 @@ jobs:
           path: web/test-results
           retention-days: 7
 
-  container-scan:
+  images:
+    # `make demo` builds these three; a broken Dockerfile should fail here, not there.
     runs-on: ubuntu-24.04
-    needs: [backend, web]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     steps:
       - uses: actions/checkout@v7
-      - name: Build API image
-        run: docker build -f Dockerfile.api -t fin-scrape-api:scan .
+      - run: docker build -f Dockerfile.api -t fin-scrape-api:scan .
+      - run: docker build -f Dockerfile.worker .
+      - run: docker build web
       - name: Trivy scan
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: fin-scrape-api:scan
