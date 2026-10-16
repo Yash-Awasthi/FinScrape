@@ -21,6 +21,14 @@ log = logging.getLogger("worldfin.hardening")
 # API responses are pure JSON with no inline assets — lock the CSP all the way down.
 # The SPA's looser CSP (scripts, connect-src, etc.) lives on nginx, not here.
 _API_CSP = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+# FastAPI's Swagger and ReDoc pages load from jsdelivr and boot with an inline script.
+_DOCS_CSP = (
+    "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; connect-src 'self'; "
+    "script-src https://cdn.jsdelivr.net 'unsafe-inline'; worker-src blob:; "
+    "style-src https://cdn.jsdelivr.net https://fonts.googleapis.com 'unsafe-inline'; "
+    "font-src https://fonts.gstatic.com; img-src 'self' data: https:"
+)
+_DOCS_PATHS = frozenset({"/docs", "/docs/oauth2-redirect", "/redoc"})
 
 
 def _envelope(status: int, message: str) -> JSONResponse:
@@ -115,7 +123,10 @@ def configure_hardening(app: FastAPI) -> None:
         resp.headers.setdefault("X-Content-Type-Options", "nosniff")
         resp.headers.setdefault("X-Frame-Options", "DENY")
         resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-        resp.headers.setdefault("Content-Security-Policy", _API_CSP)
+        resp.headers.setdefault(
+            "Content-Security-Policy",
+            _DOCS_CSP if request.url.path in _DOCS_PATHS else _API_CSP,
+        )
         if s.enable_hsts:
             resp.headers.setdefault(
                 "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
