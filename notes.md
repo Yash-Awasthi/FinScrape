@@ -13,7 +13,7 @@ A fresh clone starts with `make demo` (`docs/DEMO.md` is the walkthrough).
 - Production: SPA on Cloudflare Pages, API on Render, Postgres on Supabase. The Cloudflare
   cron Worker `winfin-ingest-cron` is the only scheduler (GitHub turns off schedules in a
   public repo after 60 days without commits): every `INGEST_EVERY_HOURS` hours it dispatches
-  `ingest` (24 since 3 Oct, at 00:10 UTC), plus `telegram-summary` daily at 02:30 UTC,
+  `ingest` (1 since 16 Oct for interview demos, which also keeps the API warm; 24 before), plus `telegram-summary` daily at 02:30 UTC,
   `backup` at 21:20 UTC (an encrypted dump kept 14 days) and `score-week` on Saturdays at
   06:00 UTC. `make ingest-every HOURS=1` switches to hourly for demos, which also pings
   `/health` every 10 minutes so Render never sleeps; at 24 the API cold-starts in 30-50 s.
