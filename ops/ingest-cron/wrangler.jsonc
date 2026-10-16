@@ -2,6 +2,7 @@
   // The only scheduler for timed workflows (see index.mjs). Change the ingest interval
   // with `make ingest-every HOURS=1` (demos) or `HOURS=24` (default).
   "name": "winfin-ingest-cron",
+  "account_id": "f8560a671e337c49d03fe62396a8124b",
   "main": "index.mjs",
   "compatibility_date": "2026-09-20",
   "workers_dev": false,
