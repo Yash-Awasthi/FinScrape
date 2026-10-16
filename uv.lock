@@ -529,6 +529,14 @@ wheels = [
 ]
 
 [[package]]
+name = "en-core-web-sm"
+version = "3.8.0"
+source = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" }
+wheels = [
+    { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl", hash = "sha256:1932429db727d4bff3deed6b34cfc05df17794f4a52eeb26cf8928f7c1a0fb85" },
+]
+
+[[package]]
 name = "fastapi"
 version = "0.143.0"
 source = { registry = "https://pypi.org/simple" }
@@ -583,6 +591,7 @@ dependencies = [
     { name = "browserforge" },
     { name = "cssselect" },
     { name = "curl-cffi" },
+    { name = "en-core-web-sm" },
     { name = "feedparser" },
     { name = "lxml" },
     { name = "msgspec" },
@@ -632,6 +641,7 @@ requires-dist = [
     { name = "browserforge", specifier = ">=1.2.4" },
     { name = "cssselect", specifier = ">=1.6.0" },
     { name = "curl-cffi", specifier = ">=0.16.3" },
+    { name = "en-core-web-sm", url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" },
     { name = "feedparser", specifier = ">=6.0.14" },
     { name = "laya", marker = "(platform_machine != 'arm64' and extra == 'laya') or (sys_platform != 'darwin' and extra == 'laya')", specifier = ">=0.4.6" },
     { name = "laya-mlx", marker = "platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'laya'", specifier = ">=0.4.0" },

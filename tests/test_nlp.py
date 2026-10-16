@@ -29,6 +29,14 @@ class TestEntityResolution:
         result = nlp.analyze("Tesla news", "Tesla (TSLA) announced new factory plans.")
         assert "TSLA" in result.tickers
 
+    def test_bracketed_acronyms_are_not_tickers(self, nlp):
+        text = (
+            "The Stockholm International Peace Research Institute (SIPRI) said the "
+            "United Arab Emirates (UAE) closed its base, the Associated Press (AP) reported."
+        )
+        tickers = nlp.analyze("Base closes", text).tickers
+        assert not {"SIPRI", "UAE", "AP"} & set(tickers)
+
     def test_multiple_companies(self, nlp):
         result = nlp.analyze(
             "Tech Earnings",

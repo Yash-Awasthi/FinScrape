@@ -22,7 +22,11 @@ from finscrape.analysis.temporal import (
     get_next_catalyst_date,
 )
 from finscrape.analysis.ticker_map import COMPANY_TO_TICKER
-from finscrape.entity_map import _matches, resolve_company_tickers
+from finscrape.entity_map import (
+    _matches,
+    parenthesised_tickers,
+    resolve_company_tickers,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -394,9 +398,8 @@ class FinancialNLP:
                 tickers.append(m)
                 seen.add(m)
 
-        # (AAPL) pattern
-        for m in re.findall(r'\(([A-Z]{2,5})\)', text):
-            if m not in seen:
+        for m in parenthesised_tickers(text):
+            if len(m) >= 2 and m not in seen:
                 tickers.append(m)
                 seen.add(m)
 

@@ -27,6 +27,7 @@ dependencies = [
     "spacy>=3.8.16",
     "trafilatura>=2.3.1",
     "scipy>=1.18.1",
+    "en-core-web-sm",
 ]
 
 [project.optional-dependencies]
@@ -90,3 +91,6 @@ extend-immutable-calls = ["fastapi.Body", "fastapi.Depends", "fastapi.Query"]
 # Keep pytest scoped to the real suite; absorbed/ holds 31k vendored files.
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.uv.sources]
+en-core-web-sm = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" }
