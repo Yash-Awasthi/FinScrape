@@ -1,10 +1,10 @@
-# WorldFin — observability overlay (Phase 9). OPTIONAL.
+# FinScrape — observability overlay (Phase 9). OPTIONAL.
 #
 # Run merged with the main stack so it shares the default network and can scrape
 # api:8000 + worker:9100 and tail container logs by name:
 #   docker compose -f docker-compose.yml -f docker-compose.obs.yml up -d
 #
-# Grafana → http://localhost:3000 (admin/admin), with WorldFin dashboard prebuilt.
+# Grafana → http://localhost:3000 (admin/admin), with FinScrape dashboard prebuilt.
 # Prometheus → :9090, Loki → :3100. ponytail: demo-grade configs (no auth/TLS/retention
 # tuning) — fine for local + a single demo VPS; harden before real multi-tenant prod.
 services:

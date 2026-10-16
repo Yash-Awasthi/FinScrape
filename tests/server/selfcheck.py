@@ -149,7 +149,7 @@ def check_schemas() -> None:
 
 
 def main() -> int:
-    print("WorldFin Phase 0 self-check:")
+    print("FinScrape Phase 0 self-check:")
     check_migration_sql()
     check_migration_series()
     if check_settings():

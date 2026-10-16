@@ -1,4 +1,4 @@
-"""WorldFin ingestion worker — continuous scrape→analyze→judge→geocode→ingest.
+"""FinScrape ingestion worker — continuous scrape→analyze→judge→geocode→ingest.
 
 Separate long-running process (own asyncio loop). Blocking finscrape work (scrapers,
 LLM, market data) runs in a threadpool so it never stalls the loop. Reuses the

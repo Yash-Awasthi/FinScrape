@@ -1,6 +1,6 @@
 # Notes
 
-What is known about WorldFin and how it runs. Open work lives in `task.md`; finished work
+What is known about FinScrape and how it runs. Open work lives in `task.md`; finished work
 lives in git history.
 
 ## Where things stand
@@ -92,7 +92,7 @@ A fresh clone starts with `make demo` (`docs/DEMO.md` is the walkthrough).
 
 - `tests/server/` truncates its database, so it reads `WORLDFIN_TEST_DATABASE_URL` and
   refuses any database not named `*_test` (locally `worldfin_test` on port 5434).
-- The nexus Docker stack holds 8000, 5432, 6379, 3000 and 4173. WorldFin's API runs on 8010
+- The nexus Docker stack holds 8000, 5432, 6379, 3000 and 4173. FinScrape's API runs on 8010
   (`WORLDFIN_PORT=8011` while `adapfit-backend-1` holds 8010); compose publishes Postgres
   on 5433, Redis on 6380, Grafana on 3002; Playwright previews on 4183. The native Postgres
   17 service runs on 5434 and `.env` points `WORLDFIN_DATABASE_URL` there.
@@ -101,8 +101,8 @@ A fresh clone starts with `make demo` (`docs/DEMO.md` is the walkthrough).
 - Laya (CPU torch) loads ~800 MB on first use and takes ~2 s per article; `FINSCRAPE_LAYA=0`
   turns it off. Ollama must serve `nomic-embed-text`, and runs CPU-only
   (`CUDA_VISIBLE_DEVICES=-1`) or it takes the GPU.
-- Windows tasks: `WorldFin DB backup` dumps `worldfin` into `backups/` nightly (newest 14
-  kept; `make restore FILE=...`); `WorldFin backfill weekly` rewrites `data/backfill/` on
-  Saturdays; `WorldFin Laya daily` is disabled.
+- Windows tasks: `FinScrape DB backup` dumps `worldfin` into `backups/` nightly (newest 14
+  kept; `make restore FILE=...`); `FinScrape backfill weekly` rewrites `data/backfill/` on
+  Saturdays; `FinScrape Laya daily` is disabled.
 - History was rewritten on 30 Sep 2026 and the repository recreated on 1 Oct; the old
   history is in `../fin-scrape-history-backup-20260930.bundle`.

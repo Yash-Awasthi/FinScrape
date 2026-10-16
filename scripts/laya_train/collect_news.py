@@ -1,4 +1,4 @@
-"""Collect fresh headlines for Laya's teacher to label, from every source WorldFin reads
+"""Collect fresh headlines for Laya's teacher to label, from every source FinScrape reads
 plus Firecrawl news search, deduplicated against all existing Laya data.
 
     .venv/Scripts/python scripts/laya_train/collect_news.py OUT.json [--days 30] [--no-firecrawl]

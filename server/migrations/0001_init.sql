@@ -1,4 +1,4 @@
--- WorldFin schema — Phase 0 (resolves PLAN.md open-investigation #1).
+-- FinScrape schema — Phase 0 (resolves PLAN.md open-investigation #1).
 -- Columns mirror finscrape FinEvent (finscrape/models/__init__.py). JSONB for the
 -- list/dict fields; scalars as typed columns. TIMESTAMPTZ everywhere, UTC-normalized
 -- at ingest, so the ONE half-open [day, day+1) day-bounds convention holds across

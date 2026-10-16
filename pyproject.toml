@@ -51,7 +51,7 @@ dev = [
     # tests/live_e2e.py serves the app in-process on uvicorn; the API itself runs on Granian.
     "uvicorn[standard]>=0.54.0",
 ]
-# WorldFin backend (server/). Kept out of core deps so the finscrape CLI install
+# FinScrape backend (server/). Kept out of core deps so the finscrape CLI install
 # stays lean; `uv sync --group server` to work on the API.
 server = [
     "fastapi>=0.143.0",
@@ -68,7 +68,7 @@ server = [
 [tool.setuptools.packages.find]
 include = ["finscrape*"]
 
-# Scoped to the WorldFin backend only. The legacy finscrape/ core (~24k LOC) carries
+# Scoped to the FinScrape backend only. The legacy finscrape/ core (~24k LOC) carries
 # type debt that would red-gate the whole repo, so pyright covers server/ + worker/ —
 # the new, typed code — while ruff handles lint everywhere. Run via `make typecheck`.
 [tool.pyright]

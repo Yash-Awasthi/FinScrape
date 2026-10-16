@@ -1,4 +1,4 @@
-"""Dump or restore the WorldFin Postgres database.
+"""Dump or restore the FinScrape Postgres database.
 
     python scripts/db_backup.py backup            # backups/worldfin-<utc>.dump
     python scripts/db_backup.py restore <file>    # replaces current contents

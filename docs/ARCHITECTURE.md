@@ -1,4 +1,4 @@
-# WorldFin — Architecture
+# FinScrape — Architecture
 
 How the system is wired as of 30 Sep 2026. [DEPLOY.md](DEPLOY.md) covers production
 hosting and [RUNBOOK.md](RUNBOOK.md) operations; current work is in [task.md](../task.md).

@@ -1,6 +1,6 @@
 """Per-client sliding-window rate limiter.
 
-In-memory by design: one API replica is the WorldFin demo topology, so a process-local
+In-memory by design: one API replica is the FinScrape demo topology, so a process-local
 deque of hit timestamps is the whole limiter — no Redis round-trip on the hot path.
 
 ponytail: in-memory only. Ceiling = a single API replica (each process keeps its own

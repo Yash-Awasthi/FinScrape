@@ -1,6 +1,6 @@
 """Weekly backfill append (docs/BACKFILL.md): `python -m scripts.backfill.weekly`.
 
-Run on Saturdays by the Windows task `WorldFin backfill weekly`. Refreshes prices,
+Run on Saturdays by the Windows task `FinScrape backfill weekly`. Refreshes prices,
 rebuilds the event files of the months the last week touched (a rebuild is idempotent
 where an append is not), then recomputes `outcomes.parquet`. The universe stays as built.
 """

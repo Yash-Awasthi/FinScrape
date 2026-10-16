@@ -1,4 +1,4 @@
-# WorldFin API image — multi-stage, non-root, slim.
+# FinScrape API image — multi-stage, non-root, slim.
 # The build stage installs the locked server environment with uv; the runtime stage
 # copies only the venv + app, so uv and its cache never ship.
 FROM python:3.14-slim AS build

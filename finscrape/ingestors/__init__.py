@@ -7,7 +7,7 @@ with no network. Endpoints are public facts (verified present in worldmonitor), 
 copied source.
 
 Crypto was removed from the event mix (CoinGeckoIngestor stays in coingecko.py for
-reference but is not registered) — WorldFin covers equities/geopolitics.
+reference but is not registered) — FinScrape covers equities/geopolitics.
 """
 
 from finscrape.ingestors.base import BaseIngestor, RawGeoEvent

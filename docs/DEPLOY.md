@@ -1,4 +1,4 @@
-# WorldFin — free-tier production deploy
+# FinScrape — free-tier production deploy
 
 The live stack runs **$0/month, no credit card** across four free services + a free LLM.
 

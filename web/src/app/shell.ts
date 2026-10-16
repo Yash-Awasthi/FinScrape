@@ -26,7 +26,7 @@ export class Shell {
 
     const brand = document.createElement("div");
     brand.className = "brand";
-    brand.textContent = "WorldFin";
+    brand.textContent = "FinScrape";
 
     this.clock = document.createElement("time");
     this.clock.className = "clock";

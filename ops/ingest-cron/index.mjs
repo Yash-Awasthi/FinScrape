@@ -1,9 +1,9 @@
 // The only scheduler: GitHub turns off schedules in a public repo after 60 days without
 // commits, so this Worker dispatches every timed workflow from one 10-minute cron.
-// GH_TOKEN: fine-grained PAT for Yash-Awasthi/fin-scrape with Actions read and write.
+// GH_TOKEN: fine-grained PAT for Yash-Awasthi/FinScrape with Actions read and write.
 // INGEST_EVERY_HOURS (wrangler.jsonc vars): 24 = daily at 00:10 UTC, 1 = hourly for demos.
 const DISPATCH = (workflow) =>
-  `https://api.github.com/repos/Yash-Awasthi/fin-scrape/actions/workflows/${workflow}/dispatches`;
+  `https://api.github.com/repos/Yash-Awasthi/FinScrape/actions/workflows/${workflow}/dispatches`;
 const HEALTH = "https://winfin-api.onrender.com/health";
 
 export const hours = (value) => (Number.isInteger(value) && value > 0 ? value : 24);

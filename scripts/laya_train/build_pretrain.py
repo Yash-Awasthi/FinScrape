@@ -1,4 +1,4 @@
-"""Stage-1 data: public financial-news headlines mapped onto WorldFin's sector and
+"""Stage-1 data: public financial-news headlines mapped onto FinScrape's sector and
 direction questions, for one full fine-tune before the daily LoRA runs.
 
     python scripts/laya_train/build_pretrain.py OUT.json [--per-sector 2500] [--max-rows N]

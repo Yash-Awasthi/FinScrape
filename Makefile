@@ -1,11 +1,11 @@
-# WorldFin developer commands. `make help` lists them.
+# FinScrape developer commands. `make help` lists them.
 # Python tasks run via uv pinned to 3.14 with the server + dev groups so
 # FastAPI/asyncpg/ruff are present.
 .DEFAULT_GOAL := help
 PY := uv run -p 3.14 --group server --group dev
 COMPOSE := docker compose
 
-# New (WorldFin) code only — pre-existing finscrape source isn't ruff-format clean,
+# New (FinScrape) code only — pre-existing finscrape source isn't ruff-format clean,
 # so formatting is scoped to avoid a noisy whole-repo reformat.
 NEW_DIRS := server worker finscrape/scrapers/world finscrape/ingestors \
 	finscrape/scenarios.py \
@@ -51,16 +51,16 @@ demo: up seed ## Bring up the stack, then seed it — a populated dashboard in o
 test: ## Run the test suite (pytest)
 	$(PY) pytest -q
 
-lint: ## Lint new WorldFin code with ruff (pre-existing finscrape debt is out of scope)
+lint: ## Lint new FinScrape code with ruff (pre-existing finscrape debt is out of scope)
 	$(PY) ruff check $(NEW_DIRS)
 
-fmt: ## Auto-format new WorldFin code
+fmt: ## Auto-format new FinScrape code
 	$(PY) ruff format $(NEW_DIRS)
 
-fmt-check: ## Check formatting of new WorldFin code (CI gate)
+fmt-check: ## Check formatting of new FinScrape code (CI gate)
 	$(PY) ruff format --check $(NEW_DIRS)
 
-typecheck: ## Type-check the WorldFin backend (pyright, scoped to server/ + worker/)
+typecheck: ## Type-check the FinScrape backend (pyright, scoped to server/ + worker/)
 	$(PY) pyright
 
 selfcheck: ## Docker-free Phase 0 checks (settings/schemas/migration SQL)

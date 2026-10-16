@@ -1,5 +1,5 @@
 {
-  "_comment": "Curated WorldFin demo dataset. Timestamps are RELATIVE (days_ago/hour) and resolved to absolute UTC at load time, so the dashboard is full of fresh signal on every launch. lat/lon are baked (no geocode dependency). Events flagged with `accuracy` seed accuracy_outcomes; `correlations` seed the breaking-news/correlation panels. Facts are illustrative, not real market calls.",
+  "_comment": "Curated FinScrape demo dataset. Timestamps are RELATIVE (days_ago/hour) and resolved to absolute UTC at load time, so the dashboard is full of fresh signal on every launch. lat/lon are baked (no geocode dependency). Events flagged with `accuracy` seed accuracy_outcomes; `correlations` seed the breaking-news/correlation panels. Facts are illustrative, not real market calls.",
   "events": [
     {
       "days_ago": 0, "hour": 8,

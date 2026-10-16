@@ -1,4 +1,4 @@
-# WorldFin ingestion worker — multi-stage, non-root (Phase 10).
+# FinScrape ingestion worker — multi-stage, non-root (Phase 10).
 # Same locked environment as the api image: every dependency ships a cp314 wheel
 # with its native libs bundled, so neither stage needs compilers or system libxml2.
 FROM python:3.14-slim AS build

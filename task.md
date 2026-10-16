@@ -1,6 +1,6 @@
 # Tasks
 
-The working list for WorldFin. `notes.md` records what is known about it.
+The working list for FinScrape. `notes.md` records what is known about it.
 
 ## How to work this list
 

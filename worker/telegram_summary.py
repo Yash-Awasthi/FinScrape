@@ -30,7 +30,7 @@ async def last_day(pool: asyncpg.Pool) -> list[dict]:
 
 def summary_text(events: list[dict]) -> str:
     if not events:
-        return "📰 *WorldFin daily*\nNo new signals in the last 24 hours."
+        return "📰 *FinScrape daily*\nNo new signals in the last 24 hours."
     counts = Counter(e.get("verdict") or "?" for e in events)
     order = ("INVEST", "PULL_OUT", "CAUTIOUS", "OBSERVE")
     tally = ", ".join(f"{v} {counts[v]}" for v in order if counts[v])
@@ -39,7 +39,7 @@ def summary_text(events: list[dict]) -> str:
         key=lambda e: (abs(e.get("signal_score") or 0), e.get("confidence") or 0),
         reverse=True,
     )[:TOP_CALLS]
-    lines = [f"📰 *WorldFin daily*: {len(events)} events ({escape_md(tally)})"]
+    lines = [f"📰 *FinScrape daily*: {len(events)} events ({escape_md(tally)})"]
     if calls:
         lines.append("\n*Strongest calls*")
         for e in calls:

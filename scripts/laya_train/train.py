@@ -1,4 +1,4 @@
-"""Fine-tune Laya's English checkpoint on WorldFin's sector question, on one CUDA GPU.
+"""Fine-tune Laya's English checkpoint on FinScrape's sector question, on one CUDA GPU.
 
 Adapted from the upstream notebook (NandhaKishorM/laya,
 notebooks/laya_finetune_typed_decisions_2xT4_kaggle.ipynb) for a single GPU and our

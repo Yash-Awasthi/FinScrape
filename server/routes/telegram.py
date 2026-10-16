@@ -25,7 +25,7 @@ log = logging.getLogger("worldfin.telegram")
 router = APIRouter()
 
 _HELP = (
-    "WorldFin bot commands:\n"
+    "FinScrape bot commands:\n"
     "/subscribe — get INVEST/PULL\\_OUT alerts\n"
     "/unsubscribe — stop alerts\n"
     "/status — subscription + alert status\n"

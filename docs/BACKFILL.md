@@ -1,6 +1,6 @@
 # Backfill and call scoring
 
-How WorldFin judges its sector labels and its INVEST / PULL_OUT calls. Market data and
+How FinScrape judges its sector labels and its INVEST / PULL_OUT calls. Market data and
 official company sectors are the only judges: no hand labels, no teacher labels.
 
 ## Rules
@@ -63,7 +63,7 @@ windows across that date are dropped (`UNADJUSTED` in `outcomes.py`).
 - `score-week` Action, Saturdays 06:00 UTC via the cron Worker (`python -m worker.score_week`): scores live
   calls up to a year old whose windows have closed (ingest only reaches back 30 days) and
   prints the +2 / +4 day rates of the last two weeks and of all calls.
-- Windows task `WorldFin backfill weekly`, Saturdays 10:00 local
+- Windows task `FinScrape backfill weekly`, Saturdays 10:00 local
   (`python -m scripts.backfill.weekly`, log in `data/backfill/weekly.log`): refreshes
   prices, rebuilds the months the last 8 days touched and recomputes outcomes. It refuses a
   short prices download rather than overwrite history.

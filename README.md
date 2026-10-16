@@ -1,14 +1,14 @@
-# 🌐 WorldFin — Geopolitical Market Advisory
+# FinScrape — Geopolitical Market Advisory
 
 > **See what moves markets — before it's news.**
 
-[![CI](https://github.com/Yash-Awasthi/fin-scrape/actions/workflows/ci.yml/badge.svg)](https://github.com/Yash-Awasthi/fin-scrape/actions/workflows/ci.yml)
+[![CI](https://github.com/Yash-Awasthi/FinScrape/actions/workflows/ci.yml/badge.svg)](https://github.com/Yash-Awasthi/FinScrape/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.14-3776AB.svg)](https://python.org)
 [![Cost](https://img.shields.io/badge/Cost-$0%2Fmonth-brightgreen.svg)](docs/DEPLOY.md)
 [![Live](https://img.shields.io/badge/Live-Dashboard-blue.svg)](https://winfin.pages.dev/app/)
 
-WorldFin reads world and geopolitical news on a schedule (daily, or hourly for demos), works out which sectors
+FinScrape reads world and geopolitical news on a schedule (daily, or hourly for demos), works out which sectors
 and tickers each event moves, turns related events into scenarios with a calibrated
 probability and an instruction (invest, pull out, observe), and scores every call
 against the market move that followed.
@@ -46,7 +46,7 @@ Needs Docker and git. No LLM key is required: the demo loads a seeded dataset, a
 the worker falls back to keyword analysis until a model is configured.
 
 ```bash
-git clone https://github.com/Yash-Awasthi/fin-scrape.git && cd fin-scrape
+git clone https://github.com/Yash-Awasthi/FinScrape.git && cd FinScrape
 cp .env.example .env
 make demo                     # build, start postgres + api + worker + web, seed demo data
 #   web → http://localhost:8080 (dashboard at /app/)   ·   api → http://localhost:8010/docs
@@ -148,7 +148,7 @@ Current work is in [task.md](task.md); what is known and measured is in [notes.m
 
 ## 📄 License
 
-[MIT](LICENSE) — WorldFin is market intelligence, **not financial advice**.
+[MIT](LICENSE) — FinScrape is market intelligence, **not financial advice**.
 
 Built on [globe.gl](https://github.com/vasturiano/globe.gl), [FastAPI](https://fastapi.tiangolo.com),
 [spaCy](https://spacy.io), [Laya](https://pypi.org/project/laya/), [Supabase](https://supabase.com)

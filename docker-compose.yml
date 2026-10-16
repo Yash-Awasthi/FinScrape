@@ -1,4 +1,4 @@
-# WorldFin local stack: postgres, api, worker and web; redis is an opt-in profile.
+# FinScrape local stack: postgres, api, worker and web; redis is an opt-in profile.
 # Postgres listens on 127.0.0.1 only, so the default password never leaves the machine.
 
 services:

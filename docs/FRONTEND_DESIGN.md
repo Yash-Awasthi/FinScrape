@@ -1,6 +1,6 @@
-# WorldFin Frontend — Design
+# FinScrape Frontend — Design
 
-*The design of the WorldFin SPA (`web/`).*
+*The design of the FinScrape SPA (`web/`).*
 
 ## Principles
 
@@ -28,7 +28,7 @@ rail sits beside Today and Tickers, where events are picked, and gives its width
 the other two.
 
 ```
-┌ WorldFin   Today │ Tickers │ Track record │ Sources        00:10 UTC ● ↻ ┐
+┌ FinScrape   Today │ Tickers │ Track record │ Sources        00:10 UTC ● ↻ ┐
 ├───────────────────────────────────────────────────────────┬───────────────┤
 │ Scenarios: probability · instruction · exposed tickers     │ Inspector     │
 ├──────────────────────┬────────────────────────────────────┤ verdict,      │

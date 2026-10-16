@@ -1,6 +1,6 @@
 # Security & hardening
 
-How the WorldFin backend defends its trust boundaries. All knobs are env vars (see
+How the FinScrape backend defends its trust boundaries. All knobs are env vars (see
 `.env.example`); defaults are safe for the demo and tightenable for production.
 
 ## Authentication

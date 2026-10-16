@@ -1,4 +1,4 @@
-"""Typed settings for the WorldFin backend (pydantic-settings).
+"""Typed settings for the FinScrape backend (pydantic-settings).
 
 One typed object, imported everywhere — no scattered os.getenv. Reads from the
 process env / .env. BYOK and Ollama keys are the SAME ones finscrape already uses

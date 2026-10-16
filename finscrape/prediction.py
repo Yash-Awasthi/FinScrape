@@ -1,7 +1,7 @@
 """Calibrated Event-Impact Probability (CEIP) engine.
 
 The differentiator: news terminals tell you what happened; prediction markets
-tell you odds of events. WorldFin tells you the **calibrated probability that a
+tell you odds of events. FinScrape tells you the **calibrated probability that a
 signal's direction realizes in price** — with the reliability evidence attached.
 
 How it works (honest, small-sample aware):

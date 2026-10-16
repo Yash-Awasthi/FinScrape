@@ -248,6 +248,17 @@ def test_security_headers_present(monkeypatch):
     assert "content-security-policy" in r.headers
 
 
+def test_docs_csp_lets_swagger_load(monkeypatch):
+    client = TestClient(_app(monkeypatch, WORLDFIN_RATE_LIMIT_PER_MIN="0"))
+    docs = client.get("/docs").headers["content-security-policy"]
+    assert "https://cdn.jsdelivr.net" in docs and "connect-src 'self'" in docs
+    assert (
+        client.get("/ping")
+        .headers["content-security-policy"]
+        .startswith("default-src 'none'")
+    )
+
+
 def test_etag_then_304(monkeypatch):
     client = TestClient(_app(monkeypatch, WORLDFIN_RATE_LIMIT_PER_MIN="0"))
     r1 = client.get("/ping")

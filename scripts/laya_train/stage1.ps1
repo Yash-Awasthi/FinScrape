@@ -35,7 +35,7 @@ Add-Type -Namespace Laya -Name Power -MemberDefinition '[DllImport("kernel32.dll
 [Laya.Power]::SetThreadExecutionState([uint32]2147483649) | Out-Null
 (Get-Process -Id $PID).PriorityClass = "BelowNormal"
 
-schtasks /Change /TN "WorldFin Laya daily" /DISABLE | Out-Null
+schtasks /Change /TN "FinScrape Laya daily" /DISABLE | Out-Null
 Get-Process ollama, "ollama app", "Docker Desktop" -ErrorAction SilentlyContinue | Stop-Process -Force
 cmd /c "wsl --shutdown >nul 2>&1"
 Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
@@ -99,7 +99,7 @@ print(msg)
 '@ | & "$Repo\.venv\Scripts\python.exe" -W ignore -
 }
 finally {
-  schtasks /Change /TN "WorldFin Laya daily" /ENABLE | Out-Null
+  schtasks /Change /TN "FinScrape Laya daily" /ENABLE | Out-Null
   Write-Host "STAGE 1 DONE"
   Stop-Transcript
 }

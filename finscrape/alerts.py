@@ -449,7 +449,7 @@ class AlertEngine:
                 {"name": "Sources", "value": s["source_str"] or "—", "inline": False},
             ],
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "footer": {"text": "WorldFin Signal Alert"},
+            "footer": {"text": "FinScrape Signal Alert"},
         }
         payload: dict[str, Any] = {"embeds": [embed]}
         if action.config.get("username"):

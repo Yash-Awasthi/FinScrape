@@ -1,1 +1,1 @@
-"""WorldFin analysis library: ingest, analysis, scoring and correlation code."""
+"""FinScrape analysis library: ingest, analysis, scoring and correlation code."""

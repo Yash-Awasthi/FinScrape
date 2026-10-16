@@ -93,7 +93,7 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     s = get_settings()
-    app = FastAPI(title="WorldFin API", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="FinScrape API", version="0.1.0", lifespan=lifespan)
 
     app.add_middleware(
         CORSMiddleware,

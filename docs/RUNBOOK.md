@@ -1,6 +1,6 @@
-# WorldFin — Operations Runbook
+# FinScrape — Operations Runbook
 
-How to operate, observe, restore, and rotate secrets for the WorldFin stack. Pairs with
+How to operate, observe, restore, and rotate secrets for the FinScrape stack. Pairs with
 [`SECURITY.md`](SECURITY.md) (threat model) and [`DATA_SOURCES.md`](DATA_SOURCES.md) (feeds).
 
 ## 0. Production (Pages + Render + Supabase + Actions)
@@ -50,7 +50,7 @@ docker compose down             # stop (keeps the pgdata18 volume)
 With observability:
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.obs.yml up -d
-# Grafana http://localhost:3000 (admin/admin) → "WorldFin — Observability" dashboard
+# Grafana http://localhost:3000 (admin/admin) → "FinScrape — Observability" dashboard
 # Prometheus :9090 · Loki :3100
 ```
 

@@ -1,6 +1,6 @@
-# WorldFin — Data Sources
+# FinScrape — Data Sources
 
-Every external source WorldFin pulls, its access terms, and key status. All sources are
+Every external source FinScrape pulls, its access terms, and key status. All sources are
 **keyless** (ReliefWeb needs a free approved app name, not a key). Source of truth in code:
 `finscrape/scrapers/world/feeds.py` and `finscrape/ingestors/`.
 

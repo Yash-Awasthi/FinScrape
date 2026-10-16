@@ -1,9 +1,9 @@
-# Contributing to WorldFin
+# Contributing to FinScrape
 
 ## Setup
 
 ```bash
-git clone https://github.com/Yash-Awasthi/fin-scrape.git && cd fin-scrape
+git clone https://github.com/Yash-Awasthi/FinScrape.git && cd FinScrape
 uv sync -p 3.14 --group server --group dev
 cd web && npm ci && cd ..
 ```

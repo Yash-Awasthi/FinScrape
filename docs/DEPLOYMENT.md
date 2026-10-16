@@ -1,4 +1,4 @@
-# WorldFin — API
+# FinScrape — API
 
 The API (`server/`) and the ingest worker (`worker/`) share one Postgres database;
 the SPA (`web/`) talks only to the API.

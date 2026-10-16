@@ -1,6 +1,6 @@
-# WorldFin demo script
+# FinScrape demo script
 
-About eight minutes. WorldFin reads world news, decides which tickers and sectors
+About eight minutes. FinScrape reads world news, decides which tickers and sectors
 each story moves, and keeps score of whether its calls came true.
 
 Live: landing https://winfin.pages.dev, dashboard https://winfin.pages.dev/app/.

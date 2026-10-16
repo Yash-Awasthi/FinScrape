@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 _TIMEOUT = 20
 _HEADERS = {
-    "User-Agent": "finscrape-worldfin/0.1 (+https://github.com/Yash-Awasthi/fin-scrape)"
+    "User-Agent": "finscrape-worldfin/0.1 (+https://github.com/Yash-Awasthi/FinScrape)"
 }
 
 # GDELT throttles hard and inconsistently — a plain probe alternates 429/200 within
