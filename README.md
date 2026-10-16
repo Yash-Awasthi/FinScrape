@@ -2,6 +2,7 @@
 
 > **See what moves markets — before it's news.**
 
+[![CI](https://github.com/Yash-Awasthi/fin-scrape/actions/workflows/ci.yml/badge.svg)](https://github.com/Yash-Awasthi/fin-scrape/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.14-3776AB.svg)](https://python.org)
 [![Cost](https://img.shields.io/badge/Cost-$0%2Fmonth-brightgreen.svg)](docs/DEPLOY.md)
@@ -14,6 +15,10 @@ against the market move that followed.
 
 **Live:** [landing](https://winfin.pages.dev) · [dashboard](https://winfin.pages.dev/app/) ·
 [API docs](https://winfin-api.onrender.com/docs)
+
+![Today view: scenarios with sector tilt and exposed tickers, the signal feed and the globe](docs/img/today.png)
+
+![Track record: hit rates with 95% intervals, calibration and every scored call](docs/img/track-record.png)
 
 ---
 

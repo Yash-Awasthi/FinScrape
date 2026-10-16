@@ -53,13 +53,4 @@ Facts about the owner's setup that the items below rely on (as of 2 Oct 2026):
 
 ## Open
 
-1. **Publish the web app to Cloudflare Pages.** *Gated: Cloudflare login.* The live site at
-   winfin.pages.dev still serves the old 18-panel build; the API and worker already run
-   the 12 Oct code. Either add the repo secrets `CLOUDFLARE_API_TOKEN` (Cloudflare Pages:
-   Edit) and `CLOUDFLARE_ACCOUNT_ID` and run `gh workflow run deploy-web.yml`, or, logged
-   in with `npx wrangler login`: `cd web && npm ci && set VITE_API_BASE=https://winfin-api.onrender.com && npm run build && npx wrangler pages deploy dist --project-name=winfin --branch=main`
-   (PowerShell: `$env:VITE_API_BASE=...`). Live check: `/app/#record` shows Next day,
-   +2 and +4 days vs SPY with intervals and the Scored calls table; `/app/#tickers` charts
-   the top ticker with the calls that named it; an event's inspector shows Outcome,
-   Coverage and the council button. Merging PR #41 (the `deploy-web` workflow) first makes
-   later web changes deploy on push.
+Nothing open.
