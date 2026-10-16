@@ -32,12 +32,7 @@ from pathlib import Path
 _DATA_FILE = Path(__file__).with_name("data") / "entity_index.json"
 # Official SEC company→ticker list, absorbed from company_name_to_ticker (768 KB,
 # ~10k companies). Kept in the absorbed tree so it stays next to its provenance.
-_COMPANY_FILE = (
-    Path(__file__).with_name("absorbed")
-    / "market_data"
-    / "company_name_to_ticker"
-    / "company_tickers.json"
-)
+_COMPANY_FILE = Path(__file__).with_name("data") / "company_tickers.json"
 
 
 @functools.lru_cache(maxsize=1)
@@ -142,9 +137,24 @@ def listed_titles() -> dict[str, str]:
     }
 
 
+@functools.lru_cache(maxsize=1)
 def listed_symbols() -> frozenset[str]:
     """Every ticker on the SEC list."""
     return frozenset(listed_titles())
+
+
+def parenthesised_tickers(text: str) -> list[str]:
+    """Symbols written as "Name (TICK)". A bracketed token spelling the initials of
+    the words before it is an acronym being defined ("World Trade Organization
+    (WTO)"), and anything off the listed-symbol list is an agency or group (OCHA)."""
+    out = []
+    for m in re.finditer(r"\(([A-Z]{1,5})\)", text):
+        sym = m.group(1)
+        words = re.findall(r"[A-Za-z][\w'-]*", text[: m.start()])[-len(sym):]
+        if "".join(w[0].upper() for w in words) == sym or sym not in listed_symbols():
+            continue
+        out.append(sym)
+    return out
 
 
 @functools.lru_cache(maxsize=1)
