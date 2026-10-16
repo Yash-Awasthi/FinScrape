@@ -5,8 +5,9 @@ lives in git history.
 
 ## Where things stand
 
-As of 12 Oct 2026: API and worker run the 12 Oct changes (logic fixes, four-view
-dashboard, Vite+); the Pages site still serves the previous build until task 1 lands.
+As of 16 Oct 2026: API, worker and the Pages site all run the 12 Oct changes (logic
+fixes, four-view dashboard, Vite+). The Pages project `winfin` lives on the
+yashawasthi12032006 Cloudflare account; set `CLOUDFLARE_ACCOUNT_ID` if wrangler caches another.
 A fresh clone starts with `make demo` (`docs/DEMO.md` is the walkthrough).
 
 - Production: SPA on Cloudflare Pages, API on Render, Postgres on Supabase. The Cloudflare

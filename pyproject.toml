@@ -63,6 +63,10 @@ server = [
     "redis>=8.1.0",
 ]
 
+# Lets Nexus `pip install -e` this repo; only the engine ships, the apps stay local.
+[tool.setuptools.packages.find]
+include = ["finscrape*"]
+
 # Scoped to the WorldFin backend only. The legacy finscrape/ core (~24k LOC) carries
 # type debt that would red-gate the whole repo, so pyright covers server/ + worker/ —
 # the new, typed code — while ruff handles lint everywhere. Run via `make typecheck`.

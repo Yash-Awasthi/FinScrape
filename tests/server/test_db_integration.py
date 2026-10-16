@@ -22,7 +22,7 @@ from server import db, queries
 from server.ingest import ingest_events
 from tests.server import PG_DSN as DSN
 
-TEST_EVENT = Path(__file__).resolve().parents[2] / "test_event.json"
+TEST_EVENT = Path(__file__).resolve().parent / "test_event.json"
 
 
 def _pg_reachable() -> bool:
