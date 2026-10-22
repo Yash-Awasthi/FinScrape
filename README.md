@@ -16,9 +16,11 @@ against the market move that followed.
 **Live:** [landing](https://winfin.pages.dev) · [dashboard](https://winfin.pages.dev/app/) ·
 [API docs](https://winfin-api.onrender.com/docs)
 
-![Today view: scenarios with sector tilt and exposed tickers, the signal feed and the globe](docs/img/today.png)
+---
 
-![Track record: hit rates with 95% intervals, calibration and every scored call](docs/img/track-record.png)
+## 📸 Screenshots
+
+<a href="docs/screenshots/showcase.jpg"><img src="docs/screenshots/showcase.jpg" width="100%" alt="FinScrape dashboard tabs, the mobile view and the Telegram alert feed"></a>
 
 ---
 
