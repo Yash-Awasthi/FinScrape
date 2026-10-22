@@ -156,4 +156,4 @@ Each ingest cycle ends with a retention sweep. `WORLDFIN_RETENTION_DAYS` (defaul
 correlations, scrape runs, the LLM cache, visited URLs and alert history. `WORLDFIN_EVENT_RETENTION_DAYS`
 (default 365) deletes events older than that together with their scored outcomes, so the free
 database cannot fill up and the accuracy record is a rolling year. Set either to 0 to keep forever.
-`scripts/check_prod.py` still fails the run above 400 MB.
+Above `WORLDFIN_DB_MAX_MB` (default 400) the sweep also drops the oldest events in 5% batches and compacts, so ingest never stops on a full database. `scripts/check_prod.py` fails the run only above 450 MB, which means eviction failed.

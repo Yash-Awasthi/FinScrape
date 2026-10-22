@@ -232,6 +232,28 @@ async def prune_old_rows(pool: asyncpg.Pool, days: int, event_days: int = 0) -> 
         )
 
 
+async def evict_to_size(pool: asyncpg.Pool, max_mb: float) -> int:
+    """Keep the database under max_mb by dropping the oldest events (and their outcomes) in
+    batches of 5%, compacting after each so the size really falls. Returns events removed."""
+    removed = 0
+    for _ in range(10):
+        size = await pool.fetchval("SELECT pg_database_size(current_database())")
+        if size <= max_mb * 1e6:
+            break
+        batch = await pool.fetchval("SELECT GREATEST(1, count(*) / 20) FROM events")
+        n = await pool.fetchval(
+            "WITH gone AS (DELETE FROM events WHERE id IN "
+            "(SELECT id FROM events ORDER BY timestamp LIMIT $1) RETURNING 1) "
+            "SELECT count(*) FROM gone",
+            batch,
+        )
+        if not n:
+            break
+        removed += n
+        await pool.execute("VACUUM FULL events")
+    return removed
+
+
 def _source_type(source: str) -> str:
     """Tier is encoded as the suffix after ':' in our source tags (world/<feed>:<tier>,
     gdelt/<domain>:wire, usgs_quakes:gov, …)."""

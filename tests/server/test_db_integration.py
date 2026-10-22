@@ -140,3 +140,24 @@ def test_event_retention_deletes_old_events_and_their_outcomes():
         assert (kept, forever, events_left, outcomes_left) == (1, 1, 0, 0)
 
     asyncio.run(body())
+
+
+def test_size_cap_evicts_oldest_events_instead_of_stopping():
+    from worker.runner import evict_to_size
+
+    async def body():
+        pool = await _fresh_pool()
+        await pool.execute(
+            "INSERT INTO events (content_hash, subject, event_type, verdict, timestamp) "
+            "SELECT 'h' || g, 'event ' || g, 'news', 'OBSERVE', now() - g * interval '1 day' "
+            "FROM generate_series(1, 40) g"
+        )
+        assert await evict_to_size(pool, 100000) == 0  # under the cap: nothing leaves
+        removed = await evict_to_size(pool, 0.001)  # always over: sheds oldest, then stops
+        left = await pool.fetchval("SELECT count(*) FROM events")
+        oldest = await pool.fetchval("SELECT min(subject) FROM events WHERE subject = 'event 40'")
+        await db.disconnect()
+        assert 0 < removed < 40 and left == 40 - removed
+        assert oldest is None  # the oldest event went first
+
+    asyncio.run(body())

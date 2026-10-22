@@ -1,4 +1,4 @@
-"""Fail the ingest run when production stops getting events or nears the 500 MB cap.
+"""Fail the ingest run when production stops getting events or eviction fails to keep it under the 500 MB cap.
 
 GitHub emails the owner on a failed run, which is the alert.
 """
@@ -9,7 +9,7 @@ import sys
 
 import asyncpg
 
-MAX_MB = 400
+MAX_MB = 450  # the worker evicts the oldest events above 400
 
 
 def max_age_hours(every_hours: str | None) -> int:

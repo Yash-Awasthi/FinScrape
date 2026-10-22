@@ -23,7 +23,7 @@ from finscrape.logging_config import setup_logging
 from server import db
 from server.settings import Settings, get_settings
 from worker import key_queue
-from worker.runner import Worker, prune_old_rows
+from worker.runner import Worker, evict_to_size, prune_old_rows
 
 log = logging.getLogger("worldfin.worker.main")
 
@@ -52,10 +52,12 @@ async def _score_outcomes(worker: Worker) -> int:
         return 0
 
 
-async def _prune(worker: Worker, days: int, event_days: int = 0) -> None:
+async def _prune(worker: Worker, days: int, event_days: int = 0, max_mb: float = 0) -> None:
     """Retention sweep; logged and skipped on failure like the backtest."""
     try:
         await prune_old_rows(worker.pool, days, event_days)
+        if max_mb > 0 and (n := await evict_to_size(worker.pool, max_mb)):
+            log.warning("database over %s MB: evicted %d oldest events", max_mb, n)
     # The sweep reruns tomorrow.
     except Exception as exc:  # noqa: BLE001  # pragma: no cover
         log.warning("retention skipped: %s", exc)
@@ -103,7 +105,7 @@ def _schedule(worker: Worker, s: Settings) -> AsyncIOScheduler:
         _prune,
         "interval",
         hours=24,
-        args=[worker, s.retention_days, s.event_retention_days],
+        args=[worker, s.retention_days, s.event_retention_days, s.db_max_mb],
         id="retention",
         max_instances=1,
         coalesce=True,
@@ -144,7 +146,7 @@ async def run_once() -> None:
     finally:
         await key_queue.save(worker.pool)
     await _score_outcomes(worker)
-    await _prune(worker, s.retention_days, s.event_retention_days)
+    await _prune(worker, s.retention_days, s.event_retention_days, s.db_max_mb)
     await db.disconnect()
 
 

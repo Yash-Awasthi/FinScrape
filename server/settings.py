@@ -103,6 +103,9 @@ class Settings(BaseSettings):
     # Events and their scored outcomes older than this are deleted, so the free database
     # cannot fill up; the accuracy record is a rolling window. 0 keeps events forever.
     event_retention_days: int = Field(default=365, validation_alias="WORLDFIN_EVENT_RETENTION_DAYS")
+    # Over this size the sweep drops the oldest events until it fits again, so ingest never
+    # stops on a full database (the free cap is 500 MB); 0 turns it off.
+    db_max_mb: float = Field(default=400, validation_alias="WORLDFIN_DB_MAX_MB")
     # Production ingests once a day (INGEST_EVERY_HOURS=24), so a source is stale only
     # after a missed run plus an hour of slack; scripts/check_prod.py alerts sooner.
     source_stale_after_minutes: int = Field(
