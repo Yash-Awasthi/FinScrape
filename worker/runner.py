@@ -210,8 +210,13 @@ def _json_list(value) -> list:
     return value if isinstance(value, list) else []
 
 
-async def prune_old_rows(pool: asyncpg.Pool, days: int) -> None:
-    """Age out operational tables. Events are the product and are never pruned."""
+async def prune_old_rows(pool: asyncpg.Pool, days: int, event_days: int = 0) -> None:
+    """Age out operational tables, and events (with their scored outcomes, which cascade)
+    once older than event_days; 0 keeps events forever."""
+    if event_days > 0:
+        await pool.execute(
+            "DELETE FROM events WHERE timestamp < now() - make_interval(days => $1)", event_days
+        )
     if days <= 0:
         return
     for table, column in (

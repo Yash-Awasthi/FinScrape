@@ -149,3 +149,11 @@ After rotation, confirm green: `/health`, `/ready`, and one authenticated mutati
 Container stdout/stderr → Docker json-file driver (cap with `--log-opt max-size`/`max-file` or a
 daemon-level default). Loki retention is set in `obs/loki-config.yml`; Prometheus TSDB retention
 is `--storage.tsdb.retention.time` in `docker-compose.obs.yml` (15d default). Tune both to disk.
+
+## 7. Database retention
+
+Each ingest cycle ends with a retention sweep. `WORLDFIN_RETENTION_DAYS` (default 90) ages out
+correlations, scrape runs, the LLM cache, visited URLs and alert history. `WORLDFIN_EVENT_RETENTION_DAYS`
+(default 365) deletes events older than that together with their scored outcomes, so the free
+database cannot fill up and the accuracy record is a rolling year. Set either to 0 to keep forever.
+`scripts/check_prod.py` still fails the run above 400 MB.

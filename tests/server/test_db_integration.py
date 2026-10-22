@@ -116,3 +116,27 @@ def test_stored_analysis_is_found_by_event_and_heuristics_are_skipped():
         assert found["summary"] == "r"
 
     asyncio.run(body())
+
+
+def test_event_retention_deletes_old_events_and_their_outcomes():
+    from worker.runner import prune_old_rows
+
+    async def body():
+        pool = await _fresh_pool()
+        events = json.loads(TEST_EVENT.read_text())["events"]
+        await ingest_events(pool, events)
+        await pool.execute(
+            "INSERT INTO accuracy_outcomes (event_id, ticker, verdict) SELECT id, 'X', 'INVEST' FROM events"
+        )
+        await prune_old_rows(pool, 90, 365)  # the fresh event survives
+        kept = await pool.fetchval("SELECT COUNT(*) FROM events")
+        await pool.execute("UPDATE events SET timestamp = now() - interval '400 days'")
+        await prune_old_rows(pool, 90, 0)  # 0 keeps events forever
+        forever = await pool.fetchval("SELECT COUNT(*) FROM events")
+        await prune_old_rows(pool, 90, 365)
+        events_left = await pool.fetchval("SELECT COUNT(*) FROM events")
+        outcomes_left = await pool.fetchval("SELECT COUNT(*) FROM accuracy_outcomes")
+        await db.disconnect()
+        assert (kept, forever, events_left, outcomes_left) == (1, 1, 0, 0)
+
+    asyncio.run(body())

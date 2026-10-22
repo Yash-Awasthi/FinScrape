@@ -52,10 +52,10 @@ async def _score_outcomes(worker: Worker) -> int:
         return 0
 
 
-async def _prune(worker: Worker, days: int) -> None:
+async def _prune(worker: Worker, days: int, event_days: int = 0) -> None:
     """Retention sweep; logged and skipped on failure like the backtest."""
     try:
-        await prune_old_rows(worker.pool, days)
+        await prune_old_rows(worker.pool, days, event_days)
     # The sweep reruns tomorrow.
     except Exception as exc:  # noqa: BLE001  # pragma: no cover
         log.warning("retention skipped: %s", exc)
@@ -103,7 +103,7 @@ def _schedule(worker: Worker, s: Settings) -> AsyncIOScheduler:
         _prune,
         "interval",
         hours=24,
-        args=[worker, s.retention_days],
+        args=[worker, s.retention_days, s.event_retention_days],
         id="retention",
         max_instances=1,
         coalesce=True,
@@ -144,7 +144,7 @@ async def run_once() -> None:
     finally:
         await key_queue.save(worker.pool)
     await _score_outcomes(worker)
-    await _prune(worker, s.retention_days)
+    await _prune(worker, s.retention_days, s.event_retention_days)
     await db.disconnect()
 
 
