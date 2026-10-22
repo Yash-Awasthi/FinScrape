@@ -19,9 +19,10 @@ jobs:
           WORLDFIN_DATABASE_URL: ${{ secrets.WORLDFIN_DATABASE_URL }}
           BACKUP_KEY: ${{ secrets.BACKUP_KEY }}
         run: |
-          # ECR's mirror of the official image: Docker Hub rate-limits anonymous pulls.
-          docker run --rm -e URL="$WORLDFIN_DATABASE_URL" public.ecr.aws/docker/library/postgres:17 \
-            sh -c 'pg_dump "$URL" -Fc --no-owner' > worldfin.dump
+          # Registry pulls hit anonymous rate limits (Docker Hub, ECR); PGDG apt has none.
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-client-17
+          /usr/lib/postgresql/17/bin/pg_dump "$WORLDFIN_DATABASE_URL" -Fc --no-owner > worldfin.dump
           test -s worldfin.dump
           openssl enc -aes-256-cbc -pbkdf2 -pass env:BACKUP_KEY -in worldfin.dump -out worldfin.dump.enc
           ls -lh worldfin.dump.enc
