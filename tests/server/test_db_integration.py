@@ -153,9 +153,13 @@ def test_size_cap_evicts_oldest_events_instead_of_stopping():
             "FROM generate_series(1, 40) g"
         )
         assert await evict_to_size(pool, 100000) == 0  # under the cap: nothing leaves
-        removed = await evict_to_size(pool, 0.001)  # always over: sheds oldest, then stops
+        removed = await evict_to_size(
+            pool, 0.001
+        )  # always over: sheds oldest, then stops
         left = await pool.fetchval("SELECT count(*) FROM events")
-        oldest = await pool.fetchval("SELECT min(subject) FROM events WHERE subject = 'event 40'")
+        oldest = await pool.fetchval(
+            "SELECT min(subject) FROM events WHERE subject = 'event 40'"
+        )
         await db.disconnect()
         assert 0 < removed < 40 and left == 40 - removed
         assert oldest is None  # the oldest event went first

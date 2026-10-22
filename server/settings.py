@@ -102,7 +102,9 @@ class Settings(BaseSettings):
     retention_days: int = Field(default=90, validation_alias="WORLDFIN_RETENTION_DAYS")
     # Events and their scored outcomes older than this are deleted, so the free database
     # cannot fill up; the accuracy record is a rolling window. 0 keeps events forever.
-    event_retention_days: int = Field(default=365, validation_alias="WORLDFIN_EVENT_RETENTION_DAYS")
+    event_retention_days: int = Field(
+        default=365, validation_alias="WORLDFIN_EVENT_RETENTION_DAYS"
+    )
     # Over this size the sweep drops the oldest events until it fits again, so ingest never
     # stops on a full database (the free cap is 500 MB); 0 turns it off.
     db_max_mb: float = Field(default=400, validation_alias="WORLDFIN_DB_MAX_MB")

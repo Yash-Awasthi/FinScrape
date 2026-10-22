@@ -52,7 +52,9 @@ async def _score_outcomes(worker: Worker) -> int:
         return 0
 
 
-async def _prune(worker: Worker, days: int, event_days: int = 0, max_mb: float = 0) -> None:
+async def _prune(
+    worker: Worker, days: int, event_days: int = 0, max_mb: float = 0
+) -> None:
     """Retention sweep; logged and skipped on failure like the backtest."""
     try:
         await prune_old_rows(worker.pool, days, event_days)

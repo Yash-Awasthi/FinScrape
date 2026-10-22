@@ -215,7 +215,8 @@ async def prune_old_rows(pool: asyncpg.Pool, days: int, event_days: int = 0) -> 
     once older than event_days; 0 keeps events forever."""
     if event_days > 0:
         await pool.execute(
-            "DELETE FROM events WHERE timestamp < now() - make_interval(days => $1)", event_days
+            "DELETE FROM events WHERE timestamp < now() - make_interval(days => $1)",
+            event_days,
         )
     if days <= 0:
         return
