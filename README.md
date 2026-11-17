@@ -128,7 +128,7 @@ make test        # pytest; DB tests need WORLDFIN_TEST_DATABASE_URL naming a *_t
 make e2e-live    # the built SPA against the real API and a seeded, empty *_test database
 ```
 
-About 690 pytest cases, 66 vitest cases and 9 Playwright specs; CI runs all of them.
+About 680 pytest cases, 72 vitest cases and 8 Playwright specs; CI runs all of them.
 
 ---
 

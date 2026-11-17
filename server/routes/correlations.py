@@ -2,17 +2,21 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, Query
 from fastapi.encoders import jsonable_encoder
 
 from server import db
 from server.ingest import day_bounds
+from server.routes.params import day as day_param
 
 router = APIRouter()
 
 
 @router.get("/api/correlations")
-async def list_correlations(date: str | None = None, limit: int = 200) -> dict:
+async def list_correlations(
+    date: str | None = Depends(day_param),
+    limit: int = Query(200, ge=1, le=500),
+) -> dict:
     if date:
         start, end = day_bounds(date)
         rows = await db.pool().fetch(

@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
+from typing import cast
+
 from fastapi import APIRouter, Query
 
 from finscrape.scrapers.world.feeds import FEEDS
-from server import db
+from server import cache, db
 
 router = APIRouter()
 
@@ -267,6 +270,24 @@ async def storylines(limit: int = Query(10, ge=1, le=50)) -> dict:
     Same contract as the local route; Ollama down → singleton clusters."""
     from finscrape.analysis.clusters import build_storylines
 
+    # Clustering reads the same newest-200 window every time. Settle the cache key
+    # from a cheap head query first: ids bound the window, and source/ticker text
+    # moves when coverage is merged into an old row without a new id.
+    head = await db.pool().fetchrow(
+        """
+        SELECT max(id) AS newest, count(*) AS considered,
+               coalesce(sum(length(sources::text) + length(tickers::text)), 0) AS coverage
+        FROM (SELECT id, sources, tickers FROM events ORDER BY id DESC LIMIT 200) w
+        """
+    )
+    key = (
+        f"storylines:{head['newest'] or 0}:{head['considered'] or 0}:"
+        f"{head['coverage'] or 0}"
+    )
+    hit = cache.peek(key)
+    if hit is not cache.MISSING:
+        return {"storylines": cast("list[dict]", hit)[:limit]}
+
     rows = await db.pool().fetch(
         """
         SELECT id, subject, tickers, sources, signal_score, created_at
@@ -285,4 +306,10 @@ async def storylines(limit: int = Query(10, ge=1, le=50)) -> dict:
         }
         for r in rows
     ]
-    return {"storylines": build_storylines(events)[:limit]}
+    # Embedding on a cold cache takes seconds per subject and used to run on the
+    # event loop, stalling every other request; and re-clustering on each dashboard
+    # load paid for the same answer again. Both are fixed here.
+    built = await asyncio.to_thread(
+        lambda: cache.get_or_set(key, cache.MEDIUM, lambda: build_storylines(events))
+    )
+    return {"storylines": cast("list[dict]", built)[:limit]}

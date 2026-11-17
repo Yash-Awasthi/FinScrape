@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging
 import math
 import os
+from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, field
 from typing import Any
@@ -71,14 +72,14 @@ class AgentCouncil:
 
     def __init__(
         self,
-        agents: list[BaseAgent],
+        agents: Sequence[BaseAgent],
         max_workers: int | None = None,
         judge: bool = False,
         rounds: int | None = None,
     ):
         if not agents:
             raise ValueError("AgentCouncil requires at least one agent.")
-        self.agents = agents
+        self.agents = list(agents)
         self.max_workers = max_workers or min(len(agents), 8)
         self.judge = judge
         if rounds is None:

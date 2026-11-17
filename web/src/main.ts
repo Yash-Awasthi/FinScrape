@@ -7,6 +7,7 @@ import { BreakingNewsBanner } from "./components/banner";
 import { Inspector } from "./components/inspector";
 import type { GlobeView } from "./globe/globe";
 import type { EventOut } from "./api";
+import { RefreshLoop } from "./live";
 import { PanelLayoutManager } from "./panels/layout";
 import { Panel } from "./panels/panel";
 import {
@@ -85,6 +86,11 @@ function showView(id: string): void {
   layout.applyVariant(VIEWS[view].slots);
   shell.setView(view);
   if (location.hash !== `#${view}`) history.replaceState(null, "", `#${view}`);
+  // Returning to Today leaves a day-filtered feed behind and resumes the live one.
+  if (view === "today" && dayScope) {
+    dayScope = false;
+    void loadAll();
+  }
   // The globe measures its panel, which has no size while its view is hidden.
   if (view === "today") requestAnimationFrame(sizeGlobe);
 }
@@ -147,6 +153,8 @@ window.addEventListener("keydown", (e) => {
 });
 
 async function loadAll(): Promise<void> {
+  // A full load means the live feed, not a calendar day.
+  dayScope = false;
   // allSettled: one missing backend endpoint must never blank the whole load.
   const [events, stats, correlations, dates] = await Promise.allSettled([
     api.events({ limit: 200 }),
@@ -155,7 +163,10 @@ async function loadAll(): Promise<void> {
     api.dates(),
   ]);
   if (events.status === "fulfilled") store.setEvents(events.value);
-  if (stats.status === "fulfilled") store.setStats(stats.value);
+  if (stats.status === "fulfilled") {
+    store.setStats(stats.value);
+    refresher.note(stats.value);
+  }
   if (correlations.status === "fulfilled") store.setCorrelations(correlations.value);
   if (dates.status === "fulfilled") datesPanel.update(dates.value);
   // Momentum badges and storyline collapse need these before the feed's last render.
@@ -182,6 +193,8 @@ async function loadAll(): Promise<void> {
 }
 
 async function loadDay(day: string): Promise<void> {
+  // Polling must not overwrite a calendar view with the latest feed.
+  dayScope = true;
   try {
     store.setEvents(await api.events({ date: day, limit: 200 }));
     store.setCorrelations(await api.correlations(day));
@@ -193,7 +206,10 @@ async function loadDay(day: string): Promise<void> {
 function onMessage(msg: WSMessage): void {
   if (msg.type === "init" && msg.events) store.setEvents(msg.events);
   else if (msg.type === "new_events" && msg.events) store.addEvents(msg.events);
-  if (msg.stats) store.setStats(msg.stats);
+  if (msg.stats) {
+    store.setStats(msg.stats);
+    refresher.note(msg.stats);
+  }
 }
 
 (window as unknown as { __wfEvents?: EventOut[] }).__wfEvents = [];
@@ -224,6 +240,27 @@ window.setInterval(() => {
 }, 60_000);
 const rt = new RealtimeClient(wsUrl(), onMessage, (status) => store.setConnection(status));
 
+// Worker-ingested events never reach WS clients without Redis, so poll the cheap
+// stats endpoint and reload only when a write actually landed. Paused on hidden
+// tabs and on a calendar day; a visible tab polls immediately when it comes back.
+let dayScope = false;
+const refresher = new RefreshLoop(
+  () => api.stats(),
+  async (stats) => {
+    const [events, correlations] = await Promise.all([
+      api.events({ limit: 200 }),
+      api.correlations(),
+    ]);
+    store.setStats(stats);
+    store.setEvents(events);
+    store.setCorrelations(correlations);
+  },
+);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") void refresher.tick();
+});
+
 showView(location.hash.slice(1));
 void loadAll();
 rt.connect();
+refresher.start();

@@ -33,12 +33,15 @@ export class Shell {
 
     this.dot = document.createElement("span");
     this.dot.className = "conn-dot";
+    this.dot.setAttribute("role", "status");
+    this.dot.setAttribute("aria-label", "realtime connecting");
     this.dot.title = "realtime connection";
 
     const refresh = document.createElement("button");
     refresh.className = "refresh";
     refresh.textContent = "↻";
     refresh.title = "refresh";
+    refresh.setAttribute("aria-label", "Refresh feed and panels");
     refresh.addEventListener("click", onRefresh);
 
     this.tabs = document.createElement("nav");
@@ -92,6 +95,7 @@ export class Shell {
 
   setConnection(status: WSStatus): void {
     this.dot.dataset.status = status;
+    this.dot.setAttribute("aria-label", `realtime ${status}`);
   }
 
   private startClock(): void {

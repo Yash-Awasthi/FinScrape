@@ -19,7 +19,11 @@ router = APIRouter()
 
 @router.get("/api/candles")
 async def candles(
-    symbol: str = Query(...),
+    # Yahoo symbols: letters, digits, and the `. ^ = -` that index/FX/futures use
+    # (^GSPC, CL=F, BRK-B). Bounded so an arbitrary string never reaches yfinance.
+    symbol: str = Query(
+        ..., min_length=1, max_length=16, pattern=r"^[A-Za-z0-9^.=-]+$"
+    ),
     period: str = Query("1mo", pattern="^(1d|5d|1mo|3mo|6mo|1y|2y)$"),
     interval: str = Query("1d", pattern="^(5m|15m|1h|1d|1wk)$"),
 ) -> dict:

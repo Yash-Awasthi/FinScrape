@@ -14,7 +14,9 @@ How the FinScrape backend defends its trust boundaries. All knobs are env vars (
 
 - Per-client **sliding-window** limiter (`server/rate_limit.py`), `WORLDFIN_RATE_LIMIT_PER_MIN`
   (default 120; `0` disables). Past the threshold → **429** with a `Retry-After` header.
-- Client identity = first `X-Forwarded-For` hop (behind nginx) else the peer IP.
+- Client identity = the peer IP; behind a proxy we operate (loopback/private/link-local) it is
+  the rightmost `X-Forwarded-For` hop, the one our proxy appended. A header from a public peer
+  is ignored so a caller cannot mint identities.
 - In-memory, process-local. Ceiling: a single API replica. Multi-replica upgrade path is a
   Redis sorted-set window keyed on `WORLDFIN_REDIS_URL` — noted in the module docstring.
 

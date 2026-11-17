@@ -77,7 +77,9 @@ LLM is any OpenAI-compatible endpoint, shared with finscrape via env (`OPENAI_BA
    to the next trading close) and feeds `/api/accuracy` and `/api/reliability`.
 7. **Live updates**: `server/ws.py` broadcasts `init`/`new_events`/`ai_updated`/`pong`. API-side
    ingest broadcasts directly; worker→client broadcast needs Redis (`WORLDFIN_REDIS_URL`), which
-   production does not run, so the dashboard picks up worker events on refresh.
+   production does not run. The SPA closes that gap itself: while a tab is visible it polls the
+   cheap `/api/stats` once a minute and reloads events and correlations only when `last_update`
+   moved (`web/src/live.ts`), so worker-ingested events appear without a manual refresh.
 
 ## The three root-cause bug fixes (vs the old Workers/D1 dashboard)
 
@@ -228,14 +230,15 @@ implemented in `finscrape/analysis/nlp.py` despite earlier documentation claimin
   flagging), `tests/test_lessons.py` (`get_lessons` read-back, its prompt wiring into the judge only).
 - DB-dependent paths are **skip-ready** integration tests (`tests/server/test_*integration.py`)
   that auto-skip without Postgres and run under `make up` / CI (postgres service).
-- `make lint` / `make fmt-check` / `make selfcheck` / `make test` — about 1,190 tests; CI sets
+- `make lint` / `make fmt-check` / `make selfcheck` / `make test` — about 790 tests; CI sets
   `WORLDFIN_REQUIRE_PG` so a missing database fails instead of skipping.
 - `make e2e-live` runs the built SPA against the real API on an empty `*_test` database, with
   credentials stripped and outbound network blocked (`tests/live_e2e.py`).
 
 ## Known gaps
 
-- Worker→client WS fan-out needs Redis; production refreshes instead (see Data flow 7).
+- Worker→client WS fan-out needs Redis; the SPA's stats poll covers the common case
+  (see Data flow 7).
 - `detect_prediction_leads_news` reads AI ticker impacts, so it only sees events that were
   actually analysed.
 - `_topic_mentions_for_symbol` covers the 25 tickers the entity index and the topic keyword

@@ -37,6 +37,14 @@ A fresh clone starts with `make demo` (`docs/DEMO.md` is the walkthrough).
 - Telegram: ingest sends INVEST / PULL_OUT alerts through @YashAwasthiBot, and the
   `telegram-summary` Action sends a daily summary.
 
+- Live updates without Redis: the SPA polls `/api/stats` every 60 s while its tab is visible
+  and reloads events + correlations only when `last_update` moves (`web/src/live.ts`). A day
+  view pauses it; returning to Today resumes the live feed.
+- `GET /api/storylines` clusters on a worker thread (a cold Ollama pass no longer blocks the
+  event loop) and caches the newest-200 answer for 120 s, keyed on ids plus source/ticker text
+  so a coverage merge invalidates it.
+- Read routes validate at the boundary: a bad `?date=` is a 422 (not a 500), `/api/correlations`
+  bounds its limit, and `/api/candles` only accepts a Yahoo-shaped symbol.
 - Correlations: the velocity baseline and the already-emitted keys are read from Postgres
   each run, so the one-shot ingest keeps state. A fixed watch list (topic-mapped tickers
   plus CL=F, NG=F) is priced every run so silent_divergence can fire; a story that names a

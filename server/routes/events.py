@@ -13,6 +13,7 @@ from server import db, queries
 from server.alert_rules import fire_alerts
 from server.auth import require_api_key
 from server.ingest import ingest_events
+from server.routes.params import day as day_param
 from server.routes.telegram import notify_new_events
 from server.schemas import (
     DashboardStats,
@@ -66,7 +67,7 @@ async def ingest(background: BackgroundTasks, payload: IngestBatch) -> IngestRes
 async def list_events(
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
-    date: str | None = None,
+    date: str | None = Depends(day_param),
     verdict: str | None = None,
     ticker: str | None = None,
     source: str | None = None,
