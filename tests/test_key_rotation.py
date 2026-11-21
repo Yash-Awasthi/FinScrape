@@ -1,5 +1,6 @@
 """Keys form a queue: one that answers 429 moves to the back and the next takes over."""
 
+import time
 from types import SimpleNamespace
 
 from finscrape.analysis import ai_client
@@ -49,6 +50,8 @@ def test_single_key_survives_429(monkeypatch):
 
 def test_loaded_order_skips_a_key_spent_last_run(monkeypatch):
     used = _proxy(monkeypatch, spent={"a"})
-    ai_client.load_key_moves({ai_client.key_fingerprint("a"): 100.0})
+    # Recent on purpose: a 429 older than the allowance window is treated as reset (see
+    # test_provider_fragility), and `worker.key_queue` only ever stores real times.
+    ai_client.load_key_moves({ai_client.key_fingerprint("a"): time.time() - 60})
     assert ai_client._call_openai_proxy("p", "s") == {"relevant": True}
     assert used == ["b"]

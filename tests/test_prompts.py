@@ -2,12 +2,10 @@
 
 import logging
 
-import pytest
 
 from finscrape.analysis import prompts
 from finscrape.analysis.ai_client import _validate_response
 from finscrape.analysis.constants import VALID_EVENT_TYPES
-
 
 # ---------------------------------------------------------------------------
 # EVENT_TYPES_PIPE built from constants.VALID_EVENT_TYPES

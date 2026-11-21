@@ -54,3 +54,40 @@ def test_correlations_bounds_its_limit(client, limit):
 def test_candles_rejects_a_non_symbol(client, bad):
     response = client.get("/api/candles", params={"symbol": bad})
     assert response.status_code == 422
+
+
+def test_market_quotes_filter_junk_before_yfinance(client, monkeypatch):
+    seen: list[list[str]] = []
+
+    def fake_quotes(symbols, timeout=None):
+        seen.append(symbols)
+        return [
+            {
+                "symbol": "XOM",
+                "price": 1.0,
+                "previous_close": 1.0,
+                "change_percent": 0.0,
+                "spark": [1.0, 1.0],
+            }
+        ]
+
+    monkeypatch.setattr(market_routes, "get_quotes", fake_quotes)
+    response = client.get(
+        "/api/market/quotes", params={"symbols": "xom,<script>../../x,BTC-USD"}
+    )
+    assert response.status_code == 200
+    assert seen == [["XOM", "BTC-USD"]]
+    assert response.json()["quotes"][0]["symbol"] == "XOM"
+
+
+def test_market_quotes_default_tape_and_cap(client, monkeypatch):
+    seen: list[list[str]] = []
+    monkeypatch.setattr(
+        market_routes, "get_quotes", lambda symbols, timeout=None: seen.append(symbols) or []
+    )
+    assert client.get("/api/market/quotes").json()["symbols"] == list(
+        market_routes.DEFAULT_QUOTE_SYMBOLS
+    )
+    many = ",".join(f"S{i}" for i in range(40))
+    client.get("/api/market/quotes", params={"symbols": many})
+    assert len(seen[-1]) == market_routes.MAX_QUOTE_SYMBOLS

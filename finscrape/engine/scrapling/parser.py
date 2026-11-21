@@ -1,40 +1,45 @@
-from pathlib import Path
-from inspect import signature
-from urllib.parse import urljoin
 from difflib import SequenceMatcher
+from inspect import signature
+from pathlib import Path
 from re import Pattern as re_Pattern
+from urllib.parse import urljoin
 
-from lxml.html import HtmlElement, HTMLParser
-from cssselect import SelectorError, SelectorSyntaxError, parse as split_selectors
+from cssselect import SelectorError, SelectorSyntaxError
+from cssselect import parse as split_selectors
 from lxml.etree import (
     XPath,
-    tostring,
-    fromstring,
     XPathError,
     XPathEvalError,
     _ElementUnicodeResult,
+    fromstring,
+    tostring,
 )
+from lxml.html import HtmlElement, HTMLParser
 
 from finscrape.engine.scrapling.core._types import (
+    TYPE_CHECKING,
     Any,
-    Set,
-    Dict,
-    cast,
-    List,
-    Tuple,
-    Union,
-    TypeVar,
-    Pattern,
     Callable,
+    Dict,
+    Generator,
+    Iterable,
+    List,
     Literal,
     Optional,
-    Iterable,
-    overload,
-    Generator,
+    Pattern,
+    Set,
     SupportsIndex,
-    TYPE_CHECKING,
+    Tuple,
+    TypeVar,
+    Union,
+    cast,
+    overload,
 )
-from finscrape.engine.scrapling.core.custom_types import AttributesHandler, TextHandler, TextHandlers
+from finscrape.engine.scrapling.core.custom_types import (
+    AttributesHandler,
+    TextHandler,
+    TextHandlers,
+)
 from finscrape.engine.scrapling.core.mixins import SelectorsGeneration
 from finscrape.engine.scrapling.core.storage import (
     SQLiteStorageSystem,
@@ -42,7 +47,12 @@ from finscrape.engine.scrapling.core.storage import (
     _StorageTools,
 )
 from finscrape.engine.scrapling.core.translator import css_to_xpath as _css_to_xpath
-from finscrape.engine.scrapling.core.utils import clean_spaces, flatten, html_forbidden, log
+from finscrape.engine.scrapling.core.utils import (
+    clean_spaces,
+    flatten,
+    html_forbidden,
+    log,
+)
 
 __DEFAULT_DB_FILE__ = str(Path(__file__).parent / "elements_storage.db")
 # Attributes that are Python reserved words and can't be used directly
@@ -63,18 +73,18 @@ _find_all_text_nodes = XPath(".//text()")
 
 class Selector(SelectorsGeneration):
     __slots__ = (
-        "url",
-        "encoding",
         "__adaptive_enabled",
+        "__attributes",
+        "__huge_tree_enabled",
+        "__keep_cdata",
+        "__keep_comments",
+        "__tag",
+        "__text",
+        "_raw_body",
         "_root",
         "_storage",
-        "__keep_comments",
-        "__huge_tree_enabled",
-        "__attributes",
-        "__text",
-        "__tag",
-        "__keep_cdata",
-        "_raw_body",
+        "encoding",
+        "url",
     )
 
     def __init__(
@@ -139,16 +149,16 @@ class Selector(SelectorsGeneration):
                 raise TypeError(f"content argument must be str or bytes, got {type(content)}")
 
             # https://lxml.de/api/lxml.etree.HTMLParser-class.html
-            _parser_kwargs: Dict[str, Any] = dict(
-                recover=True,
-                remove_blank_text=True,
-                remove_comments=(not keep_comments),
-                encoding=encoding,
-                compact=True,
-                huge_tree=huge_tree,
-                default_doctype=True,  # Supported by lxml but missing from stubs
-                strip_cdata=(not keep_cdata),
-            )
+            _parser_kwargs: Dict[str, Any] = {
+                "recover": True,
+                "remove_blank_text": True,
+                "remove_comments": (not keep_comments),
+                "encoding": encoding,
+                "compact": True,
+                "huge_tree": huge_tree,
+                "default_doctype": True,  # Supported by lxml but missing from stubs
+                "strip_cdata": (not keep_cdata),
+            }
             parser = HTMLParser(**_parser_kwargs)
             self._root = cast(HtmlElement, fromstring(body or "<html/>", parser=parser, base_url=url or ""))
             self._raw_body = content
@@ -203,7 +213,7 @@ class Selector(SelectorsGeneration):
         # Faster than checking `element.is_attribute or element.is_text or element.is_tail`
         return issubclass(type(element), _ElementUnicodeResult)
 
-    def __element_convertor(self, element: HtmlElement | _ElementUnicodeResult) -> "Selector":
+    def __element_convertor(self, element: HtmlElement | _ElementUnicodeResult) -> Selector:
         """Used internally to convert a single HtmlElement or text node to Selector directly without checks"""
         return Selector(
             root=element,
@@ -216,7 +226,7 @@ class Selector(SelectorsGeneration):
             huge_tree=self.__huge_tree_enabled,
         )
 
-    def __elements_convertor(self, elements: List[HtmlElement | _ElementUnicodeResult]) -> "Selectors":
+    def __elements_convertor(self, elements: List[HtmlElement | _ElementUnicodeResult]) -> Selectors:
         # Store them for non-repeated call-ups
         url = self.url
         encoding = self.encoding
@@ -240,7 +250,7 @@ class Selector(SelectorsGeneration):
             for el in elements
         )
 
-    def __handle_elements(self, result: List[HtmlElement | _ElementUnicodeResult]) -> "Selectors":
+    def __handle_elements(self, result: List[HtmlElement | _ElementUnicodeResult]) -> Selectors:
         """Used internally in all functions to convert results to Selectors in bulk"""
         if not result:
             return Selectors()
@@ -383,13 +393,13 @@ class Selector(SelectorsGeneration):
         return class_name in self._root.classes
 
     @property
-    def parent(self) -> Optional["Selector"]:
+    def parent(self) -> Optional[Selector]:
         """Return the direct parent of the element or ``None`` otherwise"""
         _parent = self._root.getparent()
         return self.__element_convertor(_parent) if _parent is not None else None
 
     @property
-    def below_elements(self) -> "Selectors":
+    def below_elements(self) -> Selectors:
         """Return all elements under the current element in the DOM tree"""
         if self._is_text_node(self._root):
             return Selectors()
@@ -397,7 +407,7 @@ class Selector(SelectorsGeneration):
         return self.__elements_convertor(below) if below is not None else Selectors()
 
     @property
-    def children(self) -> "Selectors":
+    def children(self) -> Selectors:
         """Return the children elements of the current element or empty list otherwise"""
         if self._is_text_node(self._root):
             return Selectors()
@@ -408,20 +418,20 @@ class Selector(SelectorsGeneration):
         )
 
     @property
-    def siblings(self) -> "Selectors":
+    def siblings(self) -> Selectors:
         """Return other children of the current element's parent or empty list otherwise"""
         if self.parent:
             return Selectors(child for child in self.parent.children if child._root != self._root)
         return Selectors()
 
-    def iterancestors(self) -> Generator["Selector", None, None]:
+    def iterancestors(self) -> Generator[Selector, None, None]:
         """Return a generator that loops over all ancestors of the element, starting with the element's parent."""
         if self._is_text_node(self._root):
             return
         for ancestor in self._root.iterancestors():
             yield self.__element_convertor(ancestor)
 
-    def find_ancestor(self, func: Callable[["Selector"], bool]) -> Optional["Selector"]:
+    def find_ancestor(self, func: Callable[[Selector], bool]) -> Optional[Selector]:
         """Loop over all ancestors of the element till one match the passed function
         :param func: A function that takes each ancestor as an argument and returns True/False
         :return: The first ancestor that match the function or ``None`` otherwise.
@@ -432,13 +442,13 @@ class Selector(SelectorsGeneration):
         return None
 
     @property
-    def path(self) -> "Selectors":
+    def path(self) -> Selectors:
         """Returns a list of type `Selectors` that contains the path leading to the current element from the root."""
         lst = list(self.iterancestors())
         return Selectors(lst)
 
     @property
-    def next(self) -> Optional["Selector"]:
+    def next(self) -> Optional[Selector]:
         """Returns the next element of the current element in the children of the parent or ``None`` otherwise."""
         if self._is_text_node(self._root):
             return None
@@ -450,7 +460,7 @@ class Selector(SelectorsGeneration):
         return self.__element_convertor(next_element) if next_element is not None else None
 
     @property
-    def previous(self) -> Optional["Selector"]:
+    def previous(self) -> Optional[Selector]:
         """Returns the previous element of the current element in the children of the parent or ``None`` otherwise."""
         if self._is_text_node(self._root):
             return None
@@ -508,20 +518,20 @@ class Selector(SelectorsGeneration):
     # From here we start with the selecting functions
     @overload
     def relocate(
-        self, element: Union[Dict, HtmlElement, "Selector"], percentage: int, selector_type: Literal[True]
-    ) -> "Selectors": ...
+        self, element: Union[Dict, HtmlElement, Selector], percentage: int, selector_type: Literal[True]
+    ) -> Selectors: ...
 
     @overload
     def relocate(
-        self, element: Union[Dict, HtmlElement, "Selector"], percentage: int, selector_type: Literal[False] = False
+        self, element: Union[Dict, HtmlElement, Selector], percentage: int, selector_type: Literal[False] = False
     ) -> List[HtmlElement]: ...
 
     def relocate(
         self,
-        element: Union[Dict, HtmlElement, "Selector"],
+        element: Union[Dict, HtmlElement, Selector],
         percentage: int = 0,
         selector_type: bool = False,
-    ) -> Union[List[HtmlElement], "Selectors"]:
+    ) -> Union[List[HtmlElement], Selectors]:
         """This function will search again for the element in the page tree, used automatically on page structure change
 
         :param element: The element we want to relocate in the tree
@@ -568,7 +578,7 @@ class Selector(SelectorsGeneration):
         adaptive: bool = False,
         auto_save: bool = False,
         percentage: int = 0,
-    ) -> "Selectors":
+    ) -> Selectors:
         """Search the current tree with CSS3 selectors
 
         **Important:
@@ -619,7 +629,7 @@ class Selector(SelectorsGeneration):
             SelectorError,
             SelectorSyntaxError,
         ) as e:
-            raise SelectorSyntaxError(f"Invalid CSS selector '{selector}': {str(e)}") from e
+            raise SelectorSyntaxError(f"Invalid CSS selector '{selector}': {e!s}") from e
 
     def xpath(
         self,
@@ -629,7 +639,7 @@ class Selector(SelectorsGeneration):
         auto_save: bool = False,
         percentage: int = 0,
         **kwargs: Any,
-    ) -> "Selectors":
+    ) -> Selectors:
         """Search the current tree with XPath selectors
 
         **Important:
@@ -695,7 +705,7 @@ class Selector(SelectorsGeneration):
         self,
         *args: str | Iterable[str] | Pattern | Callable | Dict[str, str],
         **kwargs: str,
-    ) -> "Selectors":
+    ) -> Selectors:
         """Find elements by filters of your creations for ease.
 
         :param args: Tag name(s), iterable of tag names, regex patterns, function, or a dictionary of elements' attributes. Leave empty for selecting all.
@@ -708,7 +718,7 @@ class Selector(SelectorsGeneration):
         if not args and not kwargs:
             raise TypeError("You have to pass something to search with, like tag name(s), tag attributes, or both.")
 
-        attributes: Dict[str, Any] = dict()
+        attributes: Dict[str, Any] = {}
         tags: Set[str] = set()
         patterns: Set[Pattern] = set()
         results, functions, selectors = Selectors(), [], []
@@ -760,7 +770,7 @@ class Selector(SelectorsGeneration):
             for key, value in attributes.items():
                 value = value.replace('"', r"\"")  # Escape double quotes in user input
                 # Not escaping anything with the key so the user can pass patterns like {'href*': '/p/'} or get errors :)
-                selector += '[{}="{}"]'.format(key, value)
+                selector += f'[{key}="{value}"]'
             if selector != "*":
                 selectors.append(selector)
 
@@ -789,7 +799,7 @@ class Selector(SelectorsGeneration):
         self,
         *args: str | Iterable[str] | Pattern | Callable | Dict[str, str],
         **kwargs: str,
-    ) -> Optional["Selector"]:
+    ) -> Optional[Selector]:
         """Find elements by filters of your creations for ease, then return the first result. Otherwise return `None`.
 
         :param args: Tag name(s), iterable of tag names, regex patterns, function, or a dictionary of elements' attributes. Leave empty for selecting all.
@@ -1014,7 +1024,7 @@ class Selector(SelectorsGeneration):
             "src",
         ),
         match_text: bool = False,
-    ) -> "Selectors":
+    ) -> Selectors:
         """Find elements that are in the same tree depth in the page with the same tag name and same parent tag etc...
         then return the ones that match the current element attributes with a percentage higher than the input threshold.
 
@@ -1040,7 +1050,7 @@ class Selector(SelectorsGeneration):
 
         # We will use the elements' root from now on to get the speed boost of using Lxml directly
         root = self._root
-        similar_elements = list()
+        similar_elements = []
 
         current_depth = len(list(root.iterancestors()))
         target_attrs = self.__get_attributes(root, ignore_attributes) if ignore_attributes else root.attrib
@@ -1075,7 +1085,7 @@ class Selector(SelectorsGeneration):
         partial: bool = ...,
         case_sensitive: bool = ...,
         clean_match: bool = ...,
-    ) -> "Selector": ...
+    ) -> Selector: ...
 
     @overload
     def find_by_text(
@@ -1085,7 +1095,7 @@ class Selector(SelectorsGeneration):
         partial: bool = ...,
         case_sensitive: bool = ...,
         clean_match: bool = ...,
-    ) -> "Selectors": ...
+    ) -> Selectors: ...
 
     def find_by_text(
         self,
@@ -1094,7 +1104,7 @@ class Selector(SelectorsGeneration):
         partial: bool = False,
         case_sensitive: bool = False,
         clean_match: bool = True,
-    ) -> Union["Selectors", "Selector"]:
+    ) -> Union[Selectors, Selector]:
         """Find elements that its text content fully/partially matches input.
         :param text: Text query to match
         :param first_match: Returns the first element that matches conditions, enabled by default
@@ -1142,7 +1152,7 @@ class Selector(SelectorsGeneration):
         first_match: Literal[True] = ...,
         case_sensitive: bool = ...,
         clean_match: bool = ...,
-    ) -> "Selector": ...
+    ) -> Selector: ...
 
     @overload
     def find_by_regex(
@@ -1151,7 +1161,7 @@ class Selector(SelectorsGeneration):
         first_match: Literal[False],
         case_sensitive: bool = ...,
         clean_match: bool = ...,
-    ) -> "Selectors": ...
+    ) -> Selectors: ...
 
     def find_by_regex(
         self,
@@ -1159,7 +1169,7 @@ class Selector(SelectorsGeneration):
         first_match: bool = True,
         case_sensitive: bool = False,
         clean_match: bool = True,
-    ) -> Union["Selectors", "Selector"]:
+    ) -> Union[Selectors, Selector]:
         """Find elements that its text content matches the input regex pattern.
         :param query: Regex query/pattern to match
         :param first_match: Return the first element that matches conditions; enabled by default.
@@ -1205,10 +1215,10 @@ class Selectors(List[Selector]):
         pass
 
     @overload
-    def __getitem__(self, pos: slice) -> "Selectors":
+    def __getitem__(self, pos: slice) -> Selectors:
         pass
 
-    def __getitem__(self, pos: SupportsIndex | slice) -> Union[Selector, "Selectors"]:
+    def __getitem__(self, pos: SupportsIndex | slice) -> Union[Selector, Selectors]:
         lst = super().__getitem__(pos)
         if isinstance(pos, slice):
             return self.__class__(cast(List[Selector], lst))
@@ -1222,7 +1232,7 @@ class Selectors(List[Selector]):
         auto_save: bool = False,
         percentage: int = 0,
         **kwargs: Any,
-    ) -> "Selectors":
+    ) -> Selectors:
         """
         Call the ``.xpath()`` method for each element in this list and return
         their results as another `Selectors` class.
@@ -1252,7 +1262,7 @@ class Selectors(List[Selector]):
         identifier: str = "",
         auto_save: bool = False,
         percentage: int = 0,
-    ) -> "Selectors":
+    ) -> Selectors:
         """
         Call the ``.css()`` method for each element in this list and return
         their results flattened as another `Selectors` class.
@@ -1314,7 +1324,7 @@ class Selectors(List[Selector]):
                 return result
         return default
 
-    def search(self, func: Callable[["Selector"], bool]) -> Optional["Selector"]:
+    def search(self, func: Callable[[Selector], bool]) -> Optional[Selector]:
         """Loop over all current elements and return the first element that matches the passed function
         :param func: A function that takes each element as an argument and returns True/False
         :return: The first element that match the function or ``None`` otherwise.
@@ -1324,7 +1334,7 @@ class Selectors(List[Selector]):
                 return element
         return None
 
-    def filter(self, func: Callable[["Selector"], bool]) -> "Selectors":
+    def filter(self, func: Callable[[Selector], bool]) -> Selectors:
         """Filter current elements based on the passed function
         :param func: A function that takes each element as an argument and returns True/False
         :return: The new `Selectors` object or empty list otherwise.

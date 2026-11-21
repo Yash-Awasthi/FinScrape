@@ -1,7 +1,7 @@
 import logging
+from contextvars import ContextVar, Token
 from itertools import chain
 from re import compile as re_compile
-from contextvars import ContextVar, Token
 
 from lxml import html
 

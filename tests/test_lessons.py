@@ -11,8 +11,6 @@ import sys
 import types
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 
 # Same ai_client stubbing trick as tests/test_judge.py and tests/test_agents.py:
 # fake out finscrape.analysis.ai_client before importing finscrape.agents.judge
@@ -21,7 +19,6 @@ _ai_client_mod = types.ModuleType("finscrape.analysis.ai_client")
 _ai_client_mod.call_ai = MagicMock(return_value=None)
 sys.modules["finscrape.analysis.ai_client"] = _ai_client_mod
 
-import finscrape.analysis.constants  # noqa: F401
 from finscrape.agents.base import AgentVerdict
 from finscrape.agents.judge import format_lessons_block, judge_debate
 

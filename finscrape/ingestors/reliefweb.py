@@ -21,7 +21,9 @@ class ReliefWebIngestor(BaseIngestor):
     def enabled() -> bool:
         return bool(os.getenv("RELIEFWEB_APPNAME"))
 
-    def __init__(self, limit: int = 20):
+    def __init__(self, limit: int = 8):
+        # Disasters are context, not the feed: the old 20-per-cycle limit let them
+        # outnumber the news sources in the analysis budget.
         self.limit = limit
 
     def fetch_raw(self, url: str | None = None, params: dict | None = None) -> Any:

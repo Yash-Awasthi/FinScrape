@@ -392,6 +392,15 @@ export class PredictionPanel extends Panel {
       const relTable = rel.reliability;
       const brier = rel.brier.brier == null ? "—" : rel.brier.brier.toFixed(3);
       const n = relTable.sample_size;
+      // Murphy decomposition (plan m1.4.1): reliability is the part of the Brier score the
+      // model controls, so a panel that shows only the total cannot say whose fault it is.
+      const dec = rel.brier.decomposition;
+      const decomposition = dec
+        ? ` · reliability ${dec.reliability.toFixed(2)}, resolution ${dec.resolution.toFixed(2)}, uncertainty ${dec.uncertainty.toFixed(2)}` +
+          (rel.brier.base_rate == null
+            ? ""
+            : ` · base rate ${Math.round(rel.brier.base_rate * 100)}%`)
+        : "";
 
       const verds = barChart(
         Object.entries(relTable.by_verdict)
@@ -429,7 +438,7 @@ export class PredictionPanel extends Panel {
             `<span class="pred-p">${pct}%</span></div>` +
             `<div class="pred-subj">${escapeHtml(pr.event.subject)}</div>` +
             `<div class="pred-bar"><i style="width:${pct}%;background:${pct >= 55 ? "#16c784" : pct <= 45 ? "#ea3943" : "#f5a623"}"></i></div>` +
-            `<div class="muted pred-note">chance the call is right · ${TIER_NOTE[pr.data_tier] ?? pr.data_tier}</div>` +
+            `<div class="muted pred-note">${pct}% is how often this verdict's past calls came right, not a forecast of this one · ${TIER_NOTE[pr.data_tier] ?? pr.data_tier}</div>` +
             `</div>`
           );
         })
@@ -438,7 +447,7 @@ export class PredictionPanel extends Panel {
       this.setContent(
         `<div class="pred-summary">` +
           `<span>Global base rate: <b>${relTable.global_hit_rate == null ? "—" : Math.round(relTable.global_hit_rate * 100)}%</b></span>` +
-          `<span class="muted"> · ${n} outcomes · Brier ${brier} · recency-decayed</span></div>` +
+          `<span class="muted"> · ${n} outcomes · Brier ${brier}${decomposition} · recency-decayed</span></div>` +
           `<div class="pred-grid">${cards || '<p class="empty">No directional signals yet.</p>'}</div>` +
           `<div class="pred-charts">` +
           `<div class="pred-table">${verds || '<p class="empty">No scored verdicts yet.</p>'}</div>` +
@@ -517,17 +526,25 @@ export class AccuracyPanel extends Panel {
       .map(([label, h, rule]) => {
         if (!h?.scored)
           return `<div class="kpi"><span class="kpi-label">${label}</span><b>—</b></div>`;
-        const [lo, hi] = wilson(h.hits, h.scored);
+        const [lo, hi] = h.ci95 ?? wilson(h.hits, h.scored);
+        // `sample` already carries "wide interval" when the server judged the sample thin
+        // (plan m1.4.1): a rate on a dozen calls must not look like a rate on a hundred.
         return (
           `<div class="kpi" title="${escapeHtml(rule)}"><span class="kpi-label">${label}</span>` +
-          `<b>${pct(h.hit_rate)}</b><span class="muted">${h.hits}/${h.scored} · 95% ${pct(lo)}–${pct(hi)}</span></div>`
+          `<b>${pct(h.hit_rate)}</b><span class="muted">${h.hits}/${h.scored} · 95% ${pct(lo)}–${pct(hi)}` +
+          `${h.sample?.includes("wide interval") ? ' · <span class="warn">wide interval</span>' : ""}</span></div>`
         );
       })
       .join("");
     const verdicts = [...new Set(horizons.flatMap(([, h]) => Object.keys(h?.by_verdict ?? {})))];
     const cell = (h: HitRate | undefined, v: string): string => {
       const b = h?.by_verdict?.[v];
-      return b ? `<td>${pct(b.hit_rate)} <span class="muted">${b.total}</span></td>` : "<td>—</td>";
+      if (!b) return "<td>—</td>";
+      const thin = b.sample?.includes("wide interval") ? " wide" : "";
+      return (
+        `<td title="${escapeHtml(b.sample ?? `${b.hits}/${b.total}`)}">${pct(b.hit_rate)}` +
+        ` <span class="muted${thin}">n=${b.total}</span></td>`
+      );
     };
     const table =
       `<table class="grid-table"><thead><tr><th>Call</th>${horizons.map(([l]) => `<th>${l}</th>`).join("")}</tr></thead><tbody>` +
@@ -781,7 +798,7 @@ export class ScenarioPanel extends Panel {
       `<header class="sc-head">` +
       `<span class="sc-stance" style="background:${color}">${escapeHtml(scenario.stance)}</span>` +
       `<h4 class="sc-title">${escapeHtml(scenario.title)}</h4>` +
-      `<span class="sc-prob" style="color:${color}" title="probability the ${escapeHtml(scenario.stance)} call plays out · ${escapeHtml(scenario.data_tier)}">${pct}%</span></header>` +
+      `<span class="sc-prob" style="color:${color}" title="how often this scenario's past calls landed (its record, not a forecast) · ${escapeHtml(scenario.data_tier)}">${pct}%</span></header>` +
       `<div class="sc-bar"><i style="width:${pct}%;background:${color}"></i></div>` +
       `<p class="sc-advice">${escapeHtml(scenario.advice)}</p>` +
       (scenario.sectors.length ? legBars(scenario.sectors, "sector tilt") : "") +

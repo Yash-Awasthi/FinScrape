@@ -130,7 +130,7 @@ class RSSScraperSource(BaseScraper):
             raw = fast_get(article.url)
             if raw:
                 text = trafilatura.extract(raw.decode("utf-8", "ignore")) or ""
-        except Exception as e:  # noqa: BLE001 — enrichment is best-effort
+        except Exception as e:
             logger.debug("[%s] trafilatura enrichment failed: %s", self.name, e)
 
         if len(text) < MIN_BODY_CHARS:
@@ -145,29 +145,4 @@ class RSSScraperSource(BaseScraper):
         if len(text) > len(article.text):
             article.text = text
         article.text = article.text[:MAX_TEXT_CHARS]
-        return article
-
-        page = self.fetch_page(article.url)
-        if page:
-            full_text = self.extract_article_text(page)
-            if len(full_text) > len(article.text):
-                article.text = full_text
-
-            if not article.published_at:
-                pub_date, age = self.extract_publish_date(page)
-                article.published_at = pub_date
-                article.age_hours = age
-
-        if len(article.text) < 300:
-            try:
-                import trafilatura
-
-                raw = fast_get(article.url)
-                if raw:
-                    extracted = trafilatura.extract(raw.decode("utf-8", "ignore"))
-                    if extracted and len(extracted) > len(article.text):
-                        article.text = extracted
-            except Exception as e:  # noqa: BLE001 — enrichment is best-effort
-                logger.debug("[%s] trafilatura enrichment failed: %s", self.name, e)
-
         return article

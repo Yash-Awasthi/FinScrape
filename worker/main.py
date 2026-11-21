@@ -47,7 +47,7 @@ async def _score_outcomes(worker: Worker) -> int:
         log.info("backtest scored %d outcomes", wrote)
         return wrote
     # Scoring resumes next hour.
-    except Exception as exc:  # noqa: BLE001  # pragma: no cover
+    except Exception as exc:  # pragma: no cover
         log.warning("backtest skipped: %s", exc)
         return 0
 
@@ -61,7 +61,7 @@ async def _prune(
         if max_mb > 0 and (n := await evict_to_size(worker.pool, max_mb)):
             log.warning("database over %s MB: evicted %d oldest events", max_mb, n)
     # The sweep reruns tomorrow.
-    except Exception as exc:  # noqa: BLE001  # pragma: no cover
+    except Exception as exc:  # pragma: no cover
         log.warning("retention skipped: %s", exc)
 
 

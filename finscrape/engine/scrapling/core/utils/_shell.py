@@ -1,9 +1,8 @@
 from http import cookies as Cookie
 
-
 from finscrape.engine.scrapling.core._types import (
-    List,
     Dict,
+    List,
     Tuple,
 )
 
@@ -18,8 +17,8 @@ def _CookieParser(cookie_string):
 
 def _ParseHeaders(header_lines: List[str], parse_cookies: bool = True) -> Tuple[Dict[str, str], Dict[str, str]]:
     """Parses headers into separate header and cookie dictionaries."""
-    header_dict = dict()
-    cookie_dict = dict()
+    header_dict = {}
+    cookie_dict = {}
 
     for header_line in header_lines:
         if ":" not in header_line:

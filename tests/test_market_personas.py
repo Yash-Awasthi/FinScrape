@@ -8,9 +8,8 @@ from __future__ import annotations
 
 import sys
 import types
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-import pytest
 
 # ---------------------------------------------------------------------------
 # Stub out finscrape.analysis.ai_client so we never import requests/dotenv
@@ -20,17 +19,15 @@ _ai_client_mod = types.ModuleType("finscrape.analysis.ai_client")
 _ai_client_mod.call_ai = MagicMock(return_value=None)
 sys.modules["finscrape.analysis.ai_client"] = _ai_client_mod
 
-import finscrape.analysis.constants  # noqa: F401
-
-from finscrape.agents.base import AgentVerdict, BaseAgent
-from finscrape.agents.council import AgentCouncil, CouncilVerdict
+from finscrape.agents.base import BaseAgent
+from finscrape.agents.council import AgentCouncil
 from finscrape.agents.market_personas import (
-    InstitutionalWhaleAgent,
-    RetailDayTraderAgent,
-    ContrarianInvestorAgent,
-    QuantAgent,
-    ESGInvestorAgent,
     MARKET_PERSONAS,
+    ContrarianInvestorAgent,
+    ESGInvestorAgent,
+    InstitutionalWhaleAgent,
+    QuantAgent,
+    RetailDayTraderAgent,
 )
 from finscrape.agents.personas import DEFAULT_AGENTS
 

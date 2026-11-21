@@ -49,9 +49,12 @@ def test_excess_runs_from_the_last_close_before_the_news():
     before = excess_moves(closes, dt.datetime(2026, 9, 23, 15, tzinfo=dt.UTC))
     assert round(before[2]["XOM"], 6) == round((102 / 100 - 1 - 0.01) * 100, 6)
     assert round(before[4]["XOM"], 6) == round((104 / 100 - 1 - 0.01) * 100, 6)
-    # 17:00 ET on the 23rd: after the close, so the base is the 23rd itself.
+    # 17:00 ET on the 23rd: after the close. The 23rd's close is a price nobody could act
+    # on once the news was out, so without the next session's open nothing is scored.
     after = excess_moves(closes, dt.datetime(2026, 9, 23, 21, tzinfo=dt.UTC))
-    assert round(after[2]["XOM"], 6) == round((103 / 101 - 1 - 0.01) * 100, 6)
-    # +4 needs the 29th's close and the 30th's for a base on the 24th: not there yet.
-    late = excess_moves(closes, dt.datetime(2026, 9, 24, 21, tzinfo=dt.UTC))
+    assert after == {2: {}, 4: {}}
+    # After the close on the 24th the next session is the 25th; +2 needs the 28th's close
+    # (there), +4 needs the 30th's (absent), so only the short horizon is scored.
+    opens = pd.DataFrame({"XOM": [100.0, 100, 101, 102, 103, 104], "SPY": [100.0] * 6}, index=days)
+    late = excess_moves(closes, dt.datetime(2026, 9, 24, 21, tzinfo=dt.UTC), opens)
     assert "XOM" in late[2] and late[4] == {}

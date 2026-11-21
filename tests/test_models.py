@@ -1,8 +1,8 @@
 """Tests for finscrape.models data classes and enums."""
 
 import pytest
-from finscrape.models import Verdict, EventType, FinEvent, ScrapedArticle
 
+from finscrape.models import EventType, FinEvent, ScrapedArticle, Verdict
 
 # ---------------------------------------------------------------------------
 # Verdict.from_score
@@ -59,20 +59,20 @@ class TestEventType:
 
 class TestFinEvent:
     def _make_event(self, **overrides) -> FinEvent:
-        defaults = dict(
-            subject="Apple earnings beat",
-            event_type="earnings",
-            tickers=["AAPL"],
-            impact_direction="positive",
-            signal_score=4,
-            confidence=0.9,
-            verdict="INVEST",
-            heuristic_impact=0.75,
-            divergence_flag=False,
-            sources=["https://example.com/article"],
-            articles=["Apple reported record Q1 revenue."],
-            timestamp="2026-01-15T12:00:00+00:00",
-        )
+        defaults = {
+            "subject": "Apple earnings beat",
+            "event_type": "earnings",
+            "tickers": ["AAPL"],
+            "impact_direction": "positive",
+            "signal_score": 4,
+            "confidence": 0.9,
+            "verdict": "INVEST",
+            "heuristic_impact": 0.75,
+            "divergence_flag": False,
+            "sources": ["https://example.com/article"],
+            "articles": ["Apple reported record Q1 revenue."],
+            "timestamp": "2026-01-15T12:00:00+00:00",
+        }
         defaults.update(overrides)
         return FinEvent(**defaults)
 

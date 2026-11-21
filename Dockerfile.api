@@ -1,7 +1,7 @@
 # FinScrape API image — multi-stage, non-root, slim.
 # The build stage installs the locked server environment with uv; the runtime stage
 # copies only the venv + app, so uv and its cache never ship.
-FROM python:3.14-slim AS build
+FROM python:3.14-slim@sha256:22eafb370920ad8b429e0aec3fff433e0669968519f5d60469d83729c138b28b AS build
 COPY --from=ghcr.io/astral-sh/uv:0.13.0 /uv /bin/
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
@@ -11,7 +11,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --group server
 
-FROM python:3.14-slim
+FROM python:3.14-slim@sha256:22eafb370920ad8b429e0aec3fff433e0669968519f5d60469d83729c138b28b
 # pip is not needed at runtime and vendors old msgpack and setuptools; OpenSSL is
 # patched from Debian because the base image lags its fixes.
 RUN apt-get update && apt-get upgrade -y --no-install-recommends \
@@ -32,3 +32,7 @@ USER app
 
 EXPOSE 8000
 CMD ["python", "-m", "server.main"]
+
+# Base images are pinned by digest as well as tag: a tag can be re-pushed, so a rebuild
+# that silently picks up a different image is indistinguishable from a clean one. Dependabot
+# bumps these (plan M2.4) and the digest in the diff is the review.

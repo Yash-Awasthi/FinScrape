@@ -1,0 +1,63 @@
+name: Model evaluation (live)
+
+# plan M2.1: the live run of the gold set against whatever model production is configured
+# with, so a model or prompt change is measured on more than a hunch.
+#
+# Manual by design — the repository's one scheduler is the Cloudflare cron Worker and no
+# workflow carries a `schedule:` block (plan invariant). Run it from the Actions tab, or
+# dispatch it by hand through the same Worker that starts ingest.
+#
+# It appends one row to docs/EVAL.md and gates the run against the stored baseline. A
+# >5-point sector drop fails the job, which is what "refuse a model switch that costs more
+# than five points" means in practice.
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: "Model id to score (defaults to the configured FINSCRAPE_MODEL)"
+        required: false
+        default: ""
+      prompt:
+        description: "Prompt variant from prompt_registry (v1 or v2)"
+        required: false
+        default: "v1"
+
+permissions:
+  contents: read
+
+jobs:
+  eval:
+    runs-on: ubuntu-24.04
+    env:
+      OPENAI_BASE_URL: ${{ vars.OPENAI_BASE_URL }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      FINSCRAPE_LAYA: "0"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-python
+        with:
+          groups: --group server --group dev
+      - name: Score the gold set against the live model
+        env:
+          FINSCRAPE_MODEL: ${{ inputs.model || vars.FINSCRAPE_MODEL }}
+          FINSCRAPE_MODEL_FALLBACK: ""
+        run: |
+          python -m scripts.eval_model \
+            --model "${FINSCRAPE_MODEL}" \
+            --prompt "${{ inputs.prompt }}" \
+            --append-docs --json eval-run.json | tee eval-run.txt
+      - name: Gate the run against the stored baseline
+        run: python -m scripts.eval_model --from-json eval-run.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: eval-run
+          path: |
+            eval-run.txt
+            eval-run.json
+          retention-days: 30
+      # The row is appended in the workspace, not committed: the owner reviews it, because a
+      # stored row is what every later gate compares against.
+      - name: Remind the owner to commit the row
+        run: git diff --exit-code docs/EVAL.md || echo "::notice::docs/EVAL.md gained a run row — commit it"

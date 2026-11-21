@@ -1,25 +1,30 @@
 from collections.abc import Mapping
+from re import IGNORECASE, UNICODE
+from re import compile as re_compile
 from types import MappingProxyType
-from re import compile as re_compile, UNICODE, IGNORECASE
 
 from orjson import dumps, loads
 from w3lib.html import replace_entities as _replace_entities
 
 from finscrape.engine.scrapling.core._types import (
     Any,
-    cast,
     Dict,
+    Generator,
+    Iterable,
     List,
-    Union,
-    overload,
-    TypeVar,
     Literal,
     Pattern,
-    Iterable,
-    Generator,
     SupportsIndex,
+    TypeVar,
+    Union,
+    cast,
+    overload,
 )
-from finscrape.engine.scrapling.core.utils import _is_iterable, flatten, __CONSECUTIVE_SPACES_REGEX__
+from finscrape.engine.scrapling.core.utils import (
+    __CONSECUTIVE_SPACES_REGEX__,
+    _is_iterable,
+    flatten,
+)
 
 # Define type variable for AttributeHandler value type
 _TextHandlerType = TypeVar("_TextHandlerType", bound="TextHandler")
@@ -31,77 +36,77 @@ class TextHandler(str):
 
     __slots__ = ()
 
-    def __getitem__(self, key: SupportsIndex | slice) -> "TextHandler":  # pragma: no cover
+    def __getitem__(self, key: SupportsIndex | slice) -> TextHandler:  # pragma: no cover
         lst = super().__getitem__(key)
         return TextHandler(lst)
 
     def split(self, sep: str | None = None, maxsplit: SupportsIndex = -1) -> list[Any]:  # pragma: no cover
         return TextHandlers([TextHandler(s) for s in super().split(sep, maxsplit)])
 
-    def strip(self, chars: str | None = None) -> Union[str, "TextHandler"]:  # pragma: no cover
+    def strip(self, chars: str | None = None) -> Union[str, TextHandler]:  # pragma: no cover
         return TextHandler(super().strip(chars))
 
-    def lstrip(self, chars: str | None = None) -> Union[str, "TextHandler"]:  # pragma: no cover
+    def lstrip(self, chars: str | None = None) -> Union[str, TextHandler]:  # pragma: no cover
         return TextHandler(super().lstrip(chars))
 
-    def rstrip(self, chars: str | None = None) -> Union[str, "TextHandler"]:  # pragma: no cover
+    def rstrip(self, chars: str | None = None) -> Union[str, TextHandler]:  # pragma: no cover
         return TextHandler(super().rstrip(chars))
 
-    def capitalize(self) -> Union[str, "TextHandler"]:  # pragma: no cover
+    def capitalize(self) -> Union[str, TextHandler]:  # pragma: no cover
         return TextHandler(super().capitalize())
 
-    def casefold(self) -> Union[str, "TextHandler"]:  # pragma: no cover
+    def casefold(self) -> Union[str, TextHandler]:  # pragma: no cover
         return TextHandler(super().casefold())
 
-    def center(self, width: SupportsIndex, fillchar: str = " ") -> Union[str, "TextHandler"]:  # pragma: no cover
+    def center(self, width: SupportsIndex, fillchar: str = " ") -> Union[str, TextHandler]:  # pragma: no cover
         return TextHandler(super().center(width, fillchar))
 
-    def expandtabs(self, tabsize: SupportsIndex = 8) -> Union[str, "TextHandler"]:  # pragma: no cover
+    def expandtabs(self, tabsize: SupportsIndex = 8) -> Union[str, TextHandler]:  # pragma: no cover
         return TextHandler(super().expandtabs(tabsize))
 
-    def format(self, *args: object, **kwargs: object) -> Union[str, "TextHandler"]:  # pragma: no cover
+    def format(self, *args: object, **kwargs: object) -> Union[str, TextHandler]:  # pragma: no cover
         return TextHandler(super().format(*args, **kwargs))
 
-    def format_map(self, mapping) -> Union[str, "TextHandler"]:  # pragma: no cover
+    def format_map(self, mapping) -> Union[str, TextHandler]:  # pragma: no cover
         return TextHandler(super().format_map(mapping))
 
-    def join(self, iterable: Iterable[str]) -> Union[str, "TextHandler"]:  # pragma: no cover
+    def join(self, iterable: Iterable[str]) -> Union[str, TextHandler]:  # pragma: no cover
         return TextHandler(super().join(iterable))
 
-    def ljust(self, width: SupportsIndex, fillchar: str = " ") -> Union[str, "TextHandler"]:  # pragma: no cover
+    def ljust(self, width: SupportsIndex, fillchar: str = " ") -> Union[str, TextHandler]:  # pragma: no cover
         return TextHandler(super().ljust(width, fillchar))
 
-    def rjust(self, width: SupportsIndex, fillchar: str = " ") -> Union[str, "TextHandler"]:  # pragma: no cover
+    def rjust(self, width: SupportsIndex, fillchar: str = " ") -> Union[str, TextHandler]:  # pragma: no cover
         return TextHandler(super().rjust(width, fillchar))
 
-    def swapcase(self) -> Union[str, "TextHandler"]:  # pragma: no cover
+    def swapcase(self) -> Union[str, TextHandler]:  # pragma: no cover
         return TextHandler(super().swapcase())
 
-    def title(self) -> Union[str, "TextHandler"]:  # pragma: no cover
+    def title(self) -> Union[str, TextHandler]:  # pragma: no cover
         return TextHandler(super().title())
 
-    def translate(self, table) -> Union[str, "TextHandler"]:  # pragma: no cover
+    def translate(self, table) -> Union[str, TextHandler]:  # pragma: no cover
         return TextHandler(super().translate(table))
 
-    def zfill(self, width: SupportsIndex) -> Union[str, "TextHandler"]:  # pragma: no cover
+    def zfill(self, width: SupportsIndex) -> Union[str, TextHandler]:  # pragma: no cover
         return TextHandler(super().zfill(width))
 
-    def replace(self, old: str, new: str, count: SupportsIndex = -1) -> Union[str, "TextHandler"]:
+    def replace(self, old: str, new: str, count: SupportsIndex = -1) -> Union[str, TextHandler]:
         return TextHandler(super().replace(old, new, count))
 
-    def upper(self) -> Union[str, "TextHandler"]:
+    def upper(self) -> Union[str, TextHandler]:
         return TextHandler(super().upper())
 
-    def lower(self) -> Union[str, "TextHandler"]:
+    def lower(self) -> Union[str, TextHandler]:
         return TextHandler(super().lower())
 
     ##############
 
-    def sort(self, reverse: bool = False) -> Union[str, "TextHandler"]:
+    def sort(self, reverse: bool = False) -> Union[str, TextHandler]:
         """Return a sorted version of the string"""
         return self.__class__("".join(sorted(self, reverse=reverse)))
 
-    def clean(self, remove_entities=False) -> Union[str, "TextHandler"]:
+    def clean(self, remove_entities=False) -> Union[str, TextHandler]:
         """Return a new version of the string after removing all white spaces and consecutive spaces"""
         data = self.translate(__CLEANING_TABLE__)
         if remove_entities:
@@ -143,7 +148,7 @@ class TextHandler(str):
         clean_match: bool = False,
         case_sensitive: bool = True,
         check_match: Literal[False] = False,
-    ) -> "TextHandlers": ...
+    ) -> TextHandlers: ...
 
     def re(
         self,
@@ -152,7 +157,7 @@ class TextHandler(str):
         clean_match: bool = False,
         case_sensitive: bool = True,
         check_match: bool = False,
-    ) -> Union["TextHandlers", bool]:
+    ) -> Union[TextHandlers, bool]:
         """Apply the given regex to the current text and return a list of strings with the matches.
 
         :param regex: Can be either a compiled regular expression or a string.
@@ -188,7 +193,7 @@ class TextHandler(str):
         replace_entities: bool = True,
         clean_match: bool = False,
         case_sensitive: bool = True,
-    ) -> "TextHandler":
+    ) -> TextHandler:
         """Apply the given regex to text and return the first match if found, otherwise return the default value.
 
         :param regex: Can be either a compiled regular expression or a string.
@@ -219,10 +224,10 @@ class TextHandlers(List[TextHandler]):
         pass
 
     @overload
-    def __getitem__(self, pos: slice) -> "TextHandlers":  # pragma: no cover
+    def __getitem__(self, pos: slice) -> TextHandlers:  # pragma: no cover
         pass
 
-    def __getitem__(self, pos: SupportsIndex | slice) -> Union[TextHandler, "TextHandlers"]:
+    def __getitem__(self, pos: SupportsIndex | slice) -> Union[TextHandler, TextHandlers]:
         lst = super().__getitem__(pos)
         if isinstance(pos, slice):
             return TextHandlers(cast(List[TextHandler], lst))
@@ -234,7 +239,7 @@ class TextHandlers(List[TextHandler]):
         replace_entities: bool = True,
         clean_match: bool = False,
         case_sensitive: bool = True,
-    ) -> "TextHandlers":
+    ) -> TextHandlers:
         """Call the ``.re()`` method for each element in this list and return
         their results flattened as TextHandlers.
 
@@ -308,7 +313,7 @@ class AttributesHandler(Mapping[str, _TextHandlerType]):
         """Acts like the standard dictionary `.get()` method"""
         return self._data.get(key, default)
 
-    def search_values(self, keyword: str, partial: bool = False) -> Generator["AttributesHandler", None, None]:
+    def search_values(self, keyword: str, partial: bool = False) -> Generator[AttributesHandler, None, None]:
         """Search current attributes by values and return a dictionary of each matching item
         :param keyword: The keyword to search for in the attribute values
         :param partial: If True, the function will search if keyword in each value instead of perfect match

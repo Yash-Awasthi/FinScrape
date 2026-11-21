@@ -31,8 +31,7 @@ DEFAULT_WINDOW_HOURS = 48
 # on one airport and a ceasefire's follow-ups, and kept unrelated stories apart.
 LEXICAL_OVERLAP = 0.5
 _STOP = frozenset(
-    "the and for with from into over after amid says said will its their new more than "
-    "about against report".split()
+    ["the", "and", "for", "with", "from", "into", "over", "after", "amid", "says", "said", "will", "its", "their", "new", "more", "than", "about", "against", "report"]
 )
 
 

@@ -1,7 +1,12 @@
 from threading import Lock
 
-from finscrape.engine.scrapling.core._types import Callable, Dict, List, Tuple, ProxyType
-
+from finscrape.engine.scrapling.core._types import (
+    Callable,
+    Dict,
+    List,
+    ProxyType,
+    Tuple,
+)
 
 RotationStrategy = Callable[[List[ProxyType], int], Tuple[ProxyType, int]]
 _PROXY_ERROR_INDICATORS = {
@@ -46,7 +51,7 @@ class ProxyRotator:
     - Both string URLs and Playwright-style dict proxies
     """
 
-    __slots__ = ("_proxies", "_proxy_to_index", "_strategy", "_current_index", "_lock")
+    __slots__ = ("_current_index", "_lock", "_proxies", "_proxy_to_index", "_strategy")
 
     def __init__(
         self,

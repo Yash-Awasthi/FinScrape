@@ -126,6 +126,10 @@ class Settings(BaseSettings):
         default=8010, validation_alias=AliasChoices("WORLDFIN_PORT", "PORT")
     )
     cors_origins: str = Field(default="*", validation_alias="WORLDFIN_CORS_ORIGINS")
+    # Replica count the process is part of (gunicorn/granian read WEB_CONCURRENCY). The
+    # rate limiter is process-local unless Redis is configured, so >1 without Redis is
+    # refused at startup in production rather than silently multiplying the ceiling.
+    web_concurrency: int = Field(default=1, validation_alias="WEB_CONCURRENCY")
 
     # --- Hardening (Phase 8) ---
     # Per-IP sliding-window rate limit. 0 disables (handy in tests).
@@ -136,6 +140,12 @@ class Settings(BaseSettings):
     enable_hsts: bool = Field(default=False, validation_alias="WORLDFIN_ENABLE_HSTS")
     # Emit weak ETags + honor If-None-Match (304) on GET JSON. On by default.
     enable_etag: bool = Field(default=True, validation_alias="WORLDFIN_ENABLE_ETAG")
+    # Ceiling on any upstream panel call (market quotes, candles, reactions). The panel
+    # answers empty rather than holding the request open on a dead host: yfinance has no
+    # idea how long a dashboard view is allowed to take.
+    upstream_timeout_s: float = Field(
+        default=8.0, gt=0, le=60, validation_alias="WORLDFIN_UPSTREAM_TIMEOUT_S"
+    )
 
     # --- Observability (Phase 9) ---
     # Emit one-line JSON logs instead of the human format (set on in containers so
@@ -160,6 +170,11 @@ class Settings(BaseSettings):
             problems.append("FINSCRAPE_API_KEY is the published default")
         if not self.cors_origins or "*" in self.cors_origins:
             problems.append("WORLDFIN_CORS_ORIGINS must list the dashboard origin(s)")
+        if self.web_concurrency > 1 and not self.redis_enabled:
+            problems.append(
+                f"WEB_CONCURRENCY is {self.web_concurrency} but WORLDFIN_REDIS_URL is "
+                "unset, so each replica would keep its own rate-limit window"
+            )
         return problems
 
     @property

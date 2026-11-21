@@ -16,6 +16,8 @@ import sys
 from datetime import UTC
 from pathlib import Path
 
+from tests.server import schema_sql
+
 MIGRATIONS_DIR = Path(__file__).resolve().parents[2] / "server" / "migrations"
 MIGRATION = MIGRATIONS_DIR / "0001_init.sql"
 
@@ -148,10 +150,27 @@ def check_schemas() -> None:
     print("  ok  schemas validate a real FinEvent + ingest response")
 
 
+def check_schema_drift() -> None:
+    """Every column the code INSERTs must exist in the migration series (plan M2.2).
+
+    Reads only SQL and Python source, so it runs with no database — which is the point:
+    a rename in a migration and a missed call site is a diff here, not a production 500.
+    """
+    tables = schema_sql.created_columns()
+    problems = schema_sql.drift(tables)
+    assert not problems, "\n".join(problems)
+    inserts = schema_sql.insert_targets()
+    print(
+        f"  ok  schema drift: {len(inserts)} INSERT targets match "
+        f"{len(tables)} migrated tables"
+    )
+
+
 def main() -> int:
     print("FinScrape Phase 0 self-check:")
     check_migration_sql()
     check_migration_series()
+    check_schema_drift()
     if check_settings():
         check_schemas()
     print("self-check PASSED")

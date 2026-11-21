@@ -37,7 +37,7 @@ class WSHub:
             try:
                 await ws.send_json(message)
             # A dead socket is dropped.
-            except Exception:  # noqa: BLE001  # pragma: no cover
+            except Exception:  # pragma: no cover
                 dead.append(ws)
         if dead:
             async with self._lock:

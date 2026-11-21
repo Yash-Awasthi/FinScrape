@@ -307,7 +307,7 @@ class Worker:
                 # The article's tag carries the tier correlation types read.
                 tag = article.source or source_name
                 fe = self.pipeline._analyze_article(tag, article)
-            except Exception as exc:  # noqa: BLE001 - one bad article must not end the cycle
+            except Exception as exc:
                 log.warning("[%s] analyze failed: %s", source_name, exc)
                 continue
             if not self.pipeline.ai_failed():
@@ -397,13 +397,24 @@ class Worker:
     async def run_backtest(self) -> int:
         """Score matured directional verdicts against the price move in the window
         after each event (Phase 7), then fill the +2 / +4 day vs-SPY columns of calls
-        whose windows have closed. Returns rows written or updated."""
+        whose windows have closed. Returns rows written or updated.
+
+        Calls with no price are excluded and counted, so a data outage reads as an outage
+        rather than as a batch of misses (plan m1.4.2).
+        """
         from finscrape.market_data import event_excess, event_moves
         from server.accuracy import backtest, score_vs_spy
 
-        return await backtest(self.pool, event_moves) + await score_vs_spy(
-            self.pool, event_excess
-        )
+        stats: dict[str, int] = {}
+        wrote = await backtest(self.pool, event_moves, stats=stats)
+        updated = await score_vs_spy(self.pool, event_excess, stats=stats)
+        if stats.get("skipped_no_price"):
+            log.warning(
+                "scoring skipped %d call(s) with no price data: %s",
+                stats["skipped_no_price"],
+                stats,
+            )
+        return wrote + updated
 
     async def _recent_markets(self, lookback_hours: int) -> list[Market]:
         """Price moves for the most-mentioned recent tickers plus the fixed watch list →

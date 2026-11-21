@@ -1,0 +1,38 @@
+name: Release
+
+# plan M2.4: a release is a tag, the SBOM that describes it, and the images that were
+# built from it. Without the SBOM attached, "which lxml was in the 12 March image" has no
+# answer that does not involve a rebuild.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to publish (defaults to the pushed tag)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-python
+        with:
+          groups: --group server --group dev
+      - name: Build the SBOM from the lock file
+        run: python -m scripts.sbom --check
+      - name: Audit the same lock file
+        run: python -m scripts.audit --pip-only --strict
+      - name: Publish the release with its SBOM
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          files: dist/sbom.cdx.json
+          fail_on_unmatched_files: true
+          generate_release_notes: true

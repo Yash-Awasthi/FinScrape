@@ -23,6 +23,7 @@ import {
   StatsPanel,
   SuggestionsPanel,
 } from "./panels/panels";
+import { MarketPanel } from "./panels/market";
 import { SignalFeedPanel } from "./panels/signal-feed";
 import { Store } from "./state";
 import { RealtimeClient, wsUrl, type WSMessage } from "./ws";
@@ -55,6 +56,7 @@ const predictionPanel = new PredictionPanel();
 const outcomesPanel = new OutcomesPanel();
 const sourceHealthPanel = new SourceHealthPanel();
 const correlationPanel = new CorrelationPanel();
+const marketPanel = new MarketPanel();
 
 for (const p of [
   scenarioPanel,
@@ -70,6 +72,7 @@ for (const p of [
   outcomesPanel,
   sourceHealthPanel,
   correlationPanel,
+  marketPanel,
 ]) {
   layout.add(p);
 }
@@ -182,6 +185,7 @@ async function loadAll(): Promise<void> {
   if (top) candlesPanel.setSymbol(top);
   await Promise.allSettled([
     scenarioPanel.load(),
+    marketPanel.load(),
     suggestionsPanel.load(),
     candlesPanel.load(),
     sectorPanel.load(),
@@ -237,6 +241,10 @@ window.addEventListener("worldfin:search-events", (e) => {
 // The prediction panel's calibration grows as outcomes score themselves.
 window.setInterval(() => {
   if (predictionPanel.el.offsetParent) void predictionPanel.load();
+}, 60_000);
+// The market tape is intraday, so it refreshes every minute while its view is visible.
+window.setInterval(() => {
+  if (!document.hidden && marketPanel.el.offsetParent) void marketPanel.load();
 }, 60_000);
 const rt = new RealtimeClient(wsUrl(), onMessage, (status) => store.setConnection(status));
 

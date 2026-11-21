@@ -170,6 +170,53 @@ FEEDS: tuple[Feed, ...] = (
         "intel",
         topics=("defense", "strategy"),
     ),
+    # Dedicated geopolitics/foreign-policy analysis. The wires report what happened;
+    # these explain why it matters, which is the signal the prediction layer needs.
+    Feed(
+        "foreign_policy",
+        "https://foreignpolicy.com/feed/",
+        "Foreign Policy",
+        "intel",
+        topics=("geopolitics", "security"),
+    ),
+    Feed(
+        "the_diplomat",
+        "https://thediplomat.com/feed/",
+        "The Diplomat",
+        "intel",
+        region="asia",
+        topics=("geopolitics", "security"),
+    ),
+    Feed(
+        "al_monitor",
+        "https://www.al-monitor.com/rss",
+        "Al-Monitor",
+        "intel",
+        region="mena",
+        topics=("geopolitics", "energy"),
+    ),
+    Feed(
+        "crisis_group",
+        "https://www.crisisgroup.org/rss",
+        "International Crisis Group",
+        "intel",
+        topics=("conflict", "security"),
+    ),
+    Feed(
+        "atlantic_council",
+        "https://www.atlanticcouncil.org/feed/",
+        "Atlantic Council",
+        "intel",
+        topics=("geopolitics", "security"),
+    ),
+    Feed(
+        "ecfr",
+        "https://www.ecfr.eu/rss",
+        "European Council on Foreign Relations",
+        "intel",
+        region="europe",
+        topics=("geopolitics", "security"),
+    ),
     # --- mainstream ---
     Feed(
         "bbc_world",
@@ -282,6 +329,29 @@ FEEDS: tuple[Feed, ...] = (
 )
 
 _BY_KEY = {f.key: f for f in FEEDS}
+
+# Coarse sections for the analysis budget. The worker enriches only a handful of
+# articles per cycle (`WORLDFIN_WORKER_MAX_ARTICLES`), so registry order must not
+# decide which kinds of news ever get seen. `collect` round-robins sections, and
+# rotates feeds inside each one by day so no single outlet owns a section's slot.
+SECTION_ORDER = ("security", "energy", "shipping", "macro", "general")
+
+
+def section_of(key: str) -> str:
+    """The analysis bucket a feed key belongs to (safe default: general)."""
+    feed = _BY_KEY.get(key)
+    if feed is None:
+        return "general"
+    topics = set(feed.topics)
+    if "energy" in topics:
+        return "energy"
+    if "shipping" in topics:
+        return "shipping"
+    if topics & {"defense", "security", "geopolitics", "conflict", "strategy"}:
+        return "security"
+    if topics & {"monetary", "economy", "trade"}:
+        return "macro"
+    return "general"
 
 
 def feed_urls() -> dict[str, str]:

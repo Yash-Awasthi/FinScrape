@@ -14,7 +14,7 @@ router = APIRouter()
 async def accuracy() -> dict:
     rows = await db.pool().fetch(
         "SELECT a.verdict, a.correct, a.correct2, a.correct4, a.price_move_pct, "
-        "e.timestamp, e.confidence "
+        "e.timestamp, e.confidence, e.analysis_source "
         "FROM accuracy_outcomes a JOIN events e ON a.event_id = e.id "
         "ORDER BY e.timestamp"
     )
@@ -26,12 +26,22 @@ async def accuracy() -> dict:
                 "at": r["timestamp"].isoformat(),
                 "move": r["price_move_pct"],
                 "confidence": r["confidence"],
+                # Splits the record by judge: a keyword-fallback row must not be able to
+                # look like the model's own hit rate (plan m1.3.2).
+                "source": r["analysis_source"],
             }
             for r in rows
         ]
     )
     # Next-day raw move above; +2 / +4 trading days against SPY here.
     result["vs_spy"] = vs_spy_summary([dict(r) for r in rows])
+    # The record has a window, and a rate without one is ambiguous: say which calls it
+    # covers (plan m1.4.3).
+    stamps = [r["timestamp"] for r in rows if r["timestamp"] is not None]
+    result["window"] = {
+        "from": min(stamps).isoformat() if stamps else None,
+        "to": max(stamps).isoformat() if stamps else None,
+    }
     return result
 
 

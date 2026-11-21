@@ -12,6 +12,7 @@ from fastapi.encoders import jsonable_encoder
 from server import db, queries
 from server.alert_rules import fire_alerts
 from server.auth import require_api_key
+from server.correlate import annotate_topics
 from server.ingest import ingest_events
 from server.routes.params import day as day_param
 from server.routes.telegram import notify_new_events
@@ -46,7 +47,7 @@ async def ingest(background: BackgroundTasks, payload: IngestBatch) -> IngestRes
             jsonable_encoder(
                 {
                     "type": "new_events",
-                    "events": [dict(r) for r in rows],
+                    "events": annotate_topics(dict(r) for r in rows),
                     "stats": await queries.get_stats(db.pool()),
                 }
             )
@@ -87,7 +88,7 @@ async def list_events(
         sort=sort,
         direction=dir,
     )
-    return jsonable_encoder({"events": events})
+    return jsonable_encoder({"events": annotate_topics(events)})
 
 
 @router.get("/api/stats", response_model=DashboardStats)

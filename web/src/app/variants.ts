@@ -25,6 +25,7 @@ export const VIEWS: Record<ViewId, { label: string; slots: PanelSlot[] }> = {
   tickers: {
     label: "Tickers",
     slots: [
+      { id: "market", w: 12, h: 4 },
       { id: "suggestions", w: 4, h: 9 },
       { id: "candles", w: 8, h: 9 },
       { id: "sectors", w: 12, h: 5 },

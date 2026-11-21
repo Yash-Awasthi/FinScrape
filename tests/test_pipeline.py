@@ -142,7 +142,7 @@ class TestDeduplication:
     def test_subject_keeps_its_case_and_dedup_ignores_it(self, mock_ai, mock_ai_response):
         # Lowercased subjects read "iran agrees to suspend enrichment" on every panel.
         pipeline = FinScrapePipeline(MemoryEvents())
-        art = lambda n: ScrapedArticle(  # noqa: E731
+        art = lambda n: ScrapedArticle(
             url=f"https://example.com/{n}", title="Apple Reports Record Q4 Earnings",
             text="Apple Inc. (AAPL) reported record fourth-quarter earnings. " * 20,
             source="yahoo", age_hours=1.0, raw_tickers=["AAPL"],

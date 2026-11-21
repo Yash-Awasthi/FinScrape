@@ -15,12 +15,16 @@ Requires:
                      FINSCRAPE_MODEL=qwen2.5:7b
 """
 
-import os, sys, json, time
+import json
+import os
+import sys
+import time
 
 # Allow running from repo root
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 PASS = "\033[92mPASS\033[0m"
@@ -47,6 +51,7 @@ check("FINSCRAPE_MODEL set",       bool(model), model or "not set")
 # ── Step 2: Ollama reachable ───────────────────────────────────────────────
 print("\n2. Ollama connectivity")
 from curl_cffi import requests
+
 try:
     r = requests.get(base_url.replace("/v1", "") + "/api/tags", timeout=5)
     check("Ollama /api/tags responds", r.status_code == 200, f"HTTP {r.status_code}")
@@ -56,13 +61,13 @@ try:
           f"Available: {model_names}")
 except Exception as e:
     check("Ollama reachable", False, str(e))
-    print(f"\n  Make sure Ollama is running: ollama serve")
+    print("\n  Make sure Ollama is running: ollama serve")
     sys.exit(1)
 
 # ── Step 3: call_ai returns valid structure ────────────────────────────────
 print("\n3. call_ai basic response")
 from finscrape.analysis.ai_client import call_ai
-from finscrape.analysis.prompts   import SYSTEM_PROMPT
+from finscrape.analysis.prompts import SYSTEM_PROMPT
 
 test_text = "Apple Inc. reported record Q1 2025 earnings, beating analyst estimates by 12%. EPS came in at $2.40 vs expected $2.14. Revenue rose 8% to $124.3 billion."
 
@@ -93,6 +98,7 @@ check("Second call returns same result",  result == result2)
 check("Cache hit is fast (< 0.1s)",       cache_elapsed < 0.1, f"{cache_elapsed:.3f}s")
 
 from finscrape.analysis.ai_client import get_cache_stats
+
 stats = get_cache_stats()
 check("Cache reports 1 hit",              stats["hits"] >= 1, str(stats))
 
@@ -111,10 +117,10 @@ check("Bearish impact_direction is negative",
 print(f"\n{'='*45}")
 if failures:
     print(f"  {len(failures)} check(s) FAILED: {', '.join(failures)}")
-    print(f"  See troubleshooting in README.md")
+    print("  See troubleshooting in README.md")
     sys.exit(1)
 else:
-    print(f"  All checks passed. PR 1 is working correctly.")
-    print(f"\n  Full result from call_ai:")
+    print("  All checks passed. PR 1 is working correctly.")
+    print("\n  Full result from call_ai:")
     print("  " + json.dumps(result, indent=2).replace("\n", "\n  "))
 print(f"{'='*45}\n")

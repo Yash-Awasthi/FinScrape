@@ -10,11 +10,13 @@ found on PATH, then in PG_BIN, then in the default Windows install location.
 from __future__ import annotations
 
 import os
-import shutil
 import subprocess
 import sys
-from datetime import datetime, timezone
+import time
+from datetime import UTC, datetime
 from pathlib import Path
+
+from scripts.pg import tool, verify_dump
 
 ROOT = Path(__file__).resolve().parents[1]
 BACKUP_DIR = ROOT / "backups"
@@ -32,34 +34,53 @@ def _dsn() -> str:
 
 
 def _tool(name: str) -> str:
-    found = shutil.which(name)
-    if found:
-        return found
-    dirs = [os.getenv("PG_BIN", "")]
-    pg_root = Path(os.getenv("ProgramFiles", r"C:\Program Files")) / "PostgreSQL"
-    if pg_root.is_dir():
-        dirs += [str(p / "bin") for p in sorted(pg_root.iterdir(), reverse=True)]
-    for d in filter(None, dirs):
-        for candidate in (Path(d) / name, Path(d) / f"{name}.exe"):
-            if candidate.exists():
-                return str(candidate)
-    sys.exit(f"{name} not found: add it to PATH or set PG_BIN")
+    return tool(name)
 
 
-def backup() -> Path:
+def backup(max_age_days: int = 1) -> Path:
+    """Write a dump and *verify* it before calling it a backup.
+
+    A failed or truncated dump used to leave a file that looked like a backup; now the
+    archive has to survive `pg_restore --list` and be younger than `max_age_days`, or the
+    file is removed and the caller fails. Nothing partial is ever left behind for an
+    upload step to pick up.
+    """
     BACKUP_DIR.mkdir(exist_ok=True)
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
     out = BACKUP_DIR / f"worldfin-{stamp}.dump"
-    subprocess.run([_tool("pg_dump"), "-Fc", "-f", str(out), _dsn()], check=True)
+    try:
+        subprocess.run([_tool("pg_dump"), "-Fc", "-f", str(out), _dsn()], check=True)
+        verify_dump(out)
+        verify_fresh(out, max_age_days)
+    except Exception:
+        out.unlink(missing_ok=True)  # never leave a partial dump where a backup belongs
+        raise
     for old in sorted(BACKUP_DIR.glob("worldfin-*.dump"))[:-KEEP]:
         old.unlink()
     print(out)
     return out
 
 
+def verify_fresh(path: Path, max_age_days: int = 1) -> None:
+    """A dump that is older than the schedule means the schedule is not running."""
+    age_days = (time.time() - path.stat().st_mtime) / 86400
+    if age_days > max_age_days:
+        raise RuntimeError(
+            f"{path.name} is {age_days:.1f} days old, expected <= {max_age_days}"
+        )
+
+
 def restore(path: str) -> None:
     subprocess.run(
-        [_tool("pg_restore"), "--clean", "--if-exists", "--no-owner", "-d", _dsn(), path],
+        [
+            _tool("pg_restore"),
+            "--clean",
+            "--if-exists",
+            "--no-owner",
+            "-d",
+            _dsn(),
+            path,
+        ],
         check=True,
     )
 

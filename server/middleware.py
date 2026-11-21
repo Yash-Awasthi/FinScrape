@@ -13,7 +13,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 
-from server.rate_limit import Limiter, client_key
+from server.rate_limit import Limiter, RedisLimiter, client_key, hit
 from server.settings import get_settings
 
 log = logging.getLogger("worldfin.hardening")
@@ -48,7 +48,13 @@ def _etag_matches(if_none_match: str, etag: str) -> bool:
 
 def configure_hardening(app: FastAPI) -> None:
     s = get_settings()
-    limiter = Limiter(s.rate_limit_per_min)
+    # One window, shared when Redis is configured: a per-process limiter multiplies the
+    # documented ceiling by the replica count (plan M1.6).
+    limiter = (
+        RedisLimiter(s.redis_url, s.rate_limit_per_min)
+        if s.redis_enabled
+        else Limiter(s.rate_limit_per_min)
+    )
 
     # --- structured error envelopes (every error path → {"error": {...}}) ---
     @app.exception_handler(HTTPException)
@@ -108,7 +114,7 @@ def configure_hardening(app: FastAPI) -> None:
     # --- rate limit (trip before doing route work) ---
     @app.middleware("http")
     async def _rate_limit(request: Request, call_next) -> Response:
-        allowed, retry = limiter.hit(client_key(request))
+        allowed, retry = await hit(limiter, client_key(request))
         if not allowed:
             resp = _envelope(429, "rate limit exceeded")
             resp.headers["Retry-After"] = str(retry)

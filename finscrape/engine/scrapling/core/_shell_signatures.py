@@ -1,15 +1,15 @@
 from finscrape.engine.scrapling.core._types import (
     Any,
-    Dict,
-    List,
-    Set,
-    Tuple,
-    Sequence,
     Callable,
-    Optional,
-    SetCookieParam,
-    SelectorWaitStates,
+    Dict,
     FollowRedirects,
+    List,
+    Optional,
+    SelectorWaitStates,
+    Sequence,
+    Set,
+    SetCookieParam,
+    Tuple,
 )
 
 # Parameter definitions for shell function signatures (defined once at module level)

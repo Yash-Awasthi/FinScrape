@@ -1,25 +1,25 @@
 from io import BytesIO
 
 from curl_cffi.requests import (
-    ProxySpec,
-    CookieTypes,
     BrowserTypeLiteral,
+    CookieTypes,
+    ProxySpec,
 )
 
 from finscrape.engine.scrapling.core._types import (
+    Callable,
     Dict,
+    FollowRedirects,
     List,
-    Set,
-    Tuple,
     Mapping,
     Optional,
-    Callable,
-    Sequence,
-    TypedDict,
-    TypeAlias,
-    SetCookieParam,
     SelectorWaitStates,
-    FollowRedirects,
+    Sequence,
+    Set,
+    SetCookieParam,
+    Tuple,
+    TypeAlias,
+    TypedDict,
 )
 from finscrape.engine.scrapling.engines.toolbelt.proxy_rotation import ProxyRotator
 

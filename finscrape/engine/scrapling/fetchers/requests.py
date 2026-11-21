@@ -1,10 +1,10 @@
 from finscrape.engine.scrapling.engines.static import (
-    FetcherSession,
-    FetcherClient as _FetcherClient,
     AsyncFetcherClient as _AsyncFetcherClient,
 )
+from finscrape.engine.scrapling.engines.static import (
+    FetcherClient as _FetcherClient,
+)
 from finscrape.engine.scrapling.engines.toolbelt.custom import BaseFetcher
-
 
 __FetcherClientInstance__ = _FetcherClient()
 __AsyncFetcherClientInstance__ = _AsyncFetcherClient()

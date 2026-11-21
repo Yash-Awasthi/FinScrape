@@ -129,6 +129,6 @@ def install_observability(app: FastAPI, stale_after_min: int = 60) -> None:
                 fresh = r["status"] == "OK" and age <= stale_after_min * 60
                 SOURCE_UP.labels(source=r["source"]).set(1 if fresh else 0)
         # Metrics still serve on a broken DB.
-        except Exception as exc:  # noqa: BLE001  # pragma: no cover
+        except Exception as exc:  # pragma: no cover
             log.warning("metrics: source freshness query failed: %s", exc)
         return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)

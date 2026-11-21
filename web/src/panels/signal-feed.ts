@@ -9,10 +9,39 @@ import { type EventOut, type Storyline, verdictColor } from "../api";
 import { escapeHtml, timeAgo } from "../util";
 import { Panel } from "./panel";
 
+/** The chip that says who judged this row. Model rows stay clean: the badge exists so a
+ *  keyword-fallback row cannot pass as a model verdict (plan m1.3.2). */
+export function sourceBadge(source: string | undefined): string {
+  if (source === "heuristic")
+    return `<span class="src-badge" title="keyword fallback, not a model verdict">heuristic</span>`;
+  if (source === "model_repaired")
+    return `<span class="src-badge repaired" title="the model's first reply was invalid; this one was repaired">repaired</span>`;
+  if (source === "unknown")
+    return `<span class="src-badge" title="written before the analysis source was recorded">src?</span>`;
+  return "";
+}
+
+// The geopolitical lens: topics the correlation engine already scores, ordered by
+// how directly they move prices. Labels are short enough to sit in one chip row.
+const TOPIC_ORDER = ["conflict", "energy", "sanctions", "shipping", "monetary", "elections"];
+const TOPIC_LABELS: Record<string, string> = {
+  conflict: "Conflict",
+  energy: "Energy",
+  sanctions: "Sanctions",
+  shipping: "Shipping",
+  monetary: "Monetary",
+  elections: "Elections",
+};
+const topicRank = (topic: string): number => {
+  const at = TOPIC_ORDER.indexOf(topic);
+  return at === -1 ? TOPIC_ORDER.length : at;
+};
+
 export class SignalFeedPanel extends Panel {
   private verdictFilter = "ALL";
   private sectorFilter = "";
   private sourceFilter = "";
+  private topicFilter = "";
   // Survives re-renders: a live WS push must not silently drop your selection.
   private activeId: number | null = null;
   private lastEvents: EventOut[] = [];
@@ -78,6 +107,9 @@ export class SignalFeedPanel extends Panel {
       return;
     }
     const verdicts = ["ALL", ...new Set(events.map((e) => e.verdict))];
+    const topics = [...new Set(events.flatMap((e) => e.topics ?? []))].sort(
+      (a, b) => topicRank(a) - topicRank(b),
+    );
     const wrap = document.createElement("div");
     wrap.innerHTML =
       `<div class="feed-filters">` +
@@ -93,6 +125,12 @@ export class SignalFeedPanel extends Panel {
             `<button class="ffilter${v === this.verdictFilter ? " active" : ""}" data-v="${v}">${v}</button>`,
         )
         .join("") +
+      topics
+        .map(
+          (t) =>
+            `<button class="ffilter topic${t === this.topicFilter ? " active" : ""}" data-topic="${escapeHtml(t)}" title="only signals driven by ${escapeHtml(t)} news">${escapeHtml(TOPIC_LABELS[t] ?? t)}</button>`,
+        )
+        .join("") +
       `</div>`;
     wrap.addEventListener("click", (e) => {
       const sectorBtn = (e.target as HTMLElement).closest<HTMLElement>("[data-sector]");
@@ -104,6 +142,13 @@ export class SignalFeedPanel extends Panel {
       const sourceBtn = (e.target as HTMLElement).closest<HTMLElement>("[data-source]");
       if (sourceBtn) {
         this.sourceFilter = "";
+        this.update(this.lastEvents);
+        return;
+      }
+      const topicBtn = (e.target as HTMLElement).closest<HTMLElement>("[data-topic]");
+      if (topicBtn) {
+        const topic = topicBtn.dataset.topic ?? "";
+        this.topicFilter = this.topicFilter === topic ? "" : topic;
         this.update(this.lastEvents);
         return;
       }
@@ -130,12 +175,15 @@ export class SignalFeedPanel extends Panel {
         ? events
         : events.filter((e) => e.verdict === this.verdictFilter);
     const bySector = this.sectorFilter ? filtered.filter(matchesSector) : filtered;
-    const shown = this.sourceFilter
-      ? bySector.filter((e) => (e.sources ?? []).includes(this.sourceFilter))
+    const byTopic = this.topicFilter
+      ? bySector.filter((e) => (e.topics ?? []).includes(this.topicFilter))
       : bySector;
+    const shown = this.sourceFilter
+      ? byTopic.filter((e) => (e.sources ?? []).includes(this.sourceFilter))
+      : byTopic;
 
     if (!shown.length) {
-      const lens = this.sourceFilter || this.sectorFilter || this.verdictFilter;
+      const lens = this.sourceFilter || this.sectorFilter || this.topicFilter || this.verdictFilter;
       tbody.innerHTML = `<tr><td class="empty">No signals in ${escapeHtml(lens)}.</td></tr>`;
       table.append(tbody);
       return table;
@@ -148,7 +196,8 @@ export class SignalFeedPanel extends Panel {
     // the lead row and hide the rest behind its expander — never hide a row
     // whose lead isn't in this view (stale cache or day-scoped load).
     const storylines = window.__wfStorylines ?? [];
-    const collapse = this.verdictFilter === "ALL" && !this.sectorFilter && !this.sourceFilter;
+    const collapse =
+      this.verdictFilter === "ALL" && !this.sectorFilter && !this.sourceFilter && !this.topicFilter;
     const leadOf = new Map<number, Storyline>(); // lead event id → cluster
     const hideIds = new Set<number>(); // member ids rendered under their lead
     if (collapse) {
@@ -216,7 +265,7 @@ export class SignalFeedPanel extends Panel {
     tr.innerHTML =
       `<td><span class="dot" style="background:${verdictColor(e.verdict)}"></span>` +
       `${e.verdict} <b>${e.signal_score >= 0 ? "+" : ""}${e.signal_score}</b>` +
-      `<span class="row-meta">${badge}${chainBadge}${Math.round(e.confidence * 100)}% · ${escapeHtml(e.tickers.slice(0, 4).join(", ")) || "—"}` +
+      `<span class="row-meta">${badge}${chainBadge}${sourceBadge(e.analysis_source)}${Math.round(e.confidence * 100)}% · ${escapeHtml(e.tickers.slice(0, 4).join(", ")) || "—"}` +
       ` · ${timeAgo(e.timestamp)} · ${e.sources.length} src${e.divergence_flag ? ' · <span class="warn" title="the model and the text disagree on direction">divergent</span>' : ""}</span>` +
       `<div class="subj">${subject}</div>${reasoning}</td>`;
     tr.addEventListener("click", () => {

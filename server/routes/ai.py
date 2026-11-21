@@ -97,9 +97,14 @@ async def analyze(id: int = Query(...)) -> dict:
 
 @router.get("/api/ai/council")
 async def council(id: int = Query(...)) -> dict:
-    """Explainability: multi-agent council verdict + dissent for an event. Behind the
-    WORLDFIN_ENABLE_COUNCIL flag; needs an LLM backend (runs in a thread)."""
-    if not get_settings().enable_council:
+    """Explainability: multi-agent council verdict + dissent for an event.
+
+    Off by default, and never reachable in production whatever the flag says (plan
+    M1.7): production is one LLM call per article, and this route issues eight plus an
+    optional judge. It exists for experiments against a scratch database.
+    """
+    s = get_settings()
+    if not s.enable_council or s.env.lower() == "production":
         raise HTTPException(status_code=404, detail="council disabled")
     event = await queries.get_event_by_id(db.pool(), id)
     if not event:

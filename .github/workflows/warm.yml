@@ -1,0 +1,36 @@
+name: warm
+
+# plan M2.5: keep the free-tier API from sleeping, and fail loudly when a cold start gets
+# worse than the 30-50 s docs/DEPLOY.md quotes. Dispatched by the cron Worker
+# `winfin-ingest-cron` just before the ingest cycle, which is already a scheduled wake-up —
+# no `schedule:` block here, so the Worker stays the only scheduler.
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "API base URL (defaults to the API_URL variable)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  warm:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-python
+        with:
+          groups: --group server --group dev
+      - name: Wake the API and time it
+        env:
+          API_URL: ${{ inputs.url || vars.API_URL }}
+        run: |
+          if [ -z "$API_URL" ]; then
+            echo "::error::set the API_URL repository variable (or pass url)"
+            exit 1
+          fi
+          python -m scripts.warm --base-url "$API_URL" --budget 120 --quoted 50

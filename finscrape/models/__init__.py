@@ -5,11 +5,9 @@ Data models for FinScrape events and signals.
 from __future__ import annotations
 
 import os
-import re
-from dataclasses import dataclass, field, asdict
-from datetime import datetime, timezone
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Optional
 
 
 class Verdict(str, Enum):
@@ -62,7 +60,7 @@ class FinEvent:
     divergence_flag: bool = False
     sources: list[str] = field(default_factory=list)
     articles: list[str] = field(default_factory=list)
-    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     # --- New enriched analysis fields ---
     reasoning: str = ""
     magnitude: str = "medium"  # low / medium / high
@@ -72,6 +70,11 @@ class FinEvent:
     second_order_effects: list = field(default_factory=list)
     sector_impact: str = ""
     key_metrics: dict = field(default_factory=dict)
+    # Which judge produced this row: model / model_repaired / heuristic / laya. "unknown"
+    # only appears on rows written before the column existed (plan m1.3.1).
+    analysis_source: str = "unknown"
+    # The model the verdict came from, empty for model-free rows.
+    model_name: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -88,8 +91,8 @@ class ScrapedArticle:
     title: str
     text: str
     source: str
-    published_at: Optional[str] = None
-    age_hours: Optional[float] = None
+    published_at: str | None = None
+    age_hours: float | None = None
     raw_tickers: list[str] = field(default_factory=list)
 
     @property

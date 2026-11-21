@@ -228,11 +228,12 @@ export class Inspector {
     return [btn, out];
   }
 
-  /** Calibrated probability the verdict's direction realizes, with its sample size. */
+  /** How often this verdict's scored calls came right — a past record, not a forecast of
+   *  this event's price (plan m1.4.3). Shown with its sample size. */
   private prediction(ev: EventOut): HTMLElement[] {
     const head = document.createElement("h3");
     head.className = "insp-section";
-    head.textContent = "Calibrated probability";
+    head.textContent = "Past hit rate for this verdict";
     const box = document.createElement("div");
     box.className = "p-box";
     box.textContent = "…";
@@ -242,10 +243,12 @@ export class Inspector {
       .then((p: Prediction) => {
         if (this.current !== ev.id) return; // selection moved on while we waited
         const pct = Math.round(p.p_verdict_correct * 100);
+        box.title =
+          "Historical hit rate for calls like this one, not a prediction of this event's price";
         box.innerHTML =
           `<div class="p-bar"><span style="width:${pct}%"></span></div>` +
-          `<div class="p-meta"><b>${pct}%</b> ${escapeHtml(p.expected_direction)} · ` +
-          `${escapeHtml(p.data_tier)} · n=${p.reliability_tables.sample_size}</div>`;
+          `<div class="p-meta"><b>${pct}%</b> of past calls like this came right ` +
+          `(${escapeHtml(p.data_tier)} · n=${p.reliability_tables.sample_size}), not a forecast</div>`;
       })
       .catch(() => {
         if (this.current === ev.id) box.textContent = "No calibration yet.";

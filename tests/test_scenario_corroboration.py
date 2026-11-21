@@ -130,7 +130,6 @@ class TestCacheSingleFlight:
 
         def produce():
             calls.append(1)
-            return None
 
         assert cache.get_or_set("n", 60, produce) is None
         assert cache.get_or_set("n", 60, produce) is None

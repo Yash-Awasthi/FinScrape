@@ -5,13 +5,13 @@
 [![CI](https://github.com/Yash-Awasthi/FinScrape/actions/workflows/ci.yml/badge.svg)](https://github.com/Yash-Awasthi/FinScrape/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.14-3776AB.svg)](https://python.org)
-[![Cost](https://img.shields.io/badge/Cost-$0%2Fmonth-brightgreen.svg)](docs/DEPLOY.md)
+[![Cost](https://img.shields.io/badge/Cost-%240%20while%20free%20tiers%20hold-brightgreen.svg)](docs/COST.md)
 [![Live](https://img.shields.io/badge/Live-Dashboard-blue.svg)](https://winfin.pages.dev/app/)
 
 FinScrape reads world and geopolitical news on a schedule (daily, or hourly for demos), works out which sectors
-and tickers each event moves, turns related events into scenarios with a calibrated
+and tickers each event moves, turns related events into scenarios with a past-record
 probability and an instruction (invest, pull out, observe), and scores every call
-against the market move that followed.
+against the market move that followed — a hit rate with its sample size, never a forecast.
 
 **Live:** [landing](https://winfin.pages.dev) · [dashboard](https://winfin.pages.dev/app/) ·
 [API docs](https://winfin-api.onrender.com/docs)
@@ -31,21 +31,24 @@ against the market move that followed.
 | 🌍 **Live globe and feed** | Every event geolocated and coloured by verdict (INVEST / PULL_OUT / OBSERVE / CAUTIOUS) |
 | 🧭 **Scenarios** | Related events clustered into scenarios with probability, sector tilt and exposed tickers (`/api/scenarios`) |
 | 🎯 **Sectors and tickers** | Sector from a chain of Laya (a small fine-tuned classifier), the LLM and keywords; tickers only when the article backs them |
+| 📈 **Live market tape** | Indices, rates, crude, gold, bitcoin and FX with 60 s intraday quotes; click any tile to chart it (`/api/market/quotes`) |
 | 📊 **Track record** | Every call re-scored against the window after the event: hit rate by verdict, reliability, Brier score (`/api/accuracy`) |
 | 🔗 **Correlations** | Fires when independent source types corroborate one story |
 | 🤖 **Council** | Optional analyst personas debate an event; a judge reads the transcript (`/api/ai/council`) |
 | 🔔 **Alerts** | Telegram alerts on INVEST / PULL_OUT calls, a daily summary, alert rules |
 | 🏥 **Source health** | Per-source and per-feed freshness, shown on the dashboard |
 
-Sources: 32 world RSS feeds, the GDELT 15-minute events export, USGS earthquakes and
-ReliefWeb disasters, all keyless ([docs/DATA_SOURCES.md](docs/DATA_SOURCES.md)).
+Sources: <!-- facts:start feeds -->
+37
+<!-- facts:end --> world RSS feeds (including dedicated geopolitical analysis), the GDELT
+15-minute events export, USGS earthquakes and ReliefWeb disasters, all keyless ([docs/DATA_SOURCES.md](docs/DATA_SOURCES.md)).
 
 ---
 
 ## 🚀 Quick start
 
 Needs Docker and git. No LLM key is required: the demo loads a seeded dataset, and
-the worker falls back to keyword analysis until a model is configured.
+the worker falls back to deterministic event analysis until a model is configured.
 
 ```bash
 git clone https://github.com/Yash-Awasthi/FinScrape.git && cd FinScrape
@@ -99,7 +102,8 @@ Cloudflare cron Worker ──(every N hours)──▶ GitHub Action "ingest"
   everywhere.
 
 Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · deploy and operations:
-[docs/DEPLOY.md](docs/DEPLOY.md), [docs/RUNBOOK.md](docs/RUNBOOK.md).
+[docs/DEPLOY.md](docs/DEPLOY.md), [docs/RUNBOOK.md](docs/RUNBOOK.md) · what the track
+record numbers mean and when they are too thin to trust: [docs/CALIBRATION.md](docs/CALIBRATION.md).
 
 ---
 
@@ -112,8 +116,10 @@ All via env (`.env.example`). Key ones:
 | `WORLDFIN_DATABASE_URL` | Postgres DSN |
 | `OPENAI_BASE_URL`, `OPENAI_API_KEY`, `FINSCRAPE_MODEL` | LLM endpoint, key and model |
 | `FINSCRAPE_MODEL_FALLBACK` | Second model tried when the first fails |
-| `FINSCRAPE_HEURISTIC_FALLBACK` | Ingest with keyword analysis when every model fails |
+| `OPENROUTER_API_KEY`, `FINSCRAPE_OPENROUTER_MODEL` | Separate backend retried when the proxy answers 403 |
+| `FINSCRAPE_HEURISTIC_FALLBACK` | Deterministic event analysis when every model fails |
 | `FINSCRAPE_LAYA`, `FINSCRAPE_LAYA_MODEL` | Laya sector classifier on/off and checkpoint path |
+| `FINSCRAPE_REACTION_TTL` | Seconds to cache the 1-day price/volume reaction (default 300) |
 | `RELIEFWEB_APPNAME` | Approved ReliefWeb app name; the source is off without it |
 | `WORLDFIN_ENABLE_COUNCIL` | Council endpoint |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` | Telegram alerts and bot commands |
@@ -128,7 +134,9 @@ make test        # pytest; DB tests need WORLDFIN_TEST_DATABASE_URL naming a *_t
 make e2e-live    # the built SPA against the real API and a seeded, empty *_test database
 ```
 
-About 680 pytest cases, 72 vitest cases and 8 Playwright specs; CI runs all of them.
+<!-- facts:start -->
+977 pytest cases, 83 Vitest tests and 8 Playwright specs; CI runs all of them. Counted by `python -m scripts.repo_facts`.
+<!-- facts:end -->
 
 ---
 
@@ -141,10 +149,10 @@ worker/        ingest cycle, sources, correlation, backtest
 web/           Vite+ SPA (landing + dashboard)
 scripts/       llm.py (switch LLM), check_prod.py, db_backup.py, laya_train/ (fine-tuning)
 ops/ingest-cron/  Cloudflare cron Worker that dispatches ingest and keeps the API warm
-docs/          architecture, deploy, runbook, data sources, demo, security
+docs/          architecture, deploy, runbook, data sources, demo, security, calibration
 ```
 
-Current work is in [task.md](task.md); what is known and measured is in [notes.md](notes.md).
+Current work is in [plan.md](plan.md); what is known and measured is in [notes.md](notes.md).
 
 ---
 

@@ -1,8 +1,10 @@
 """Tests for sentiment_analyzer.py — financial sentiment analysis."""
 
-import pytest
+
 from finscrape.services.sentiment_analyzer import (
-    Sentiment, SentimentResult, SentimentAnalyzer,
+    Sentiment,
+    SentimentAnalyzer,
+    SentimentResult,
 )
 
 

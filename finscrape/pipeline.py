@@ -17,19 +17,22 @@ from typing import Any, Protocol
 from finscrape.agents import DEFAULT_AGENTS, AgentCouncil
 from finscrape.analysis import laya, sp500
 from finscrape.analysis.ai_client import call_ai
+from finscrape.analysis.embeddings import most_similar
+from finscrape.analysis.fallback import analyze_without_llm
+from finscrape.analysis.market_reaction import apply_market_confirmation
 from finscrape.analysis.nlp import FinancialNLP
 from finscrape.analysis.prompts import render_prompt
 from finscrape.analysis.validator import (
     calculate_heuristic_score,
+    calibrate_signal_score,
     check_divergence,
     clean_tickers,
-    grounded_tickers,
     fuse_confidence,
+    grounded_tickers,
     is_market_relevant,
 )
-from finscrape.analysis.embeddings import most_similar
 from finscrape.entity_map import lede_tickers, resolve_company_tickers
-from finscrape.market_data import get_indicators
+from finscrape.market_data import get_indicators, get_market_reaction
 from finscrape.models import FinEvent, ScrapedArticle, Verdict
 
 logger = logging.getLogger(__name__)
@@ -50,11 +53,24 @@ class FinScrapePipeline:
     """Analyze one article at a time into a FinEvent, deduped against `event_store`."""
 
     def __init__(self, event_store: EventStore, use_council: bool = False):
+        """`use_council` is an offline/experimental mode only (plan M1.7).
+
+        Production runs one `call_ai` per article plus deterministic layers (Laya
+        sector/direction, spaCy, the entity/lede maps, market facts). The council
+        issues eight calls per article and scores a weighted vote, which is not the
+        product the dashboard advertises — so asking for it in production is refused
+        rather than silently tripling the bill.
+        """
         self.event_store = event_store
         # Per-thread: the worker analyzes several sources concurrently on one pipeline.
         self._tls = threading.local()
         self.nlp = FinancialNLP()
         self.use_council = use_council
+        if use_council and os.getenv("WORLDFIN_ENV", "").lower() == "production":
+            raise RuntimeError(
+                "the agent council is an offline/experimental mode: production is one "
+                "LLM call per article (plan M1.7)"
+            )
         self.council = AgentCouncil(agents=DEFAULT_AGENTS, judge=True) if use_council else None
 
     def _analyze_article(self, source_name: str, article: ScrapedArticle) -> FinEvent | None:
@@ -68,18 +84,22 @@ class FinScrapePipeline:
             print("    [SKIP] Not market-relevant (off-topic or transient brief)")
             return None
 
+        # NLP runs for every judged article; the fallback reuses this result so an
+        # LLM outage does not pay for a second spaCy pass.
+        nlp_result = self.nlp.analyze(article.title, article.text)
+
         # Choose analysis mode: multi-agent council or single AI call
         if self.council:
-            result, council_verdict = self._analyze_with_council(source_name, article)
+            result = self._analyze_with_council(source_name, article)[0]
         else:
-            result, council_verdict = self._analyze_with_single_ai(article), None
+            result = self._analyze_with_single_ai(article)
 
         if not result:
             # Zero-cost mode: LLM unavailable / budget-capped → heuristic + entity-map
             # tickers so ingestion never stalls (opt-in: FINSCRAPE_HEURISTIC_FALLBACK).
             # The event lands with a heuristic verdict, enrichable on demand (/api/ai/analyze).
             if os.getenv("FINSCRAPE_HEURISTIC_FALLBACK", "").lower() in ("1", "true", "yes"):
-                result = self._heuristic_only(article)
+                result = self._heuristic_only(article, nlp_result)
             if not result:
                 self._tls.ai_failed = True
                 print("    [ERROR] AI analysis failed")
@@ -89,9 +109,7 @@ class FinScrapePipeline:
             print("    [SKIP] Not market-relevant")
             return None
 
-        # NLP analysis — entity extraction, metrics, sector, breaking news
         full_text = article.title + " " + article.text
-        nlp_result = self.nlp.analyze(article.title, article.text)
 
         # Ticker processing — combine AI, NLP, entity index, regex, and sector-map
         ai_tickers = result.get("tickers", [])
@@ -132,17 +150,37 @@ class FinScrapePipeline:
             return None
 
         laya_view = laya.classify(article.title, article.text)
+        market_reaction = get_market_reaction(valid_tickers[:8])
 
         # Heuristic validation
         h_sentiment, h_impact = calculate_heuristic_score(full_text, result.get("event_type", ""))
-        divergence = check_divergence(result.get("impact_direction", "neutral"), h_sentiment)
+        # The fallback already translates the event into a market direction; a
+        # sentiment mismatch ("prices rose" in a conflict story) must not clamp it.
+        heuristic = result.get("key_metrics", {}).get("analysis_source") == "heuristic"
+        divergence = False if heuristic else check_divergence(
+            result.get("impact_direction", "neutral"), h_sentiment
+        )
 
-        # Final scoring
-        base_score = result.get("signal_score", 0)
-        final_score = max(-5, min(5, base_score))
+        # Final scoring: the LLM's number is rescaled to the magnitude/actionability
+        # it chose, so routine stories stop clustering on ±3.
+        final_score = calibrate_signal_score(
+            result.get("signal_score", 0),
+            result.get("magnitude", "medium"),
+            result.get("actionability", "medium"),
+            result.get("novelty", "standard"),
+        )
         # Text and model disagree on polarity, so neither direction is trustworthy.
         if divergence:
             final_score = max(-2, min(2, final_score))
+
+        # The tape is evidence, not a new opinion: an aligned spike can lift the
+        # call, an opposing spike lowers confidence, but neither changes the sign.
+        confirmation = apply_market_confirmation(
+            final_score, result.get("impact_direction", "neutral"), market_reaction
+        )
+        if not divergence and confirmation.delta:
+            final_score += (1 if final_score > 0 else -1) * confirmation.delta
+            final_score = max(-5, min(5, final_score))
         confidence = fuse_confidence(
             result.get("confidence", 0.5),
             source_name,
@@ -150,6 +188,12 @@ class FinScrapePipeline:
             divergence,
             nlp_result.has_breaking_indicators,
         )
+        confidence = max(0.0, min(1.0, confidence + confirmation.confidence))
+        if not divergence:
+            if confirmation.magnitude:
+                result["magnitude"] = confirmation.magnitude
+            if confirmation.actionability:
+                result["actionability"] = confirmation.actionability
 
         # Only companies the text names: region keywords map to proxies like TSM
         # for "Taiwan", which would pass a political story off as technology.
@@ -163,6 +207,16 @@ class FinScrapePipeline:
         for m in nlp_result.metrics:
             nlp_metrics[m.metric_type] = {"value": m.value, "raw": m.context}
         key_metrics = result.get("key_metrics", {})
+        if market_reaction:
+            top = sorted(
+                market_reaction.values(),
+                key=lambda row: abs(float(row.get("change_percent", 0)))
+                * min(float(row.get("volume_ratio", 1.0) or 1.0), 5.0),
+                reverse=True,
+            )[:3]
+            key_metrics["market_reaction"] = top
+        if confirmation.evidence:
+            key_metrics["market_confirmation"] = confirmation.evidence
         for k, v in nlp_metrics.items():
             if k not in key_metrics:
                 key_metrics[k] = v
@@ -192,6 +246,11 @@ class FinScrapePipeline:
             second_order_effects=result.get("second_order_effects", []),
             sector_impact=sector,
             key_metrics=key_metrics,
+            # Which judge wrote this row, so a heuristic and a judged row never look alike
+            # (plan m1.3.1). `_validate_response` and the fallback both stamp it; a council
+            # verdict is model output by construction.
+            analysis_source=result.get("analysis_source") or ("heuristic" if heuristic else "model"),
+            model_name=result.get("model_name", ""),
         )
 
         # Deduplication
@@ -231,37 +290,23 @@ class FinScrapePipeline:
         so the article was never judged and is worth retrying."""
         return getattr(self._tls, "ai_failed", False)
 
-    def _heuristic_only(self, article: ScrapedArticle) -> dict | None:
-        """LLM-free analysis (zero-cost mode): heuristic verdict + entity-map/regex tickers,
-        shaped like a call_ai result. Returns None when no tickers resolve (can't place it).
-        Tagged key_metrics.prompt_variant='heuristic' so it's distinguishable + enrichable."""
-        full_text = article.title + " " + article.text
-        symbols = sorted(
-            set(lede_tickers(article.title, article.text) + resolve_company_tickers(full_text) + list(article.raw_tickers or []))
+    def _heuristic_only(
+        self, article: ScrapedArticle, nlp_result=None
+    ) -> dict | None:
+        """LLM-free analysis: a deterministic event call, not sentiment alone.
+
+        Returns None when no market event is recognisable or no listed expression
+        resolves, so an outage never publishes a 0 OBSERVE for unrelated politics.
+        Tagged `prompt_variant='heuristic'` so it is distinguishable and enrichable.
+        """
+        if nlp_result is None:
+            nlp_result = self.nlp.analyze(article.title, article.text)
+        return analyze_without_llm(
+            article.title,
+            article.text,
+            nlp_result,
+            raw_tickers=list(article.raw_tickers or []),
         )
-        tickers = [t for t in symbols if isinstance(t, str) and 1 < len(t) <= 5 and t.isupper()]
-        if not tickers:
-            return None
-        sentiment, impact = calculate_heuristic_score(full_text, "")
-        mag = round(impact * 5)
-        score = mag if sentiment == "positive" else -mag if sentiment == "negative" else 0
-        return {
-            "relevant": True,
-            "event_type": "other",
-            "subject": article.title[:120],
-            "impact_direction": sentiment if sentiment in ("positive", "negative") else "neutral",
-            "tickers": tickers,
-            "affected_entities": [],
-            "signal_score": int(max(-5, min(5, score))),
-            "confidence": 0.4,
-            "magnitude": "high" if impact >= 0.66 else "low" if impact < 0.33 else "medium",
-            "novelty": "standard",
-            "actionability": "low",
-            "reasoning": "Heuristic analysis (LLM unavailable) — click to enrich with AI.",
-            "key_metrics": {"prompt_variant": "heuristic"},
-            "sector_impact": "",
-            "second_order_effects": [],
-        }
 
     def _analyze_with_single_ai(self, article: ScrapedArticle) -> dict | None:
         """Standard single-AI analysis. Picks a prompt variant (A/B, opt-in) and stamps
@@ -283,12 +328,15 @@ class FinScrapePipeline:
         _heuristic_only) so real computed indicators can go into the council as
         GROUND TRUTH facts — the council itself fetches nothing, stays pure.
         """
+        council = self.council
+        if council is None:
+            return None, None
         metadata = {"source": source_name, "age_hours": f"{article.age_hours:.1f}"}
         full_text = article.title + " " + article.text
         tickers = sorted(set(lede_tickers(article.title, article.text) + resolve_company_tickers(full_text)))
         market_facts = get_indicators(tickers) if tickers else {}
 
-        cv = self.council.deliberate(article.title, article.text, metadata, market_facts)
+        cv = council.deliberate(article.title, article.text, metadata, market_facts)
 
         # If no individual verdicts produced anything useful, fail
         if cv.consensus_confidence < 0.05:

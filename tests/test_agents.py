@@ -6,11 +6,9 @@ All tests use mocked AI responses — no actual API calls are made.
 
 from __future__ import annotations
 
-import math
 import sys
 import types
-from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -25,18 +23,20 @@ _ai_client_mod.call_ai = MagicMock(return_value=None)  # default: returns None
 sys.modules["finscrape.analysis.ai_client"] = _ai_client_mod
 
 # Import real constants module (pure Python, no heavy deps)
-import finscrape.analysis.constants  # noqa: F401
 
 # Now safe to import agents
 from finscrape.agents.base import AgentVerdict, BaseAgent
-from finscrape.agents.council import AgentCouncil, CouncilVerdict, MAX_POSSIBLE_STD_DEV, DISSENT_THRESHOLD
+from finscrape.agents.council import (
+    AgentCouncil,
+    CouncilVerdict,
+)
 from finscrape.agents.personas import (
+    DEFAULT_AGENTS,
     AnalystAgent,
     ContrarianAgent,
-    RiskAgent,
-    MomentumAgent,
     FundamentalsAgent,
-    DEFAULT_AGENTS,
+    MomentumAgent,
+    RiskAgent,
 )
 
 # Drop the stub so later test modules importing the real ai_client don't

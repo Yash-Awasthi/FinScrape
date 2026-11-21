@@ -16,6 +16,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 
 from server import db, pubsub, queries
+from server.correlate import annotate_topics
 from server.middleware import configure_hardening
 from server.obs import install_observability
 from server.routes import accuracy as accuracy_routes
@@ -54,7 +55,7 @@ async def _warm_scenarios(s) -> None:
         log.info("scenario cache warmed")
     except asyncio.CancelledError:
         raise
-    except Exception as exc:  # noqa: BLE001 - best effort; the first request pays instead
+    except Exception as exc:
         log.warning("scenario warm-up skipped: %s", exc)
 
 
@@ -116,7 +117,7 @@ def create_app() -> FastAPI:
         try:
             await db.pool().fetchval("SELECT 1")
         # Broken DB reads as degraded.
-        except Exception as exc:  # noqa: BLE001  # pragma: no cover
+        except Exception as exc:  # pragma: no cover
             log.warning("health: db check failed: %s", exc)
             db_ok = False
         return HealthResponse(
@@ -133,7 +134,7 @@ def create_app() -> FastAPI:
         try:
             await db.pool().fetchval("SELECT 1")
         # Broken DB reads as not ready.
-        except Exception as exc:  # noqa: BLE001  # pragma: no cover
+        except Exception as exc:  # pragma: no cover
             log.warning("ready: db check failed: %s", exc)
             response.status_code = 503
             return {"ready": False}
@@ -160,7 +161,9 @@ def create_app() -> FastAPI:
                     {
                         "type": "init",
                         "stats": await queries.get_stats(pool),
-                        "events": await queries.get_events(pool, limit=20),
+                        "events": annotate_topics(
+                            await queries.get_events(pool, limit=20)
+                        ),
                     }
                 )
             )

@@ -16,11 +16,10 @@ TICKER_STOPWORDS = frozenset({
     "NEXT", "NOW", "ONE", "OUT", "OVER", "SAID", "SAYS", "SUCH", "SOME", "SAME",
     "THAN", "THAT", "THIS", "TOLD", "TWO", "WITH", "ALL", "WHAT", "WHEN", "WHERE",
     "WHO", "WHY", "HOW", "MORE", "LESS", "ONLY", "VERY", "EACH", "AFTER", "ABOUT",
-    "INTO", "BACK", "DOWN", "DOES", "HERE", "JUST", "LIKE", "MAKE", "MADE",
-    "THEM", "THEN", "THEY", "WELL", "WENT", "WHAT", "WHEN", "COME", "COULD",
-    "BEEN", "BEING", "BELOW", "ABOVE", "FIRST", "STILL", "WHILE", "WOULD",
-    "THEIR", "THESE", "THOSE", "SINCE", "OTHER", "AFTER", "WHICH", "COULD",
-    "SHOULD", "UNDER", "UNTIL", "EVERY", "AMONG",
+    "INTO", "BACK", "DOWN", "DOES", "HERE", "LIKE", "MAKE", "MADE",
+    "THEM", "THEN", "THEY", "WELL", "WENT", "COME", "COULD",
+    "BEING", "BELOW", "ABOVE", "FIRST", "STILL", "WHILE", "WOULD",
+    "THEIR", "THESE", "THOSE", "SINCE", "OTHER", "WHICH", "SHOULD", "UNDER", "UNTIL", "EVERY", "AMONG",
     # Headline words
     "NEW", "BIG", "TOP", "KEY", "SET", "HIT", "SAY", "SEE", "GET", "PUT",
     "RUN", "TRY", "END", "OWN", "ADD", "AID", "ASK", "BAD", "BAN", "BET",
@@ -55,11 +54,11 @@ TICKER_STOPWORDS = frozenset({
     "EST", "EDT", "PST", "PDT", "UTC", "GMT",
     # Misc false positives
     "FREE", "GTA", "VI", "SHRM", "ARR", "ET", "GO",
-    "CEO", "ANY", "FEE", "MAP", "OIL", "GAS", "TAX", "ERA",
+    "ANY", "FEE", "MAP", "OIL", "GAS", "TAX", "ERA",
     "BREAK", "CHINA", "JAPAN", "INDIA", "KOREA", "TRUMP",
     "BIDEN", "WHITE", "BLACK", "NORTH", "SOUTH", "EAST", "WEST",
     # Agencies, alliances and blocs seen rendering as tradeable chips
-    "NATO", "CIA", "FBI", "NSA", "IOM", "WHO", "WTO", "OPEC", "IAEA", "ICC", "ICJ",
+    "NATO", "CIA", "FBI", "NSA", "IOM", "WTO", "OPEC", "IAEA", "ICC", "ICJ",
     "UNHCR", "UNSC", "NGO", "OECD", "BRICS", "ASEAN", "G7", "G20", "IDF", "IRGC",
     "EPA", "FAA", "FDA", "DOJ", "DOD", "DHS", "NHS", "RBI", "BOJ", "BOE", "PBOC",
 })

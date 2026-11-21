@@ -1,6 +1,6 @@
 # Notes
 
-What is known about FinScrape and how it runs. Open work lives in `task.md`; finished work
+What is known about FinScrape and how it runs. Open work lives in `plan.md`; finished work
 lives in git history.
 
 ## Where things stand
@@ -24,13 +24,27 @@ A fresh clone starts with `make demo` (`docs/DEMO.md` is the walkthrough).
   from Render (403 `request_forbidden`), so the API analyses only on click with OpenRouter
   free models (`FINSCRAPE_MODEL`, `FINSCRAPE_MODEL_FALLBACK`) and, when all fail, dispatches
   the `analyze` workflow, at most 20 times an hour.
+  On 23 Nov TokenHarbor began answering `403 free_models_disabled` to every ingest
+  model; `ai_client` now retries the same prompt on OpenRouter (`FINSCRAPE_OPENROUTER_MODEL`,
+  default `deepseek/deepseek-chat`), so ingest writes judged events instead of heuristic ones.
+  If every model fails, `analysis/fallback.py` still makes a structured call: 26 event rules set
+  direction, figures/scale set magnitude, and named companies or region/sector proxies supply
+  tickers. Unrecognised stories and events with no listed expression are dropped instead of
+  publishing a sentiment-only 0 OBSERVE. Heuristic events skip the sentiment-divergence clamp,
+  since the event rule already determined market direction.
   The LLM reads each page's main text (trafilatura, capped at 6,000 characters), not the
   feed summary or the GDELT slug title: on 3 Oct that took GDELT from ~60 characters to
   4,000-6,000 and world RSS from a median ~200 to ~2,600.
 - Sectors: a named S&P 500 company sets the sector; frozen Laya `laya-20261001-1041` labels
   stories that name none. Calls: INVEST at score +3, PULL_OUT at -3, OBSERVE at 0 to +2,
-  CAUTIOUS at -1 and -2. A score is capped at ±2 when the AI and the heuristic disagree on
-  direction, and the previous session's price move no longer feeds it.
+  CAUTIOUS at -1 and -2. The LLM's score is rescaled by magnitude/actionability/novelty
+  (`calibrate_signal_score`) so routine stories stop clustering on ±3. A score is capped at ±2
+  when the AI and the heuristic disagree on direction, and the previous session's price move no
+  longer feeds it.
+- Freshness: world RSS is ordered newest-first inside each section before the cycle cap, so the
+  budget buys today's news. A blocked feed falls back to Google News' site-scoped RSS for that
+  outlet (headline-only). USGS reads the one-day quake feed and ReliefWeb the newest 8 disasters,
+  which keeps natural disasters from outnumbering market/geopolitical news.
 - Scoring: every call is scored next-day raw and +2 / +4 trading days against SPY, and the
   landing page shows both. `docs/BACKFILL.md` holds the backfill, the weekly jobs and the
   studies behind these choices.
@@ -49,6 +63,22 @@ A fresh clone starts with `make demo` (`docs/DEMO.md` is the walkthrough).
   each run, so the one-shot ingest keeps state. A fixed watch list (topic-mapped tickers
   plus CL=F, NG=F) is priced every run so silent_divergence can fire; a story that names a
   ticker explains its move. Up to three signals per type survive a run.
+- Coverage: six geopolitical analysis feeds were added (Foreign Policy, The Diplomat,
+  Al-Monitor, International Crisis Group, Atlantic Council, ECFR) and the agriculture detour
+  was removed — 37 world feeds total. Production analyses only 6 world articles per cycle
+  (`WORLDFIN_WORKER_MAX_ARTICLES: "6"`), so `WorldRSSScraper.collect` round-robins sections
+  (security first, then energy, shipping, macro, general) before feeds; registry order no
+  longer decides which kinds of news are ever seen. Feeds inside a section rotate by UTC day.
+- Geopolitical lens: `/api/events` rows carry `topics` (conflict, energy, sanctions, shipping,
+  elections, monetary) and the SPA renders them as filter chips in the signal feed.
+  The `new_events` broadcast is annotated the same way, so live and reloaded rows agree.
+- Summaries: `/api/ai/analyze` now prompts with the stored reasoning, affected entities,
+  second-order effects and key metrics (bounded), instead of only the 12-word subject, and
+  forbids inventing facts not in that data. The cache key still changes with the model.
+- Live market: `/api/market/quotes` is the Tickers view's tape — indices, US 10Y, crude, gold,
+  bitcoin and EUR/USD from one batched 2-day/5-minute yfinance download, cached 60 s. The SPA
+  polls it every minute while the view is visible; clicking a tile opens that symbol's chart.
+  This is the "live stock market" ask, not farm livestock.
 - Source health reads STALE after 25 h (`WORLDFIN_SOURCE_STALE_MIN`, default 1500), to
   match the daily ingest; `scripts/check_prod.py` alerts sooner.
 - The council (`/api/ai/council`) is on in production and answered in about a minute on 12 Oct.

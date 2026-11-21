@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import logging
 
-from finscrape.scrapers import BaseScraper
 from finscrape.models import ScrapedArticle
+from finscrape.scrapers import BaseScraper
 
 logger = logging.getLogger(__name__)
 

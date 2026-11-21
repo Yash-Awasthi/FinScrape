@@ -2,7 +2,7 @@
 
 The current application is the FastAPI `server/`, ingestion `worker/`, and Vite
 `web/` dashboard.
-Current work is tracked in [task.md](../task.md).
+Current work is tracked in [plan.md](../plan.md).
 
 ## Requirements
 
@@ -72,19 +72,26 @@ rather than deleting them. `tests/conftest.py` also disables dotenv loading and
 Pydantic's `.env` file source. `WORLDFIN_REQUIRE_PG=1` makes missing PostgreSQL fail
 instead of silently skipping integration coverage.
 
-On this workstation, `task.md` reserves 8000, 5432, 6379, 3000, and 4173 for Nexus.
+On this workstation, `plan.md` Appendix D reserves 8000, 5432, 6379, 3000, and 4173 for Nexus.
 The recipe uses PostgreSQL port 55439 and browser preview port 4183.
 
 ### Without Make
 
 After the same environment preparation, use `uv run --no-sync --offline` before
-each command below. Lint and format paths are maintained as `NEW_DIRS` in the
-root Makefile, which CI now invokes directly:
+each command below. `ruff check .` covers the whole tree; the debt that predates that
+gate is frozen per file in `ruff-baseline.toml` (`make ruff-baseline` regenerates it), so
+new violations fail. pyright covers the whole tree too, with the same idea: the 58 errors
+that predate the wider scope are pinned in `pyright-baseline.json` (`make pyright-baseline`
+regenerates both that file and `docs/PYRIGHT-BASELINE.md`), so new type debt fails and
+type debt that shrinks is free. Formatting is still scoped to the Makefile's `NEW_DIRS`,
+because the vendored tree is not format-clean:
 
 ```text
-ruff check server worker finscrape/scrapers/world finscrape/ingestors finscrape/scenarios.py tests/server tests/test_world_phase2.py tests/test_worker_phase3.py tests/test_correlate_phase4.py tests/test_scenarios.py tests/test_no_multi_model.py tests/live_e2e.py
+ruff check .
+python -m scripts.ruff_baseline --check
 ruff format --check server worker finscrape/scrapers/world finscrape/ingestors finscrape/scenarios.py tests/server tests/test_world_phase2.py tests/test_worker_phase3.py tests/test_correlate_phase4.py tests/test_scenarios.py tests/test_no_multi_model.py tests/live_e2e.py
 pyright
+python -m scripts.pyright_baseline --check
 python -m tests.server.selfcheck
 pytest -q
 ```

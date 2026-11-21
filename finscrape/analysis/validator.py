@@ -141,7 +141,7 @@ def calculate_sentence_sentiment(text: str) -> tuple[str, float]:
 
         engine_score = SentimentAnalyzer.analyze_text(text).score  # -1..1
         combined = 0.5 * legacy_score + 2.0 * engine_score
-    except Exception:  # noqa: BLE001 — engine unavailable: legacy score only
+    except Exception:
         combined = legacy_score
 
     if combined >= 1.5:
@@ -479,7 +479,7 @@ def calculate_heuristic_score(text: str, event_type: str) -> tuple[str, float]:
         impact_score: float in [0, 1]
     """
     # Sentence-level sentiment with negation
-    sentiment, raw_score = calculate_sentence_sentiment(text)
+    sentiment, _raw_score = calculate_sentence_sentiment(text)
 
     # Impact calculation (logistic weighting) — enhanced with magnitude extraction
     base_impact = EVENT_BASE_IMPACT.get(event_type, 0.3)
@@ -521,6 +521,66 @@ def check_divergence(ai_sentiment: str, heuristic_sentiment: str) -> bool:
     if ai_sentiment == "mixed":
         return False
     return ai_sentiment != heuristic_sentiment
+
+
+# How far the model may push a score given how big the story is. The score is a
+# market signal, so a low-magnitude or untradeable item cannot be a ±4/±5.
+_MAGNITUDE_CAP = {"low": 2, "medium": 3, "high": 5}
+
+
+def calibrate_signal_score(
+    score: float,
+    magnitude: str,
+    actionability: str,
+    novelty: str,
+) -> int:
+    """Keep the model's direction, but stop the "everything is ±3" collapse.
+
+    The LLM sees a single integer and clusters on the middle of the scale. The
+    magnitude/actionability/novelty it already returns describe the same story, so
+    this rescales the score to agree with them:
+
+    - low magnitude → at most ±2, medium → ±3, high → ±5
+    - a rehash is not new information → at most ±2
+    - high actionability or breaking news lifts a ≥3 score by one step
+    - a high-magnitude, high-actionability, breaking story reaches ±4/±5
+    - a strong score with low actionability is capped at ±4: big, but not tradeable
+
+    Sign is never changed, and 0 stays 0 (no call).
+    """
+    try:
+        base = int(round(float(score)))
+    except (TypeError, ValueError):
+        return 0
+    base = max(-5, min(5, base))
+    if base == 0:
+        return 0
+
+    mag = magnitude if magnitude in _MAGNITUDE_CAP else "medium"
+    act = actionability if actionability in ("low", "medium", "high") else "medium"
+    nov = (
+        novelty
+        if novelty in ("breaking", "standard", "follow_up", "rehash")
+        else "standard"
+    )
+
+    sign = 1 if base > 0 else -1
+    strength = abs(base)
+    cap = _MAGNITUDE_CAP[mag]
+    if nov == "rehash":
+        cap = min(cap, 2)
+    if strength >= 3 and nov != "rehash" and (act == "high" or nov == "breaking"):
+        cap = min(5, cap + 1)
+    if act == "low" and strength > 4:
+        cap = min(cap, 4)
+    strength = min(strength, cap)
+
+    if strength <= 2 and mag == "high" and act == "high" and nov != "rehash":
+        strength = 3
+    if strength >= 3 and mag == "high" and act == "high" and nov == "breaking":
+        strength = min(5, strength + 1)
+
+    return sign * max(1, strength)
 
 
 # ---------------------------------------------------------------------------
@@ -608,7 +668,8 @@ def grounded_tickers(
             name = core
         ticker = e.get("ticker")
         if (
-            len(name) >= 3
+            isinstance(ticker, str)
+            and len(name) >= 3
             and re.search(rf"\b{re.escape(name.lower())}\b", text_lower)
             and _ticker_is(ticker, name)
         ):

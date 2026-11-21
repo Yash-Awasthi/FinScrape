@@ -4,12 +4,12 @@ Functions related to files and URLs
 
 from urllib.parse import urlparse
 
+from msgspec import Struct, ValidationError, convert, structs
 from patchright.async_api import Route as async_Route
-from msgspec import Struct, structs, convert, ValidationError
 from patchright.sync_api import Route
 
+from finscrape.engine.scrapling.core._types import Callable, Dict, Optional, Set, Tuple
 from finscrape.engine.scrapling.core.utils import log
-from finscrape.engine.scrapling.core._types import Dict, Set, Tuple, Optional, Callable
 from finscrape.engine.scrapling.engines.constants import EXTRA_RESOURCES
 
 

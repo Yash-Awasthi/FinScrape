@@ -123,6 +123,38 @@ describe("feed source filter", () => {
   });
 });
 
+describe("feed topic lens", () => {
+  const tagged = [
+    { ...EVENTS[0], topics: ["energy"] },
+    { ...EVENTS[1], topics: ["conflict", "shipping"] },
+    { ...EVENTS[2], topics: ["livestock"] },
+  ];
+
+  it("filters to geopolitical drivers and clears on a second click", async () => {
+    const panel = new SignalFeedPanel(() => {});
+    panel.update(tagged);
+    await painted();
+
+    const chip = panel.body.querySelector<HTMLElement>('[data-topic="livestock"]');
+    expect(chip).not.toBeNull();
+    chip!.click();
+    await painted();
+    expect(panel.body.querySelectorAll("table.feed tbody tr")).toHaveLength(1);
+    expect(panel.body.textContent).toContain("third story");
+
+    panel.body.querySelector<HTMLElement>('[data-topic="livestock"]')!.click();
+    await painted();
+    expect(panel.body.querySelectorAll("table.feed tbody tr")).toHaveLength(3);
+  });
+
+  it("renders no topic chips when rows carry no tags", async () => {
+    const panel = new SignalFeedPanel(() => {});
+    panel.update(EVENTS);
+    await painted();
+    expect(panel.body.querySelector("[data-topic]")).toBeNull();
+  });
+});
+
 describe("row click", () => {
   it("selects the whole row, including the headline link", async () => {
     const picked: number[] = [];

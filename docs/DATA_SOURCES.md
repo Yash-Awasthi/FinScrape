@@ -14,7 +14,7 @@ reimplement** algorithms (clustering, correlation: `server/correlate.py`). fin-s
 
 Seed registry (`finscrape/scrapers/world/feeds.py`). `tier` ∈ wire/gov/intel/mainstream/market;
 `risk` = propaganda risk used for trust weighting. Public RSS endpoints; classification is ours.
-The table is a representative subset of the 32 registered feeds; `/api/feeds` lists them all.
+The table is a representative subset of the 37 registered feeds; `/api/feeds` lists them all.
 
 | key | source | tier | risk | endpoint |
 |---|---|---|---|---|
@@ -36,6 +36,12 @@ The table is a representative subset of the 32 registered feeds; `/api/feeds` li
 | economist_finance | The Economist — Finance & Economics | market | low | www.economist.com/finance-and-economics/rss.xml |
 | ft_world | Financial Times World | market | low | www.ft.com/world?format=rss |
 | marketwatch_top | MarketWatch Top Stories | market | low | feeds.content.dowjones.io/public/rss/mw_topstories |
+| foreign_policy | Foreign Policy | intel | low | foreignpolicy.com/feed/ |
+| the_diplomat | The Diplomat | intel | low | thediplomat.com/feed/ |
+| al_monitor | Al-Monitor | intel | low | www.al-monitor.com/rss |
+| crisis_group | International Crisis Group | intel | low | www.crisisgroup.org/rss |
+| atlantic_council | Atlantic Council | intel | low | www.atlanticcouncil.org/feed/ |
+| ecfr | European Council on Foreign Relations | intel | low | www.ecfr.eu/rss |
 | ap_gnews | Associated Press (via Google News) | wire | low | news.google.com/rss/search?q=when:24h+source:%22Associated+Press%22&hl |
 | reuters_world_gnews | Reuters (world, via Google News) | wire | low | news.google.com/rss/search?q=when:24h+source:reuters+world&hl=en-US&gl |
 
@@ -49,9 +55,9 @@ against fixtures). All no-auth.
 
 | ingestor | role | endpoint | notes |
 |---|---|---|---|
-| `usgs_quakes` | earthquakes (event) | earthquake.usgs.gov/.../summary/4.5_week.geojson | carries exact lat/lon; M4.5+ filter |
-| `gdelt` | global news (event) | data.gdeltproject.org/gdeltv2/lastupdate.txt | the 15-minute events export (not the rate-limited DOC API); titles from URL slugs, kept only when the entity map ties them to a sector |
-| `reliefweb` | disasters (event) | api.reliefweb.int/v2/disasters | live since 30 Sep 2026 with an approved `RELIEFWEB_APPNAME`; only disasters under 2 hours old pass the freshness gate |
+| `usgs_quakes` | earthquakes (event) | earthquake.usgs.gov/.../summary/4.5_day.geojson | carries exact lat/lon; M4.5+ filter, capped at 8 per cycle so quakes stay a minority source |
+| `gdelt` | global news (event) | data.gdeltproject.org/gdeltv2/lastupdate.txt | the 15-minute events export (not the rate-limited DOC API); titles from URL slugs, kept only when the entity map ties them to a sector; if the listed export is not downloadable yet, walks back up to 2 hours |
+| `reliefweb` | disasters (event) | api.reliefweb.int/v2/disasters | live since 30 Sep 2026 with an approved `RELIEFWEB_APPNAME`; newest 8 per cycle, so disasters inform rather than dominate the feed |
 | `coingecko` | crypto movers | api.coingecko.com/api/v3/coins/markets | **not registered**: crypto was dropped from the event mix; the class stays for reuse |
 | `opensky` | live flights (data layer) | opensky-network.org/api/states/all | NOT an event source; `parse_states` only |
 

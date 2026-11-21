@@ -4,25 +4,28 @@ Functions related to custom types or type checking
 
 from functools import lru_cache
 
-from finscrape.engine.scrapling.core.utils import log
 from finscrape.engine.scrapling.core._types import (
+    TYPE_CHECKING,
     Any,
+    AsyncGenerator,
+    Callable,
     Dict,
-    cast,
     List,
+    Optional,
+    Sequence,
     Tuple,
     Union,
-    Optional,
-    Callable,
-    Sequence,
-    TYPE_CHECKING,
-    AsyncGenerator,
+    cast,
 )
 from finscrape.engine.scrapling.core.custom_types import MappingProxyType
+from finscrape.engine.scrapling.core.utils import log
 from finscrape.engine.scrapling.parser import Selector, SQLiteStorageSystem
 
 if TYPE_CHECKING:
-    pass  # spiders module not vendored
+    # Only ever named in annotations: `Response.follow` raises instead of building one,
+    # because the spiders module is not vendored.
+    from finscrape.engine.scrapling.core.shell import Request
+
 
 
 class Response(Selector):
@@ -77,8 +80,8 @@ class Response(Selector):
             raise TypeError(f"Response meta should be dictionary but got {type(meta).__name__} instead!")
 
         self.meta: Dict[str, Any] = meta or {}
-        self.request: Optional["Request"] = None  # Will be set by crawler
-        self.captured_xhr: List["Response"] = []
+        self.request: Optional[Request] = None  # Will be set by crawler
+        self.captured_xhr: List[Response] = []
 
     @property
     def body(self) -> bytes:
@@ -89,7 +92,7 @@ class Response(Selector):
         self,
         url: str,
         sid: str = "",
-        callback: Callable[["Response"], AsyncGenerator[Union[Dict[str, Any], "Request", None], None]] | None = None,
+        callback: Callable[[Response], AsyncGenerator[Union[Dict[str, Any], Request, None], None]] | None = None,
         priority: int | None = None,
         dont_filter: bool = False,
         meta: dict[str, Any] | None = None,
@@ -112,35 +115,8 @@ class Response(Selector):
         :param kwargs: Additional Request arguments
         :return: Request object ready to be yielded
         """
-        raise NotImplementedError("Response.follow() requires the spiders module, which is not vendored")
-
-        if not self.request or not isinstance(self.request, Request):
-            raise TypeError("This response has no request set yet.")
-
-        # Merge original session kwargs with new kwargs (new takes precedence)
-        session_kwargs = {**self.request._session_kwargs, **kwargs}
-
-        if referer_flow:
-            # For requests
-            headers = session_kwargs.get("headers", {})
-            headers["referer"] = self.url
-            session_kwargs["headers"] = headers
-
-            # For browsers
-            extra_headers = session_kwargs.get("extra_headers", {})
-            extra_headers["referer"] = self.url
-            session_kwargs["extra_headers"] = extra_headers
-
-            session_kwargs["google_search"] = False
-
-        return Request(
-            url=self.urljoin(url),
-            sid=sid or self.request.sid,
-            callback=callback or self.request.callback,
-            priority=priority if priority is not None else self.request.priority,
-            dont_filter=dont_filter,
-            meta={**(self.meta or {}), **(meta or {})},
-            **session_kwargs,
+        raise NotImplementedError(
+            "Response.follow() requires the spiders module, which is not vendored"
         )
 
     def __str__(self) -> str:
@@ -176,19 +152,18 @@ class BaseFetcher:
         log.warning(
             f"This logic is deprecated now, and have no effect; It will be removed with v0.3. Use `{self.__class__.__name__}.configure({args_str}{kwargs_str})` instead before fetching"
         )
-        pass
 
     @classmethod
     def display_config(cls):
-        return dict(
-            huge_tree=cls.huge_tree,
-            keep_comments=cls.keep_comments,
-            keep_cdata=cls.keep_cdata,
-            adaptive=cls.adaptive,
-            storage=cls.storage,
-            storage_args=cls.storage_args,
-            adaptive_domain=cls.adaptive_domain,
-        )
+        return {
+            "huge_tree": cls.huge_tree,
+            "keep_comments": cls.keep_comments,
+            "keep_cdata": cls.keep_cdata,
+            "adaptive": cls.adaptive,
+            "storage": cls.storage,
+            "storage_args": cls.storage_args,
+            "adaptive_domain": cls.adaptive_domain,
+        }
 
     @classmethod
     def configure(cls, **kwargs):
@@ -214,15 +189,15 @@ class BaseFetcher:
     def _generate_parser_arguments(cls) -> Dict:
         # Selector class parameters
         # I won't validate Selector's class parameters here again, I will leave it to be validated later
-        parser_arguments = dict(
-            huge_tree=cls.huge_tree,
-            keep_comments=cls.keep_comments,
-            keep_cdata=cls.keep_cdata,
-            adaptive=cls.adaptive,
-            storage=cls.storage,
-            storage_args=cls.storage_args,
-            adaptive_domain=cls.adaptive_domain,
-        )
+        parser_arguments = {
+            "huge_tree": cls.huge_tree,
+            "keep_comments": cls.keep_comments,
+            "keep_cdata": cls.keep_cdata,
+            "adaptive": cls.adaptive,
+            "storage": cls.storage,
+            "storage_args": cls.storage_args,
+            "adaptive_domain": cls.adaptive_domain,
+        }
 
         return parser_arguments
 

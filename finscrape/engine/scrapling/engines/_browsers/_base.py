@@ -1,52 +1,70 @@
-from time import time
+from asyncio import Lock
+from asyncio import sleep as asyncio_sleep
+from contextlib import asynccontextmanager, contextmanager
 from re import search as re_search
-from asyncio import sleep as asyncio_sleep, Lock
-from contextlib import contextmanager, asynccontextmanager
+from time import time
 
-from patchright.sync_api._generated import Page
-from patchright.sync_api import (
-    Frame,
-    BrowserContext,
-    Response as SyncPlaywrightResponse,
-)
-from patchright.async_api._generated import Page as AsyncPage
+from patchright._impl._errors import Error as PlaywrightError
 from patchright.async_api import (
-    Frame as AsyncFrame,
-    Response as AsyncPlaywrightResponse,
     BrowserContext as AsyncBrowserContext,
 )
-from patchright._impl._errors import Error as PlaywrightError
-
-from finscrape.engine.scrapling.parser import Selector
-from finscrape.engine.scrapling.engines._browsers._page import PageInfo, PagePool
-from finscrape.engine.scrapling.engines._browsers._validators import validate, PlaywrightConfig, StealthConfig
-from finscrape.engine.scrapling.engines._browsers._config_tools import __default_chrome_useragent__, __default_useragent__
-from finscrape.engine.scrapling.engines.toolbelt.navigation import (
-    construct_proxy_dict,
-    create_intercept_handler,
-    create_async_intercept_handler,
+from patchright.async_api import (
+    Frame as AsyncFrame,
 )
+from patchright.async_api import (
+    Response as AsyncPlaywrightResponse,
+)
+from patchright.async_api._generated import Page as AsyncPage
+from patchright.sync_api import (
+    BrowserContext,
+    Frame,
+)
+from patchright.sync_api import (
+    Response as SyncPlaywrightResponse,
+)
+from patchright.sync_api._generated import Page
+
 from finscrape.engine.scrapling.core._types import (
-    Any,
-    Awaitable,
-    Dict,
-    List,
-    Set,
-    Optional,
-    Callable,
     TYPE_CHECKING,
+    Any,
+    AsyncGenerator,
+    Awaitable,
+    Callable,
+    Dict,
+    Generator,
+    List,
+    Optional,
+    ProxyType,
+    Set,
+    Tuple,
     cast,
     overload,
-    Tuple,
-    ProxyType,
-    Generator,
-    AsyncGenerator,
 )
-from finscrape.engine.scrapling.engines.constants import STEALTH_ARGS, HARMFUL_ARGS, DEFAULT_ARGS
+from finscrape.engine.scrapling.engines._browsers._config_tools import (
+    __default_chrome_useragent__,
+    __default_useragent__,
+)
+from finscrape.engine.scrapling.engines._browsers._page import PageInfo, PagePool
+from finscrape.engine.scrapling.engines._browsers._validators import (
+    PlaywrightConfig,
+    StealthConfig,
+    validate,
+)
+from finscrape.engine.scrapling.engines.constants import (
+    DEFAULT_ARGS,
+    HARMFUL_ARGS,
+    STEALTH_ARGS,
+)
+from finscrape.engine.scrapling.engines.toolbelt.navigation import (
+    construct_proxy_dict,
+    create_async_intercept_handler,
+    create_intercept_handler,
+)
+from finscrape.engine.scrapling.parser import Selector
 
 
 class SyncSession:
-    _config: "PlaywrightConfig | StealthConfig"
+    _config: PlaywrightConfig | StealthConfig
     _context_options: Dict[str, Any]
     if TYPE_CHECKING:
         _build_context_with_proxy: Callable[..., Dict[str, Any]]
@@ -101,7 +119,7 @@ class SyncSession:
 
     def _get_page(
         self,
-        timeout: int | float,
+        timeout: float,
         extra_headers: Optional[Dict[str, str]],
         disable_resources: bool,
         blocked_domains: Optional[Set[str]] = None,
@@ -182,12 +200,12 @@ class SyncSession:
     @contextmanager
     def _page_generator(
         self,
-        timeout: int | float,
+        timeout: float,
         extra_headers: Optional[Dict[str, str]],
         disable_resources: bool,
         proxy: Optional[ProxyType] = None,
         blocked_domains: Optional[Set[str]] = None,
-    ) -> Generator["PageInfo[Page]", None, None]:
+    ) -> Generator[PageInfo[Page], None, None]:
         """Acquire a page - either from persistent context or fresh context with proxy."""
         if proxy:
             # Rotation mode: create fresh context with the provided proxy
@@ -216,7 +234,7 @@ class SyncSession:
 
 
 class AsyncSession:
-    _config: "PlaywrightConfig | StealthConfig"
+    _config: PlaywrightConfig | StealthConfig
     _context_options: Dict[str, Any]
     if TYPE_CHECKING:
         _build_context_with_proxy: Callable[..., Dict[str, Any]]
@@ -274,7 +292,7 @@ class AsyncSession:
 
     async def _get_page(
         self,
-        timeout: int | float,
+        timeout: float,
         extra_headers: Optional[Dict[str, str]],
         disable_resources: bool,
         blocked_domains: Optional[Set[str]] = None,
@@ -369,12 +387,12 @@ class AsyncSession:
     @asynccontextmanager
     async def _page_generator(
         self,
-        timeout: int | float,
+        timeout: float,
         extra_headers: Optional[Dict[str, str]],
         disable_resources: bool,
         proxy: Optional[ProxyType] = None,
         blocked_domains: Optional[Set[str]] = None,
-    ) -> AsyncGenerator["PageInfo[AsyncPage]", None]:
+    ) -> AsyncGenerator[PageInfo[AsyncPage], None]:
         """Acquire a page - either from persistent context or fresh context with proxy."""
         if proxy:
             # Rotation mode: create fresh context with the provided proxy
@@ -405,7 +423,7 @@ class AsyncSession:
 
 
 class BaseSessionMixin:
-    _config: "PlaywrightConfig | StealthConfig"
+    _config: PlaywrightConfig | StealthConfig
 
     @overload
     def __validate_routine__(self, params: Dict, model: type[StealthConfig]) -> StealthConfig: ...
@@ -414,7 +432,7 @@ class BaseSessionMixin:
     def __validate_routine__(self, params: Dict, model: type[PlaywrightConfig]) -> PlaywrightConfig: ...
 
     def __validate_routine__(
-        self, params: Dict, model: type[PlaywrightConfig] | type[StealthConfig]
+        self, params: Dict, model: type[PlaywrightConfig | StealthConfig]
     ) -> PlaywrightConfig | StealthConfig:
         # Dark color scheme bypasses the 'prefersLightColor' check in creepjs
         self._context_options: Dict[str, Any] = {"color_scheme": "dark", "device_scale_factor": 2}
@@ -427,7 +445,7 @@ class BaseSessionMixin:
 
         config = validate(params, model=model)
         self._headers_keys = (
-            {header.lower() for header in config.extra_headers.keys()} if config.extra_headers else set()
+            {header.lower() for header in config.extra_headers} if config.extra_headers else set()
         )
 
         return config
@@ -521,7 +539,7 @@ class StealthySessionMixin(BaseSessionMixin):
 
     def __generate_stealth_options(self) -> None:
         config = cast(StealthConfig, self._config)
-        flags: Tuple[str, ...] = tuple()
+        flags: Tuple[str, ...] = ()
         if not config.cdp_url:
             flags = tuple(DEFAULT_ARGS) + tuple(STEALTH_ARGS)
 
@@ -539,7 +557,7 @@ class StealthySessionMixin(BaseSessionMixin):
             if config.hide_canvas:
                 flags += ("--fingerprinting-canvas-image-data-noise",)
 
-        super(StealthySessionMixin, self).__generate_options__(flags)
+        super().__generate_options__(flags)
 
     @staticmethod
     def _detect_cloudflare(page_content: str) -> str | None:

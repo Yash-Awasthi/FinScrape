@@ -1,10 +1,13 @@
 """Event ingestion + deterministic dedup — the root-cause fix for the live ~4× dup
 and count-mismatch bugs.
 
-The dedup linchpin is a deterministic `content_hash` = normalized subject + canonical
-first-article URL + UTC day, enforced by a UNIQUE constraint with ON CONFLICT DO
-NOTHING. That kills duplication atomically at the DB layer (no read-then-write race,
-no fragile `instr(articles, url)` substring match).
+The dedup linchpin is a deterministic `content_hash` = normalized subject + UTC day,
+enforced by a UNIQUE constraint with ON CONFLICT DO UPDATE. That kills duplication
+atomically at the DB layer (no read-then-write race, no fragile `instr(articles, url)`
+substring match) and lets one story that reaches us three times — world RSS, GDELT and
+a blocked-feed fallback — land as ONE row whose `sources` and `articles` are the union
+of all three. The URL is deliberately out of the key: the same story carries a
+different URL per source, so keying on it is what produced one row per source.
 
 The pure helpers below carry all the load-bearing logic, so they're unit-tested
 without a database; only `ingest_events` needs a live pool.
@@ -44,6 +47,8 @@ _INSERT_COLS = [
     "affected_entities",
     "second_order_effects",
     "key_metrics",
+    "analysis_source",
+    "model_name",
     "lat",
     "lon",
     "timestamp",
@@ -88,12 +93,16 @@ def parse_timestamp(ts: str | None) -> datetime:
     return datetime.now(UTC)
 
 
-def content_hash(subject: str, articles: list[str] | None, ts: datetime) -> str:
-    """Deterministic dedup key: norm(subject) + canon(first URL) + UTC day.
-    Same story, same day → same hash → UNIQUE rejects the duplicate."""
-    first = canonical_url(articles[0]) if articles else ""
+def content_hash(subject: str, ts: datetime) -> str:
+    """Deterministic dedup key: norm(subject) + UTC day.
+
+    The URL is intentionally not part of the key (plan M1.5): RSS, GDELT and a
+    blocked-feed fallback each hand us the same story with a different link, so a
+    URL-keyed hash inserted it three times. Same story, same UTC day → same hash →
+    one row, and `ingest_events` merges the sources/articles onto it.
+    """
     day = ts.astimezone(UTC).date().isoformat()
-    key = f"{normalize_subject(subject)}|{first}|{day}"
+    key = f"{normalize_subject(subject)}|{day}"
     return hashlib.sha256(key.encode("utf-8")).hexdigest()
 
 
@@ -110,7 +119,7 @@ def _row_values(ev: dict) -> list:
     are passed as Python objects; the pool's jsonb codec encodes them."""
     ts = parse_timestamp(ev.get("timestamp"))
     return [
-        content_hash(ev["subject"], ev.get("articles"), ts),
+        content_hash(ev["subject"], ts),
         ev["subject"],
         ev.get("event_type", "other"),
         ev.get("impact_direction", "neutral"),
@@ -130,6 +139,8 @@ def _row_values(ev: dict) -> list:
         ev.get("affected_entities", []),
         ev.get("second_order_effects", []),
         ev.get("key_metrics", {}),
+        ev.get("analysis_source", "unknown"),
+        ev.get("model_name", ""),
         ev.get("lat"),
         ev.get("lon"),
         ts,
@@ -139,32 +150,50 @@ def _row_values(ev: dict) -> list:
 def _insert_sql() -> str:
     placeholders = ", ".join(f"${i}" for i in range(1, len(_INSERT_COLS) + 1))
     cols = ", ".join(_INSERT_COLS)
+    # A repeat story merges instead of vanishing: the row keeps its first verdict and
+    # analysis, and the sources/articles become the union of every report (plan M1.5).
+    # `xmax = 0` is true only for a real insert, so the caller can still count both.
     return (
         f"INSERT INTO events ({cols}) VALUES ({placeholders}) "
-        "ON CONFLICT (content_hash) DO NOTHING RETURNING id"
+        "ON CONFLICT (content_hash) DO UPDATE SET "
+        "sources = (SELECT COALESCE(jsonb_agg(DISTINCT s ORDER BY s), '[]'::jsonb) "
+        "           FROM jsonb_array_elements_text(events.sources || EXCLUDED.sources) AS s), "
+        "articles = (SELECT COALESCE(jsonb_agg(DISTINCT a ORDER BY a), '[]'::jsonb) "
+        "            FROM jsonb_array_elements_text(events.articles || EXCLUDED.articles) AS a) "
+        "RETURNING id, (xmax = 0) AS inserted"
     )
 
 
 async def ingest_events(pool: asyncpg.Pool, events: list[dict]) -> dict:
-    """Insert events, deduping atomically by content_hash. Returns
-    {inserted, duplicates, inserted_ids, inserted_rows}. A duplicate (ON CONFLICT)
-    yields no RETURNING row, so we count it without a separate read."""
+    """Insert events, deduping atomically by content_hash and merging repeat sources.
+
+    Returns {inserted, merged, duplicates, inserted_ids, inserted_rows}. A repeat
+    (ON CONFLICT) keeps the original row and its id, widens sources/articles, and is
+    counted in both `merged` (rows that gained something) and `duplicates` (the
+    metric the worker already records), so old dashboards keep working.
+    """
     sql = _insert_sql()
     inserted_ids: list[int] = []
     inserted_rows: list[dict] = []
     duplicates = 0
+    merged = 0
 
     async with pool.acquire() as conn:
         for ev in events:
             row = await conn.fetchrow(sql, *_row_values(ev))
-            if row is None:
+            if row is None:  # unreachable while the conflict clause returns a row
                 duplicates += 1
+                continue
+            if not row["inserted"]:
+                duplicates += 1
+                merged += 1
                 continue
             inserted_ids.append(row["id"])
             inserted_rows.append({**ev, "id": row["id"]})
 
     return {
         "inserted": len(inserted_ids),
+        "merged": merged,
         "duplicates": duplicates,
         "inserted_ids": inserted_ids,
         "inserted_rows": inserted_rows,

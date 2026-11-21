@@ -4,19 +4,22 @@ Tests for the scraper retry/backoff logic in BaseScraper.fetch_page().
 Verifies that transient errors trigger retries, non-retryable errors don't,
 and that all retries exhausted returns None gracefully.
 """
-import sys
-import types
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import MagicMock, patch
 
 # ── Install the shared fake engine ────────────────────────────────────────
-from tests._scraper_mocks import install_fake_engine, get_fake_fetcher, get_fake_response, reset_fetcher
+from tests._scraper_mocks import (
+    get_fake_fetcher,
+    get_fake_response,
+    install_fake_engine,
+    reset_fetcher,
+)
 
 install_fake_engine()
 _FakeFetcher = get_fake_fetcher()
 _fake_response = get_fake_response()
 
-from finscrape.scrapers import BaseScraper, reset_breakers  # noqa: E402
-from finscrape.scrapers.yahoo import YahooScraper  # noqa: E402
+from finscrape.scrapers import reset_breakers
+from finscrape.scrapers.yahoo import YahooScraper
 
 # Global reset at import time
 reset_fetcher()
@@ -25,7 +28,6 @@ reset_breakers()
 
 class _FakeError(Exception):
     """Custom exception that embeds a status code in the message."""
-    pass
 
 
 def _make_scraper():

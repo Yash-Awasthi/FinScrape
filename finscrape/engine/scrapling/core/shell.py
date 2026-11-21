@@ -1,46 +1,51 @@
-# -*- coding: utf-8 -*-
-from sys import stderr
+# pyright: reportMissingImports=false
+# This vendored module imports optional extras (mcp / IPython / markdownify / the
+# playwright fallback) that are deliberately not core dependencies. They are absent in a
+# plain dev checkout, which is a legitimate state, not a type error.
+from argparse import SUPPRESS, ArgumentParser
+from collections import namedtuple
 from copy import deepcopy
 from functools import wraps
-from re import sub as re_sub, compile as re_compile
-from collections import namedtuple
-from shlex import split as shlex_split
-from inspect import signature, Parameter
-from tempfile import mkstemp as make_temp_file
-from argparse import ArgumentParser, SUPPRESS
-from webbrowser import open as open_in_browser
-from urllib.parse import urlparse, urlunparse, parse_qsl
+from inspect import Parameter, signature
 from logging import (
+    CRITICAL,
     DEBUG,
+    ERROR,
+    FATAL,
     INFO,
     WARNING,
-    ERROR,
-    CRITICAL,
-    FATAL,
-    getLogger,
     getLevelName,
+    getLogger,
 )
+from re import compile as re_compile
+from re import sub as re_sub
+from shlex import split as shlex_split
+from sys import stderr
+from tempfile import mkstemp as make_temp_file
+from urllib.parse import parse_qsl, urlparse, urlunparse
+from webbrowser import open as open_in_browser
 
 from lxml.etree import XPath
-from orjson import loads as json_loads, JSONDecodeError
-
-from ._shell_signatures import Signatures_map
+from orjson import JSONDecodeError
+from orjson import loads as json_loads
 from scrapling import __version__
-from finscrape.engine.scrapling.core.utils import log
-from finscrape.engine.scrapling.parser import Selector, Selectors
-from finscrape.engine.scrapling.core.custom_types import TextHandler
-from finscrape.engine.scrapling.engines.toolbelt.custom import Response
-from finscrape.engine.scrapling.core.utils._shell import _ParseHeaders, _CookieParser
+
 from finscrape.engine.scrapling.core._types import (
+    Any,
     Callable,
     Dict,
-    Any,
-    cast,
-    Optional,
     Generator,
+    Optional,
+    cast,
     extraction_types,
 )
+from finscrape.engine.scrapling.core.custom_types import TextHandler
+from finscrape.engine.scrapling.core.utils import log
+from finscrape.engine.scrapling.core.utils._shell import _CookieParser, _ParseHeaders
+from finscrape.engine.scrapling.engines.toolbelt.custom import Response
+from finscrape.engine.scrapling.parser import Selector, Selectors
 
+from ._shell_signatures import Signatures_map
 
 _known_logging_levels = {
     "debug": DEBUG,
@@ -204,7 +209,7 @@ class CurlParser:
                 log.error(f"Could not parse cookie string from -b '{parsed_args.cookie}': {e}")
 
         # --- Process Data Payload ---
-        params = dict()
+        params = {}
         data_payload: Optional[str | bytes | Dict] = None
         json_payload: Optional[Any] = None
 
@@ -375,7 +380,7 @@ def show_page_in_browser(page: Selector):  # pragma: no cover
             f.write(page.html_content)
 
         open_in_browser(f"file://{fname}")
-    except IOError as e:
+    except OSError as e:
         log.error(f"Failed to write temporary file for viewing: {e}")
     except Exception as e:
         log.error(f"An unexpected error occurred while viewing the page: {e}")
@@ -385,17 +390,36 @@ class CustomShell:
     """A custom IPython shell with minimal dependencies"""
 
     def __init__(self, code, log_level="debug"):
-        from IPython.terminal.embed import InteractiveShellEmbed as __InteractiveShellEmbed
+        from IPython.terminal.embed import (
+            InteractiveShellEmbed as __InteractiveShellEmbed,
+        )
+
+        from finscrape.engine.scrapling.fetchers import (
+            AsyncDynamicSession as __AsyncDynamicSession,
+        )
+        from finscrape.engine.scrapling.fetchers import (
+            AsyncFetcher as __AsyncFetcher,
+        )
+        from finscrape.engine.scrapling.fetchers import (
+            AsyncStealthySession as __AsyncStealthySession,
+        )
+        from finscrape.engine.scrapling.fetchers import (
+            DynamicFetcher as __DynamicFetcher,
+        )
+        from finscrape.engine.scrapling.fetchers import (
+            DynamicSession as __DynamicSession,
+        )
         from finscrape.engine.scrapling.fetchers import (
             Fetcher as __Fetcher,
-            AsyncFetcher as __AsyncFetcher,
+        )
+        from finscrape.engine.scrapling.fetchers import (
             FetcherSession as __FetcherSession,
-            DynamicFetcher as __DynamicFetcher,
-            DynamicSession as __DynamicSession,
-            AsyncDynamicSession as __AsyncDynamicSession,
+        )
+        from finscrape.engine.scrapling.fetchers import (
             StealthyFetcher as __StealthyFetcher,
+        )
+        from finscrape.engine.scrapling.fetchers import (
             StealthySession as __StealthySession,
-            AsyncStealthySession as __AsyncStealthySession,
         )
 
         self.__InteractiveShellEmbed = __InteractiveShellEmbed
@@ -495,9 +519,9 @@ Type 'exit' or press Ctrl+D to exit.
 
         if get_signature:
             # Explicitly preserve and unpack signature for IPython introspection and autocompletion
-            setattr(wrapper, "__signature__", _unpack_signature(func, signature_name))
+            wrapper.__signature__ = _unpack_signature(func, signature_name)  # pyright: ignore[reportAttributeAccessIssue]
         else:
-            setattr(wrapper, "__signature__", signature(func))
+            wrapper.__signature__ = signature(func)  # pyright: ignore[reportAttributeAccessIssue]
 
         return wrapper
 

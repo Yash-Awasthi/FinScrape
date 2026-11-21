@@ -11,8 +11,9 @@ So you don't have to learn a new selectors/api method like what bs4 done with so
 from functools import lru_cache
 
 from cssselect import HTMLTranslator as OriginalHTMLTranslator
-from cssselect.xpath import ExpressionError, XPathExpr as OriginalXPathExpr
 from cssselect.parser import Element, FunctionalPseudoElement, PseudoElement
+from cssselect.xpath import ExpressionError
+from cssselect.xpath import XPathExpr as OriginalXPathExpr
 
 from finscrape.engine.scrapling.core._types import Any, Protocol, Self
 

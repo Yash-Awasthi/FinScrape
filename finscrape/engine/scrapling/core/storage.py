@@ -1,14 +1,14 @@
-from hashlib import sha256
-from threading import RLock
-from functools import lru_cache
 from abc import ABC, abstractmethod
+from functools import lru_cache
+from hashlib import sha256
 from sqlite3 import connect as db_connect
+from threading import RLock
 
-from orjson import dumps, loads
 from lxml.html import HtmlElement
+from orjson import dumps, loads
 
+from finscrape.engine.scrapling.core._types import Any, Dict, Optional, cast
 from finscrape.engine.scrapling.core.utils import _StorageTools, log
-from finscrape.engine.scrapling.core._types import Dict, Optional, Any, cast
 
 
 class StorageSystemMixin(ABC):  # pragma: no cover
@@ -26,7 +26,7 @@ class StorageSystemMixin(ABC):  # pragma: no cover
             return default_value
 
         try:
-            from tld import get_tld, Result
+            from tld import Result, get_tld
 
             # Fixing the inaccurate return type hint in `get_tld`
             extracted: Result | None = cast(

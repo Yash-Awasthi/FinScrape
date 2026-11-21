@@ -1,7 +1,10 @@
 from finscrape.engine.scrapling.core._types import Unpack
+from finscrape.engine.scrapling.engines._browsers._controllers import (
+    AsyncDynamicSession,
+    DynamicSession,
+)
 from finscrape.engine.scrapling.engines._browsers._types import PlaywrightSession
 from finscrape.engine.scrapling.engines.toolbelt.custom import BaseFetcher, Response
-from finscrape.engine.scrapling.engines._browsers._controllers import DynamicSession, AsyncDynamicSession
 
 
 class DynamicFetcher(BaseFetcher):

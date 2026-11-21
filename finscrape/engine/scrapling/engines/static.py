@@ -1,33 +1,42 @@
 from abc import ABC
+from asyncio import sleep as asyncio_sleep
 from random import choice
 from time import sleep as time_sleep
-from asyncio import sleep as asyncio_sleep
 
-from curl_cffi.curl import CurlError
 from curl_cffi import CurlHttpVersion
+from curl_cffi.curl import CurlError
 from curl_cffi.requests import (
-    BrowserTypeLiteral,
-    Session as CurlSession,
     AsyncSession as AsyncCurlSession,
 )
-
-from finscrape.engine.scrapling.core.utils import log
-from finscrape.engine.scrapling.core._types import (
-    Any,
-    Dict,
-    Tuple,
-    Unpack,
-    Optional,
-    Awaitable,
-    SUPPORTED_HTTP_METHODS,
-    FollowRedirects,
+from curl_cffi.requests import (
+    BrowserTypeLiteral,
+)
+from curl_cffi.requests import (
+    Session as CurlSession,
 )
 
-from .toolbelt.custom import Response
+from finscrape.engine.scrapling.core._types import (
+    SUPPORTED_HTTP_METHODS,
+    Any,
+    Awaitable,
+    Dict,
+    FollowRedirects,
+    Optional,
+    Tuple,
+    Unpack,
+)
+from finscrape.engine.scrapling.core.utils import log
+
+from ._browsers._types import (
+    DataRequestParams,
+    GetRequestParams,
+    ImpersonateType,
+    RequestsSession,
+)
 from .toolbelt.convertor import ResponseFactory
+from .toolbelt.custom import Response
+from .toolbelt.fingerprints import __default_useragent__, generate_headers
 from .toolbelt.proxy_rotation import ProxyRotator, is_proxy_error
-from ._browsers._types import RequestsSession, GetRequestParams, DataRequestParams, ImpersonateType
-from .toolbelt.fingerprints import generate_headers, __default_useragent__
 
 _NO_SESSION: Any = object()
 
@@ -49,23 +58,23 @@ def _select_random_browser(impersonate: ImpersonateType) -> Optional[BrowserType
 class _ConfigurationLogic(ABC):
     # Core Logic Handler (Internal Engine)
     __slots__ = (
+        "_default_cert",
+        "_default_follow_redirects",
+        "_default_headers",
+        "_default_http3",
         "_default_impersonate",
-        "_stealth",
+        "_default_max_redirects",
         "_default_proxies",
         "_default_proxy",
         "_default_proxy_auth",
-        "_default_timeout",
-        "_default_headers",
         "_default_retries",
         "_default_retry_delay",
-        "_default_follow_redirects",
-        "_default_max_redirects",
+        "_default_timeout",
         "_default_verify",
-        "_default_cert",
-        "_default_http3",
-        "selector_config",
         "_is_alive",
         "_proxy_rotator",
+        "_stealth",
+        "selector_config",
     )
 
     def __init__(self, **kwargs: Unpack[RequestsSession]):
@@ -632,24 +641,24 @@ class FetcherSession:
     """
 
     __slots__ = (
+        "_client",
+        "_default_cert",
+        "_default_follow_redirects",
+        "_default_headers",
+        "_default_http3",
         "_default_impersonate",
-        "_stealth",
+        "_default_max_redirects",
         "_default_proxies",
         "_default_proxy",
         "_default_proxy_auth",
-        "_default_timeout",
-        "_default_headers",
         "_default_retries",
         "_default_retry_delay",
-        "_default_follow_redirects",
-        "_default_max_redirects",
+        "_default_timeout",
         "_default_verify",
-        "_default_cert",
-        "_default_http3",
-        "selector_config",
-        "_client",
         "_is_alive",
         "_proxy_rotator",
+        "_stealth",
+        "selector_config",
     )
 
     def __init__(

@@ -1,27 +1,30 @@
+from dataclasses import dataclass, fields
+from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
-from functools import lru_cache
 from urllib.parse import urlparse
-from dataclasses import dataclass, fields
 
-from msgspec import Struct, Meta, convert, ValidationError
+from msgspec import Meta, Struct, ValidationError, convert
 
 from finscrape.engine.scrapling.core._types import (
     Any,
+    Callable,
     Dict,
     List,
-    Set,
-    Tuple,
     Optional,
-    Callable,
-    Sequence,
-    overload,
-    SetCookieParam,
     SelectorWaitStates,
+    Sequence,
+    Set,
+    SetCookieParam,
+    Tuple,
+    overload,
 )
-from finscrape.engine.scrapling.engines.toolbelt.proxy_rotation import ProxyRotator
+from finscrape.engine.scrapling.engines._browsers._types import (
+    PlaywrightFetchParams,
+    StealthFetchParams,
+)
 from finscrape.engine.scrapling.engines.toolbelt.navigation import construct_proxy_dict
-from finscrape.engine.scrapling.engines._browsers._types import PlaywrightFetchParams, StealthFetchParams
+from finscrape.engine.scrapling.engines.toolbelt.proxy_rotation import ProxyRotator
 
 
 # Custom validators for msgspec
@@ -133,7 +136,9 @@ class PlaywrightConfig(Struct, kw_only=True, frozen=False, weakref=True):
                 raise ValueError(validation_msg)
 
         if self.block_ads:
-            from finscrape.engine.scrapling.engines.toolbelt.ad_domains import AD_DOMAINS
+            from finscrape.engine.scrapling.engines.toolbelt.ad_domains import (
+                AD_DOMAINS,
+            )
 
             if self.blocked_domains:
                 self.blocked_domains = self.blocked_domains | set(AD_DOMAINS)
@@ -149,7 +154,7 @@ class StealthConfig(PlaywrightConfig, kw_only=True, frozen=False, weakref=True):
 
     def __post_init__(self):
         """Custom validation after msgspec validation"""
-        super(StealthConfig, self).__post_init__()
+        super().__post_init__()
         # Cloudflare timeout adjustment
         if self.solve_cloudflare and self.timeout < 60_000:
             self.timeout = 60_000
@@ -178,7 +183,7 @@ class _fetch_params:
 def validate_fetch(
     method_kwargs: Dict | PlaywrightFetchParams | StealthFetchParams,
     session: Any,
-    model: type[PlaywrightConfig] | type[StealthConfig],
+    model: type[PlaywrightConfig | StealthConfig],
 ) -> _fetch_params:  # pragma: no cover
     result: Dict[str, Any] = {}
     overrides: Dict[str, Any] = {}
@@ -198,7 +203,7 @@ def validate_fetch(
         # Extract ONLY the fields that were actually overridden (not all fields)
         # This prevents validated defaults from overwriting session config values
         validated_dict = {
-            field: getattr(validated_config, field) for field in overrides.keys() if hasattr(validated_config, field)
+            field: getattr(validated_config, field) for field in overrides if hasattr(validated_config, field)
         }
 
         # Preserve solve_cloudflare if the user explicitly provided it, even if the model doesn't have it
@@ -243,7 +248,7 @@ def validate(params: Dict, model: type[StealthConfig]) -> StealthConfig: ...
 def validate(params: Dict, model: type[PlaywrightConfig]) -> PlaywrightConfig: ...
 
 
-def validate(params: Dict, model: type[PlaywrightConfig] | type[StealthConfig]) -> PlaywrightConfig | StealthConfig:
+def validate(params: Dict, model: type[PlaywrightConfig | StealthConfig]) -> PlaywrightConfig | StealthConfig:
     try:
         # Filter out params with the default values (no need to validate them) to speed up validation
         filtered = _filter_defaults(params, model.__name__)

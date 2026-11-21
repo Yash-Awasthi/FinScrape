@@ -54,5 +54,6 @@ __all__ = [
     "ReviewerAgent",
     "RiskAgent",
     "ScoutAgent",
+    "TechnicalAgent",
     "judge_debate",
 ]

@@ -56,6 +56,14 @@ IMPORTANT CALIBRATION GUIDELINES:
   earnings blowouts of 20%+, systemic regulatory changes, bankruptcies of major firms).
 - Most routine earnings beats/misses are +1 to +3 / -1 to -3.
 - Analyst price target changes are typically +1/-1 unless the change is dramatic.
+- DO NOT default to +3/-3. Use the whole scale and make signal_score agree with
+  magnitude and actionability:
+    low magnitude, or low actionability -> ±1 or ±2
+    medium magnitude and medium actionability -> ±2 or ±3
+    high magnitude with high actionability -> ±3 to ±5
+  A rehash is never more than ±2. Reserve ±4/±5 for a high-magnitude,
+  high-actionability, breaking story (chokepoint closure, war escalation,
+  systemic bankruptcy, major M&A).
 - confidence of 0.9+ requires primary source data (SEC filing, company PR, verified numbers).
 - confidence below 0.5 if the article is speculative, uses "sources say", or lacks concrete data.
 """
@@ -116,7 +124,7 @@ SCHEMA (follow exactly):
 {{
   "relevant": boolean,
   "event_type": "one from list above",
-  "subject": "max 12 words",
+  "subject": "max 12 words — name the actor and the action, include the place when it changes who is exposed; no prices, tickers, or hedging",
   "impact_direction": "positive/negative/mixed/neutral",
   "tickers": ["array of directly affected ticker symbols"],
   "affected_entities": [

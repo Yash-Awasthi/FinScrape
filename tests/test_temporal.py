@@ -4,13 +4,12 @@ from datetime import datetime
 
 import pytest
 
+from finscrape.analysis.nlp import FinancialNLP, NLPResult
 from finscrape.analysis.temporal import (
     TemporalExtractor,
     TemporalReference,
     get_next_catalyst_date,
 )
-from finscrape.analysis.nlp import FinancialNLP, NLPResult
-
 
 # Fixed reference date for deterministic tests
 REF = datetime(2026, 4, 14)

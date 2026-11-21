@@ -1,0 +1,37 @@
+name: Dependabot auto-merge
+
+# plan M2.4: a patch bump merged by a human every Monday is a ritual, not a control. This
+# turns the control into the CI gate: patches auto-merge once every required check is
+# green, and nothing else does. Minor and major bumps stay open for review, because
+# yfinance/pandas/spacy minors change a data shape on the extraction path.
+
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Read the update metadata
+        id: meta
+        uses: dependabot/fetch-metadata@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # A major or minor bump is a decision; leave it for a human.
+      - name: Auto-merge a patch update when CI is green
+        if: steps.meta.outputs.update-type == 'version-update:semver-patch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --auto --squash --delete-branch "$PR_URL"
+
+      - name: Explain why this one needs a human
+        if: steps.meta.outputs.update-type != 'version-update:semver-patch'
+        env:
+          UPDATE_TYPE: ${{ steps.meta.outputs.update-type }}
+        run: echo "::notice::$UPDATE_TYPE update — left open for review on purpose"

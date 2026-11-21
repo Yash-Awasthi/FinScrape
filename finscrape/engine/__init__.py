@@ -18,19 +18,19 @@ fetcher was used.
 """
 
 from finscrape.engine.scrapling import (
-    Fetcher,
     AsyncFetcher,
-    StealthyFetcher,
     DynamicFetcher,
+    Fetcher,
     Selector,
+    StealthyFetcher,
 )
 from finscrape.engine.scrapling.engines.toolbelt.custom import Response
 
 __all__ = [
-    "Fetcher",
     "AsyncFetcher",
-    "StealthyFetcher",
     "DynamicFetcher",
-    "Selector",
+    "Fetcher",
     "Response",
+    "Selector",
+    "StealthyFetcher",
 ]

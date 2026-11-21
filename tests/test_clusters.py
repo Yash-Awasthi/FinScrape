@@ -6,7 +6,7 @@ story from several sources into one storyline, respect a cosine threshold and a
 are unavailable, as on the Render API.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from finscrape.analysis import clusters
 
@@ -31,7 +31,7 @@ def _ev(
 
 
 def _ts(offset_hours: int = 0) -> str:
-    base = datetime(2026, 9, 7, 12, 0, 0, tzinfo=timezone.utc)
+    base = datetime(2026, 9, 7, 12, 0, 0, tzinfo=UTC)
     return (base + timedelta(hours=offset_hours)).isoformat()
 
 

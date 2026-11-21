@@ -401,17 +401,44 @@ def detect_prediction_leads_news(
 # --- topic extraction + orchestrator ---
 
 
+def topics_for_text(text: str) -> list[str]:
+    """Topic names whose keywords `text` names, in registry order.
+
+    One event carries no velocity/source counts, so it needs a plain tag rather
+    than the aggregate `extract_topics` builds for the detectors.
+    """
+    return [
+        topic
+        for topic, keywords in TOPIC_KEYWORDS.items()
+        if topic not in SUPPRESSED
+        and any(contains_topic_keyword(text, k) for k in keywords)
+    ]
+
+
+def annotate_topics(events: Iterable[dict]) -> list[dict]:
+    """Copy each event row with a `topics` list for the feed's geopolitical lens.
+
+    Reads the subject and the top of the analysis reasoning: the body is not
+    stored on the row, and the reasoning is where the analysis names the driver
+    ("Iranian export halt …") that the 12-word subject may compress away.
+    """
+    out: list[dict] = []
+    for event in events:
+        row = dict(event)
+        text = f"{row.get('subject') or ''} {str(row.get('reasoning') or '')[:400]}"
+        row["topics"] = topics_for_text(text)
+        out.append(row)
+    return out
+
+
 def extract_topics(items: list[NewsItem]) -> dict[str, dict]:
     """topic -> {velocity: mention count, sources: set, score: velocity + #sources}."""
     topics: dict[str, dict] = {}
     for item in items:
-        for topic, keywords in TOPIC_KEYWORDS.items():
-            if topic in SUPPRESSED:
-                continue
-            if any(contains_topic_keyword(item.title, k) for k in keywords):
-                t = topics.setdefault(topic, {"velocity": 0, "sources": set()})
-                t["velocity"] += 1
-                t["sources"].add(item.source)
+        for topic in topics_for_text(item.title):
+            t = topics.setdefault(topic, {"velocity": 0, "sources": set()})
+            t["velocity"] += 1
+            t["sources"].add(item.source)
     for t in topics.values():
         t["score"] = t["velocity"] + len(t["sources"])
     return topics

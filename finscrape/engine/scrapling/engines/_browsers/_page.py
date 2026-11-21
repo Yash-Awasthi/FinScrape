@@ -1,10 +1,18 @@
-from threading import RLock
 from dataclasses import dataclass
+from threading import RLock
 
-from patchright.sync_api._generated import Page as SyncPage
 from patchright.async_api._generated import Page as AsyncPage
+from patchright.sync_api._generated import Page as SyncPage
 
-from finscrape.engine.scrapling.core._types import Optional, List, Literal, overload, TypeVar, Generic, cast
+from finscrape.engine.scrapling.core._types import (
+    Generic,
+    List,
+    Literal,
+    Optional,
+    TypeVar,
+    cast,
+    overload,
+)
 
 PageState = Literal["ready", "busy", "error"]  # States that a page can be in
 PageType = TypeVar("PageType", SyncPage, AsyncPage)
@@ -41,7 +49,7 @@ class PageInfo(Generic[PageType]):
 class PagePool:
     """Manages a pool of browser pages/tabs with state tracking"""
 
-    __slots__ = ("max_pages", "pages", "_lock")
+    __slots__ = ("_lock", "max_pages", "pages")
 
     def __init__(self, max_pages: int = 5):
         self.max_pages = max_pages

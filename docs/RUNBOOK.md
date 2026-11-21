@@ -60,6 +60,22 @@ docker compose -f docker-compose.yml -f docker-compose.obs.yml up -d
 - `GET /api/health` — per-source freshness (OK/STALE/WARN/EMPTY).
 - `GET /metrics` — Prometheus exposition (API). Worker metrics on `worker:9100/metrics`.
 
+### Cold start and keep-warm
+
+The free tier sleeps, and DEPLOY.md quotes a 30–50 s cold start. Measure it instead of
+remembering it:
+
+```bash
+python -m scripts.warm --spawn                   # the process cost, locally (~3 s)
+python -m scripts.warm --base-url "$API_URL"     # the hosted cost, including the sleep
+```
+
+The hosted number exits non-zero once it is worse than the 50 s DEPLOY.md quotes, because a
+number that drifts is a number that stopped being true. `.github/workflows/warm.yml` is the
+keep-warm step: the cron Worker dispatches it just before the ingest cycle, which is already
+a scheduled wake-up. Set the `API_URL` repository variable for it; nothing in the repo
+carries a `schedule:` block, so the Worker stays the only scheduler.
+
 ### Scaling notes
 - Rate limiting + tiered cache are **in-process** (single API replica by design). Going
   multi-replica needs Redis — `WORLDFIN_REDIS_URL` is the documented seam (`server/cache.py`,
@@ -111,6 +127,28 @@ gunzip -c backup-YYYY-MM-DD.sql.gz | docker compose exec -T postgres psql -U wor
 Migrations are idempotent and run on startup (`WORLDFIN_RUN_MIGRATIONS=true`); a restored dump
 already has the schema, so this is a no-op safety net. Events are content-deduped on ingest, so
 re-running the worker after a restore won't double-insert.
+
+### Restore drill (run it, time it, write it down)
+
+A backup nobody has restored is a hypothesis. The drill dumps (or decrypts) an archive,
+verifies `pg_restore --list` can read it, restores into `<source>_drill`, compares row
+counts against the source, runs the API's own `/api/stats` aggregate against the restored
+copy, then drops the scratch database:
+
+```bash
+# against the test database (default; it refuses a DSN that is not *_test)
+WORLDFIN_TEST_DATABASE_URL=postgresql://.../_test make restore-drill
+
+# from the newest encrypted production backup
+BACKUP_KEY=... python -m scripts.restore_drill --dump backups/worldfin-<stamp>.dump.enc --record
+```
+
+`--record` appends one row below. The number to watch is not the seconds — it is the row
+counts: a restore that comes back one table short is the failure that matters.
+
+| run (UTC) | source | archive | restore time | app check | rows verified |
+|---|---|---|---|---|---|
+| 2026-11-24T18:06:59Z | worldfin_test | 90 objects | 1.8 s | /api/stats total_events=1 | events 1, accuracy_outcomes 0, correlations 3, source_health 2 |
 
 ### Upgrading Postgres (16 to 18)
 Postgres 16 stored its data in the `pgdata` volume; 18 uses `pgdata18`, because a data

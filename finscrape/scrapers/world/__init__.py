@@ -11,14 +11,36 @@ from __future__ import annotations
 import calendar
 import datetime as _dt
 import logging
+import time
 from concurrent.futures import ThreadPoolExecutor
 from itertools import zip_longest
+from urllib.parse import urlparse
+
+import feedparser
 
 from finscrape.models import ScrapedArticle
+from finscrape.scrapers.fastfetch import fast_get
 from finscrape.scrapers.rss import RSSScraperSource
-from finscrape.scrapers.world.feeds import FEEDS, feed_urls, tier_of
+from finscrape.scrapers.world.feeds import (
+    FEEDS,
+    SECTION_ORDER,
+    feed_urls,
+    section_of,
+    tier_of,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def google_news_mirror(feed_url: str) -> str:
+    """A site-scoped Google News RSS query for a feed's host, or "" for odd URLs."""
+    host = urlparse(feed_url).netloc.removeprefix("www.")
+    if not host or "." not in host:
+        return ""
+    return (
+        "https://news.google.com/rss/search?"
+        f"q=site%3A{host}&hl=en-US&gl=US&ceid=US%3Aen"
+    )
 
 
 class WorldRSSScraper(RSSScraperSource):
@@ -31,33 +53,98 @@ class WorldRSSScraper(RSSScraperSource):
         self.feed_health: dict[str, tuple[int, str | None]] = {}
 
     def collect(self) -> list[ScrapedArticle]:
-        """Every fresh entry from every feed, un-enriched, interleaved across feeds.
+        """Every fresh entry from every feed, interleaved across feeds and sections.
 
-        Interleaving matters because callers cap the list: concatenated, the first
-        feeds to answer filled the whole budget and the rest never contributed.
+        The caller caps this list to a handful of articles per cycle, so ordering is
+        the whole ballgame. Two round-robins make the cap fair: sections first (so
+        security, energy, shipping, macro and general news all reach the budget),
+        then feeds inside each section (so one outlet cannot own its section's
+        slot). Feed order inside a section advances with the UTC day.
         """
-        with ThreadPoolExecutor(max_workers=min(8, len(self.feeds))) as pool:
+        keys = list(self.feeds)
+        with ThreadPoolExecutor(max_workers=min(8, len(keys))) as pool:
             results = list(
                 pool.map(lambda kv: self._fetch_one(*kv), self.feeds.items())
             )
         per_feed = [articles for articles, _ in results]
         self.feed_health = {
             key: (len(articles), error)
-            for key, (articles, error) in zip(self.feeds, results)
+            for (key, _), (articles, error) in zip(self.feeds.items(), results)
         }
+
+        by_section: dict[str, list[list[ScrapedArticle]]] = {}
+        for key, articles in zip(keys, per_feed):
+            by_section.setdefault(section_of(key), []).append(articles)
+
+        day = int(time.time() // 86400)
+        streams: list[list[ScrapedArticle]] = []
+        for section in SECTION_ORDER:
+            feeds = by_section.get(section)
+            if not feeds:
+                continue
+            if len(feeds) > 1:
+                offset = day % len(feeds)
+                feeds = feeds[offset:] + feeds[:offset]
+            articles = [a for row in zip_longest(*feeds) for a in row if a is not None]
+            # Freshest first inside the section, so the six-article budget spends
+            # its slots on today's news rather than a slow feed's oldest entry.
+            # Section order is untouched: security still reaches the budget first.
+            articles.sort(key=lambda a: (a.age_hours is None, a.age_hours or 0.0))
+            streams.append(articles)
+
         out: list[ScrapedArticle] = []
         seen: set[str] = set()
-        for row in zip_longest(*per_feed):
+        for row in zip_longest(*streams):
             for article in row:
                 if article and article.url not in seen:
                     seen.add(article.url)
                     out.append(article)
         return out
 
+    def _fetch_feed_or_raise(
+        self, feed_name: str, feed_url: str
+    ) -> list[ScrapedArticle]:
+        """Primary RSS, then Google News' site index when the outlet blocks us.
+
+        curl_cffi keeps most feeds open, but a few publishers still answer 403 to a
+        datacentre IP or retire an RSS path without notice. Google News' RSS search
+        serves the same recent headlines for that site, so a blocked feed degrades
+        to headline-only analysis instead of disappearing for a whole cycle.
+        """
+        first_error: Exception | None = None
+        try:
+            articles = super()._fetch_feed_or_raise(feed_name, feed_url)
+            if articles:
+                return articles
+        except Exception as exc:
+            first_error = exc
+            logger.warning("[world/%s] primary feed failed: %s", feed_name, exc)
+
+        mirror = google_news_mirror(feed_url)
+        raw = fast_get(mirror, timeout=20) if mirror else None
+        entries = feedparser.parse(raw).entries[: self.max_articles] if raw else []
+        mirrored = []
+        for entry in entries:
+            article = self._process_entry(entry, feed_name)
+            if article:
+                mirrored.append(article)
+        if mirrored:
+            logger.info(
+                "[world/%s] served %d entries from the Google mirror",
+                feed_name,
+                len(mirrored),
+            )
+            return mirrored
+
+        # Both paths failed: let the caller record a WARN instead of a silent 0.
+        if first_error:
+            raise first_error
+        return []
+
     def _fetch_one(self, key: str, url: str) -> tuple[list[ScrapedArticle], str | None]:
         try:
             return self._fetch_feed_or_raise(key, url), None
-        except Exception as exc:  # noqa: BLE001 - one broken feed must not sink the others
+        except Exception as exc:
             logger.warning("[%s/%s] %s", self.name, key, exc)
             return [], str(exc)
 

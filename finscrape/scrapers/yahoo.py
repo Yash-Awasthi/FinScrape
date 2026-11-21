@@ -7,8 +7,8 @@ from __future__ import annotations
 import logging
 import re
 
-from finscrape.scrapers import BaseScraper
 from finscrape.models import ScrapedArticle
+from finscrape.scrapers import BaseScraper
 
 logger = logging.getLogger(__name__)
 

@@ -1,14 +1,14 @@
 """CEIP engine: reliability tables + calibrated predictions (offline)."""
 
+import time
+
 from finscrape.prediction import (
+    _bucket,
     brier_summary,
     predict,
     reliability_tables,
     structural_probability,
-    _bucket,
 )
-
-import time
 
 
 def outcomes():

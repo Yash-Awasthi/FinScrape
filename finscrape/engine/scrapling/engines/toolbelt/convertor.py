@@ -1,3 +1,7 @@
+# pyright: reportMissingImports=false
+# This vendored module imports optional extras (mcp / IPython / markdownify / the
+# playwright fallback) that are deliberately not core dependencies. They are absent in a
+# plain dev checkout, which is a legitimate state, not a type error.
 from functools import lru_cache
 from re import compile as re_compile
 
@@ -5,16 +9,21 @@ from curl_cffi.requests import Response as CurlResponse
 
 try:
     from patchright._impl._errors import Error as PlaywrightError
-    from patchright.sync_api import Page as SyncPage, Response as SyncResponse
-    from patchright.async_api import Page as AsyncPage, Response as AsyncResponse
+    from patchright.async_api import Page as AsyncPage
+    from patchright.async_api import Response as AsyncResponse
+    from patchright.sync_api import Page as SyncPage
+    from patchright.sync_api import Response as SyncResponse
 except ImportError:
     from playwright._impl._errors import Error as PlaywrightError
-    from playwright.sync_api import Page as SyncPage, Response as SyncResponse
-    from playwright.async_api import Page as AsyncPage, Response as AsyncResponse
+    from playwright.async_api import Page as AsyncPage
+    from playwright.async_api import Response as AsyncResponse
+    from playwright.sync_api import Page as SyncPage
+    from playwright.sync_api import Response as SyncResponse
 
-from finscrape.engine.scrapling.core.utils import log
-from .custom import Response, StatusText
 from finscrape.engine.scrapling.core._types import Dict, List, Optional
+from finscrape.engine.scrapling.core.utils import log
+
+from .custom import Response, StatusText
 
 __CHARSET_RE__ = re_compile(r"charset=([\w-]+)")
 
@@ -67,7 +76,7 @@ class ResponseFactory:
                                 )
                                 if current_response
                                 else "utf-8",
-                                "cookies": tuple(),
+                                "cookies": (),
                                 "headers": current_response.all_headers() if current_response else {},
                                 "request_headers": current_request.all_headers(),
                                 **parser_arguments,
@@ -183,7 +192,7 @@ class ResponseFactory:
                                 )
                                 if current_response
                                 else "utf-8",
-                                "cookies": tuple(),
+                                "cookies": (),
                                 "headers": await current_response.all_headers() if current_response else {},
                                 "request_headers": await current_request.all_headers(),
                                 **parser_arguments,

@@ -1,7 +1,7 @@
 # FinScrape — Architecture
 
 How the system is wired as of 30 Sep 2026. [DEPLOY.md](DEPLOY.md) covers production
-hosting and [RUNBOOK.md](RUNBOOK.md) operations; current work is in [task.md](../task.md).
+hosting and [RUNBOOK.md](RUNBOOK.md) operations; current work is in [plan.md](../plan.md).
 
 ## Production
 
@@ -11,8 +11,12 @@ Cloudflare cron Worker (ops/ingest-cron)
    │                     (restores Laya from the LAYA_RELEASE release, then check_prod.py)
    └─ every 10 min ─▶ GET /health on the API (keeps Render awake)
 
-worker ──writes──▶ Supabase Postgres 17 ◀──reads/writes── FastAPI on Render ◀── SPA on Cloudflare Pages
+worker ──writes──▶ Supabase Postgres ◀──reads/writes── FastAPI on Render ◀── SPA on Cloudflare Pages
 ```
+
+Postgres is **18** everywhere this repo controls: `docker-compose.yml` (`postgres:18-alpine`),
+CI (`image: postgres:18`) and the local service. Supabase's own server version is set by
+Supabase and is not pinned here — `needs-verify` against the project dashboard.
 
 The same code runs locally under docker compose (Postgres 18, api, worker, web behind
 nginx) or natively (`python -m server.main`, `python -m worker.main`).
@@ -60,7 +64,12 @@ LLM is any OpenAI-compatible endpoint, shared with finscrape via env (`OPENAI_BA
    (`visited_urls`) →
    blocking scrape/LLM/market work runs in `asyncio.to_thread` → `FinScrapePipeline._analyze_article`
    produces a `FinEvent` → `server/geocode.py:geocode_event` attaches lat/lon (explicit ingestor
-   coords win, else country centroid) → `server/ingest.py:ingest_events` upserts.
+   coords win, else country centroid) → `server/ingest.py:ingest_events` upserts. The world RSS
+   producer returns more fresh entries than the cycle's budget
+   (`WORLDFIN_WORKER_MAX_ARTICLES`, 6 in production), so `WorldRSSScraper.collect` round-robins
+   analysis sections before feeds — security, energy, shipping, macro, general — and
+   rotates feeds inside a section by UTC day. Otherwise registry order would decide which kinds
+   of news were ever analysed.
 2. **Dedup** is atomic: a deterministic `content_hash` (normalized subject + canonical first-article
    URL + UTC day) with a UNIQUE constraint + `ON CONFLICT DO NOTHING`. Same-story coverage from
    another outlet is merged into the existing event's `articles` and `sources`
@@ -68,14 +77,21 @@ LLM is any OpenAI-compatible endpoint, shared with finscrape via env (`OPENAI_BA
 3. **Correlation** (`worker/runner.py:run_correlations` → `server/correlate.py`): recent events are
    clustered (Jaccard) and run through the detectors; emitted signals persist to `correlations`.
 4. **API reads** (`server/queries.py`): the feed, stats, and dates all use the **same** half-open
-   `[day, day+1)` UTC bounds (`server/ingest.py:day_bounds`).
+   `[day, day+1)` UTC bounds (`server/ingest.py:day_bounds`). Each `/api/events` row is annotated
+   with `topics` (`server/correlate.py:annotate_topics`) — conflict, energy, sanctions, shipping,
+   elections, monetary — so the SPA can filter the feed by geopolitical driver. The same
+   annotation is applied to the `new_events` broadcast, so a live row and a reloaded row match.
 5. **Scenarios** (`/api/scenarios` → `finscrape/scenarios.py`): recent analysed events are
-   clustered, scored with the calibrated probability `/api/predict` gives each member, and
+   clustered, scored with the past hit rate `/api/predict` gives each member, and
    turned into one instruction with sector and ticker tilt; the cache key includes the window's
    article total, so coverage merges refresh it.
-6. **Backtest**: each call is scored on the window after its event (close before the event's day
+6. **Market tape**: `/api/market/quotes` returns index, rate, commodity, crypto and FX
+   quotes (price, previous session close, % change, 30-bar sparkline). `finscrape.market_data`
+   fetches one batched 2-day/5-minute yfinance download and caches each symbol for 60 s, so
+   the Tickers view can poll it every minute without hammering Yahoo.
+7. **Backtest**: each call is scored on the window after its event (close before the event's day
    to the next trading close) and feeds `/api/accuracy` and `/api/reliability`.
-7. **Live updates**: `server/ws.py` broadcasts `init`/`new_events`/`ai_updated`/`pong`. API-side
+8. **Live updates**: `server/ws.py` broadcasts `init`/`new_events`/`ai_updated`/`pong`. API-side
    ingest broadcasts directly; worker→client broadcast needs Redis (`WORLDFIN_REDIS_URL`), which
    production does not run. The SPA closes that gap itself: while a tab is visible it polls the
    cheap `/api/stats` once a minute and reloads events and correlations only when `last_update`
@@ -104,11 +120,22 @@ LLM is any OpenAI-compatible endpoint, shared with finscrape via env (`OPENAI_BA
 ## Analysis pipeline (the finscrape brain)
 
 `finscrape/pipeline.py:FinScrapePipeline._analyze_article` is the fusion entry point (see the Reuse
-map above). Per article: scrape → freshness gate → `call_ai` (or council) → relevance gate → NLP
-enrich → ticker fusion → heuristic score → divergence check → confidence fuse. The
+map above). Per article: scrape → freshness gate → relevance gate → NLP enrich → one `call_ai`
+(council is opt-in, offline-only and refused in production — plan M1.7) → ticker fusion →
+heuristic validation → calibration →
+divergence check (skipped for the deterministic fallback) → confidence fuse. The
 subsections below describe the pieces that changed in the 2026-08-16 analysis-layer hardening pass
 and the deliberation/quant follow-on that landed the same day; see
-[`../task.md`](../task.md) for current work.
+[`../plan.md`](../plan.md) for current work.
+
+**The live rating is one model call, not a vote.** The verdict, score and confidence a user sees
+come from exactly one `call_ai` per article, post-processed by deterministic layers — Laya
+sector/direction, spaCy NLP, the entity/lede ticker maps and computed market facts. The agent
+council below is an **offline experiment**: eight calls per article plus an optional judge, its
+weighted arithmetic is not the published rating, `FinScrapePipeline(use_council=True)` raises under
+`WORLDFIN_ENV=production`, and `/api/ai/council` answers 404 there whatever
+`WORLDFIN_ENABLE_COUNCIL` says (`tests/test_one_llm_call.py`). The sections that follow document the
+council's behaviour for anyone running it by hand; none of it describes production's rating.
 
 **Sector.** `finscrape/analysis/laya.py:choose_sector` picks the sector: a confident Laya label
 (a small classifier fine-tuned nightly, `scripts/laya_train/`), then the LLM's (its "technology"
@@ -128,11 +155,27 @@ article backs them (`validator.grounded_tickers`): a text-derived source found t
 named a company that appears in the text and the curated map or the SEC title agrees that the
 ticker is that company's (so no "FZ" for flydubai or "MSFT" for OpenAI).
 
-**Score and verdict.** `finscrape/pipeline.py` clamps the AI's `signal_score` to `[-5, 5]`. The
-price move that already happened is not added: that would push the verdict toward a move the market
-has priced in. When the AI and the heuristic disagree on polarity (`divergence_flag`), the score is
-clamped to `[-2, 2]`, so the event is never INVEST or PULL_OUT. `Verdict.from_score` maps `≥3` to
-INVEST, `0..2` to OBSERVE, `-2..-1` to CAUTIOUS and `≤-3` to PULL_OUT.
+**Geopolitical analysis sources.** The registry separates wires (what happened) from analysis
+(the likely consequence): Foreign Policy, The Diplomat, Al-Monitor, International Crisis Group,
+Atlantic Council and ECFR sit in the `intel` tier, which the correlation engine weights above
+mainstream coverage. With a six-article production budget, `WorldRSSScraper.collect` round-robins
+sections with `security` first, so geopolitical analysis is not crowded out by central-bank press
+releases or general world news.
+
+**On-demand summary.** `GET /api/ai/analyze` (`server/ai.py`) asks the model for a 2–3 sentence
+summary, per-ticker impacts and a verdict reason. The prompt carries the stored analysis — reasoning
+chain, affected entities, second-order effects and key metrics, each length-bounded — not just the
+12-word subject, and instructs the model to use only those facts. That keeps the summary a
+compression of work the pipeline already did instead of a plausible-sounding restatement.
+
+**Score and verdict.** `finscrape/pipeline.py` runs the AI's `signal_score` through
+`calibrate_signal_score`, which ties the number to the magnitude/actionability/novelty the model
+also returned: low magnitude caps at ±2, medium at ±3, high at ±5, a rehash at ±2, and a
+high-magnitude + high-actionability breaking story may reach ±4/±5. This breaks the model's habit of
+answering ±3 for everything. When the AI and the heuristic disagree on polarity (`divergence_flag`),
+the score is clamped to `[-2, 2]`, so the event is never INVEST or PULL_OUT. `Verdict.from_score` maps
+`≥3` to INVEST, `0..2` to OBSERVE, `-2..-1` to CAUTIOUS and `≤-3` to PULL_OUT. The price move that
+already happened is not added: that would push the verdict toward a move the market has priced in.
 
 **Confidence fusion.** `finscrape/analysis/validator.py:fuse_confidence` is the single place all
 confidence adjustments combine, called from `finscrape/pipeline.py`. The two multiplicative steps
@@ -144,9 +187,25 @@ the multipliers already discounted the base confidence.
 **Heuristic impact score.** `finscrape/analysis/validator.py:calculate_heuristic_score` converts the
 event type's base impact to log-odds (`logit_base = log(base / (1 - base))`), adds magnitude-word and
 extracted-figure boosts, and runs the sum through a sigmoid. A zero boost returns the base impact
-unchanged — there is no double-counting.
+unchanged — there is no double-counting. It remains the sanity check on a real LLM call; it is not
+the fallback analyst.
 
-**Council crash handling.** `finscrape/agents/base.py:AgentVerdict` carries an `error` flag, set
+**Offline fallback.** When every LLM attempt fails and `FINSCRAPE_HEURISTIC_FALLBACK=true`,
+`finscrape/analysis/fallback.py:analyze_without_llm` builds a structured call from the same
+`NLPResult`: 26 event rules (conflict/ceasefire, sanctions/tariffs, supply disruption, rates and
+inflation, earnings/guidance, M&A, bankruptcy, regulatory action, cyber, disaster, investment,
+product, ratings, IPO, management, market move, defence aid). Event polarity sets the direction, so
+"prices rose" inside a conflict story does not flip it; figures, scale words and casualty counts set
+magnitude; uncertainty and mixed events lower confidence/actionability. Tickers come from named
+companies first, then lede region/sector proxies, then a small liquid-expression map for macro events
+(`FXI` for tariffs, `TLT` for rates, `ITA`/`GLD`/`XLE` for conflict). No event, or no listed
+expression, returns `None` rather than publishing a 0 OBSERVE. Output is tagged
+`key_metrics.analysis_source='heuristic'`; that tag skips the sentiment-divergence clamp, because the
+fallback already translated the event into market direction. The result is still enrichable on
+demand, and `tests/server/test_nlp_fallback.py` covers every rule, mixed events, uncertainty, proxy
+fallback, missing spaCy, and the pipeline path with the LLM forced down.
+
+**Council crash handling (offline mode only).** `finscrape/agents/base.py:AgentVerdict` carries an `error` flag, set
 whenever an agent raises or its response fails to parse. `finscrape/agents/council.py`'s
 `_build_consensus` computes every consensus number — score, agreement, confidence, dissent,
 risks/opportunities — only from verdicts with `error=False`; a council where every agent crashed
@@ -230,8 +289,27 @@ implemented in `finscrape/analysis/nlp.py` despite earlier documentation claimin
   flagging), `tests/test_lessons.py` (`get_lessons` read-back, its prompt wiring into the judge only).
 - DB-dependent paths are **skip-ready** integration tests (`tests/server/test_*integration.py`)
   that auto-skip without Postgres and run under `make up` / CI (postgres service).
-- `make lint` / `make fmt-check` / `make selfcheck` / `make test` — about 790 tests; CI sets
-  `WORLDFIN_REQUIRE_PG` so a missing database fails instead of skipping.
+- `make lint` / `make fmt-check` / `make selfcheck` / `make test` — CI sets
+  `WORLDFIN_REQUIRE_PG` so a missing database fails instead of skipping. Counts:
+
+<!-- facts:start -->
+| Fact | Measured |
+|---|---|
+| Python files (tracked) | 267 |
+| Test functions (`def test_`) | 916 |
+| pytest tests collected | 977 |
+| Vitest tests | 83 |
+| Playwright tests | 8 |
+| Web source files | 37 |
+| World RSS feeds in the registry | 37 |
+| Tickers the entity index and topic keywords share | 25 |
+| Ruff errors / files with errors | 156 / 59 |
+| Ruff-clean tracked files | 208 of 267 |
+| Configured models | deepseek-v4.1-flash:free, mimo-v2.6-flash:free |
+| `deepseek-v4.1-flash:free` | 77% valid JSON, 67.4% sector, 13 s (p90 32 s) p50 |
+| `mimo-v2.6-flash:free` | 96% valid JSON, 66.7% sector, 14 s (p90 21 s) p50 |
+<!-- facts:end -->
+
 - `make e2e-live` runs the built SPA against the real API on an empty `*_test` database, with
   credentials stripped and outbound network blocked (`tests/live_e2e.py`).
 

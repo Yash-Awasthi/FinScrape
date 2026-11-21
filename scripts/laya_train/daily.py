@@ -30,12 +30,12 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 sys.path.insert(0, str(ROOT))
 
-from dotenv import dotenv_values  # noqa: E402
+from dotenv import dotenv_values
 
-from finscrape.analysis import laya  # noqa: E402
-from finscrape.analysis.nlp import FinancialNLP  # noqa: E402
-from finscrape.analysis.sectors import TAXONOMY  # noqa: E402
-from finscrape.analysis.ticker_map import resolve_company_tickers  # noqa: E402
+from finscrape.analysis import laya
+from finscrape.analysis.nlp import FinancialNLP
+from finscrape.analysis.sectors import TAXONOMY
+from finscrape.analysis.ticker_map import resolve_company_tickers
 
 HOME = Path(os.environ.get("LAYA_FT_HOME", Path.home() / "laya-ft"))
 DATA, CURRENT, RUNS = HOME / "data", HOME / "current", HOME / "runs"
@@ -152,7 +152,7 @@ def claude_labels(headlines: list[str]) -> list[dict]:
             encoding="utf-8",
             timeout=600,
         )
-        match = re.search(r"\{.*\}", run.stdout, re.S)
+        match = re.search(r"\{.*\}", run.stdout, re.DOTALL)
         try:
             labels = json.loads(match.group(0)) if match else {}
         except json.JSONDecodeError:

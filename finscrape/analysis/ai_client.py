@@ -34,6 +34,11 @@ from finscrape.analysis.constants import (
     VALID_MAGNITUDES,
     VALID_NOVELTIES,
 )
+from finscrape.analysis.reply_schema import (
+    redacted_sample,
+    repair_prompt,
+    reply_errors,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +64,11 @@ CACHE_MAX_SIZE = int(os.getenv("FINSCRAPE_CACHE_MAX_SIZE", "500"))
 # ---------------------------------------------------------------------------
 # Response Cache
 # ---------------------------------------------------------------------------
+
+# Every reply the model produced, so a repair attempt can quote what it said. Thread-local
+# because the pipeline judges articles on a pool.
+_last_reply = threading.local()
+
 
 class _ResponseCache:
     """Thread-safe LRU + TTL cache for AI responses."""
@@ -164,34 +174,93 @@ def call_ai(prompt: str, system_prompt: str, model: str | None = None) -> dict |
 
 
 def _call_model(prompt: str, system_prompt: str, effective_model: str) -> dict | None:
-    base_url = os.getenv("OPENAI_BASE_URL", "")
-    openrouter_key = os.getenv("OPENROUTER_API_KEY", "")
-
     # Check cache first
     cached = _cache.get(prompt, system_prompt, effective_model)
     if cached is not None:
         logger.debug("Cache hit (hits=%d, rate=%.0f%%)", _cache.hits, _cache.stats["hit_rate"] * 100)
         return cached
 
-    if base_url and os.getenv("FINSCRAPE_WIRE_API", "chat").lower() == "responses":
-        raw = _call_with_retry(_call_responses_api, prompt, system_prompt, effective_model)
-    elif base_url:
-        raw = _call_with_retry(_call_openai_proxy, prompt, system_prompt, effective_model)
-    elif openrouter_key:
-        raw = _call_with_retry(_call_openrouter, prompt, system_prompt, effective_model)
-    else:
-        logger.error("No AI backend configured. Set OPENROUTER_API_KEY or OPENAI_BASE_URL.")
-        return None
+    _last_reply.text = ""
+    raw = _dispatch(prompt, system_prompt, effective_model)
+    source = "model"
 
-    if raw is None:
-        return None
+    # A reply that does not parse leaves no dict to repair, only the text it sent. Both
+    # failure shapes get the same treatment: one repair attempt with the problem quoted.
+    errors = reply_errors(raw) if raw is not None else []
+    if raw is None or errors:
+        broken = _recall()
+        if not broken:
+            return None
+        if errors:
+            logger.warning(
+                "schema_invalid model=%s errors=%s sample=%s",
+                effective_model,
+                "; ".join(errors),
+                redacted_sample(broken),
+            )
+        else:
+            logger.warning(
+                "json_invalid model=%s sample=%s", effective_model, redacted_sample(broken)
+            )
+        repaired = _dispatch(
+            repair_prompt(prompt, redacted_sample(broken), errors),
+            system_prompt,
+            effective_model,
+        )
+        if repaired is None:
+            logger.error("repair_failed model=%s", effective_model)
+            return None
+        raw, source = repaired, "model_repaired"
+        if reply_errors(raw):
+            logger.error(
+                "schema_invalid model=%s after repair errors=%s sample=%s",
+                effective_model,
+                "; ".join(reply_errors(raw)),
+                redacted_sample(raw),
+            )
+            return None
 
     result = _validate_response(raw)
 
     if result is not None:
+        result["analysis_source"] = source
+        result["model_name"] = effective_model
         _cache.put(prompt, system_prompt, result, effective_model)
 
     return result
+
+
+def _dispatch(prompt: str, system_prompt: str, effective_model: str) -> dict | None:
+    """One attempt at one model, across whichever backends are configured."""
+    base_url = os.getenv("OPENAI_BASE_URL", "")
+    openrouter_key = os.getenv("OPENROUTER_API_KEY", "")
+
+    if base_url and os.getenv("FINSCRAPE_WIRE_API", "chat").lower() == "responses":
+        return _call_with_retry(_call_responses_api, prompt, system_prompt, effective_model)
+    if base_url:
+        raw = _call_with_retry(_call_openai_proxy, prompt, system_prompt, effective_model)
+        # A proxy can be up while its free-model route is disabled (403
+        # free_models_disabled). OpenRouter is a different account, so try it
+        # before giving up and letting the heuristic fallback write the event.
+        if raw is None and openrouter_key:
+            logger.info("Primary proxy failed; trying OpenRouter")
+            return _call_with_retry(
+                _call_openrouter,
+                prompt,
+                system_prompt,
+                os.getenv("FINSCRAPE_OPENROUTER_MODEL", DEFAULT_MODEL),
+            )
+        return raw
+    if openrouter_key:
+        return _call_with_retry(_call_openrouter, prompt, system_prompt, effective_model)
+
+    logger.error("No AI backend configured. Set OPENROUTER_API_KEY or OPENAI_BASE_URL.")
+    return None
+
+
+def _recall() -> str:
+    """The text of this thread's last model reply, empty when the model never answered."""
+    return getattr(_last_reply, "text", "")
 
 
 def get_cache_stats() -> dict:
@@ -338,11 +407,25 @@ def load_key_moves(moves: dict[str, float]) -> None:
 
 def _proxy_keys() -> list[str]:
     """Key queue over OPENAI_API_KEY and the comma-separated OPENAI_API_KEYS: the key
-    whose last 429 is oldest leads, ties in that listed order."""
+    whose last 429 is oldest leads, ties in that listed order.
+
+    A 429 older than the allowance window no longer means anything — the free quota has
+    reset — so that key rejoins the front. Without this a queue where every key spent its
+    allowance once stays spent-looking forever, even after the provider reset it.
+    """
     keys = [os.getenv("OPENAI_API_KEY", "proxy"), *os.getenv("OPENAI_API_KEYS", "").split(",")]
     keys = [k for k in dict.fromkeys(k.strip() for k in keys) if k]
+    # TokenHarbor's own reset is not published (docs/COST.md); 24 h is the conservative
+    # assumption, and FINSCRAPE_KEY_RESET_HOURS overrides it once the account says more.
+    reset_after = float(os.getenv("FINSCRAPE_KEY_RESET_HOURS", "24")) * 3600
+    now = time.time()
+
+    def rank(key: str) -> float:
+        moved = _moved_at.get(key_fingerprint(key), 0.0)
+        return 0.0 if not moved or now - moved >= reset_after else moved
+
     with _key_lock:
-        return sorted(keys, key=lambda k: _moved_at.get(key_fingerprint(k), 0.0))
+        return sorted(keys, key=rank)
 
 
 def _call_openai_proxy(prompt: str, system_prompt: str, model: str | None = None) -> dict | None:
@@ -431,6 +514,8 @@ def _call_openrouter(prompt: str, system_prompt: str, model: str | None = None) 
 def _extract_json_from_text(content: str) -> dict | None:
     """Strip <think> reasoning blocks then pull the JSON object out of the text."""
     content = re.sub(r"<think>[\s\S]*?</think>", "", content or "", flags=re.IGNORECASE).strip()
+    # Remembered even when the parse fails: a repair attempt quotes this back.
+    _last_reply.text = content
     try:
         match = re.search(r"\{[\s\S]*\}", content)
         if match:

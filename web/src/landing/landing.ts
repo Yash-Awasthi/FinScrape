@@ -1,6 +1,7 @@
 import "./landing.css";
 
 import { API_BASE } from "../api";
+import { hitLabel, hitValue, spyLabel, type AccuracyLike } from "./rates";
 
 // ---- content ----------------------------------------------------------------
 const FEATURES: [string, string, string][] = [
@@ -27,7 +28,7 @@ const FEATURES: [string, string, string][] = [
   [
     "📈",
     "Accuracy proof",
-    "Every call scored next day and against SPY at +2 and +4 days, with confidence intervals and the full list of calls.",
+    "Every call scored next day and against SPY at +2 and +4 days. A hit rate is a past record with its sample size, window and interval — not a forecast of the next move.",
   ],
   [
     "🛰️",
@@ -97,11 +98,7 @@ function callRow(e: LiveEvent): string {
 async function live(): Promise<void> {
   const [stats, accuracy, feeds, recent] = await Promise.all([
     getJSON<{ total_events: number }>("/api/stats"),
-    getJSON<{
-      scored: number;
-      hit_rate: number;
-      vs_spy?: Record<"d2" | "d4", { scored: number; hit_rate: number }>;
-    }>("/api/accuracy"),
+    getJSON<AccuracyLike>("/api/accuracy"),
     getJSON<{ feeds: unknown[] }>("/api/feeds"),
     getJSON<{ events: LiveEvent[] }>("/api/events?limit=60"),
   ]);
@@ -115,24 +112,16 @@ async function live(): Promise<void> {
     setText("stat-feeds", String(feeds.feeds.length));
     setText("dg-feeds", String(feeds.feeds.length));
   }
-  // A handful of scored calls is not a track record; say so rather than quote it.
-  if (accuracy && accuracy.scored >= 30) {
-    setText("stat-hit", `${Math.round(accuracy.hit_rate * 100)}%`);
-    setText(
-      "stat-hit-label",
-      `next day: of ${accuracy.scored} INVEST/PULL_OUT calls whose ticker moved 1% or more, the share that moved the way called`,
-    );
-  } else if (accuracy) {
-    setText("stat-hit", String(accuracy.scored));
-    setText("stat-hit-label", "calls scored so far against realized moves");
+  // Every rate on this page carries n, the window it covers and a 95% interval; below 30
+  // scored calls there is no rate to show at all (plan m1.4.3).
+  if (accuracy) {
+    setText("stat-hit", hitValue(accuracy));
+    setText("stat-hit-label", hitLabel(accuracy));
   }
   const spy = accuracy?.vs_spy;
-  if (spy && spy.d4.scored >= 30) {
+  if (spy?.d4 && spy.d4.scored >= 30) {
     setText("stat-spy", `${Math.round(spy.d4.hit_rate * 100)}%`);
-    setText(
-      "stat-spy-label",
-      `+4 days vs SPY: of ${spy.d4.scored} calls, beat or lagged SPY the way called (+2 days: ${Math.round(spy.d2.hit_rate * 100)}% of ${spy.d2.scored})`,
-    );
+    setText("stat-spy-label", spyLabel(spy));
   }
 
   const events = (recent?.events ?? []).filter((e) => e.tickers?.length);

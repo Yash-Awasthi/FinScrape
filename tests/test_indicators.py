@@ -13,7 +13,11 @@ import sys
 import types
 from unittest.mock import MagicMock, patch
 
-from finscrape.market_data import compute_indicators, get_indicators, clear_indicator_cache
+from finscrape.market_data import (
+    clear_indicator_cache,
+    compute_indicators,
+    get_indicators,
+)
 
 # ---------------------------------------------------------------------------
 # get_indicators — must fetch a real 52-week window, not a 6mo window wearing
@@ -76,7 +80,6 @@ _ai_client_mod = types.ModuleType("finscrape.analysis.ai_client")
 _ai_client_mod.call_ai = MagicMock(return_value=None)
 sys.modules["finscrape.analysis.ai_client"] = _ai_client_mod
 
-import finscrape.analysis.constants  # noqa: F401
 from finscrape.agents.base import BaseAgent
 from finscrape.agents.council import AgentCouncil
 from finscrape.analysis.validator import check_number_conflicts

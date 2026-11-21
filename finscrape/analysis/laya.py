@@ -118,12 +118,14 @@ def _load() -> Any:
 
             _predict = laya_mlx.load(_MLX_REPO, dtype="float16").predict
         elif _MODEL:
-            from laya import Agent
+            # `laya` is an optional extra that is usually not installed; the ImportError is
+            # the normal path and is handled below.
+            from laya import Agent  # pyright: ignore[reportAttributeAccessIssue]
 
             _stamp = _weights_mtime()
             _predict = Agent(_MODEL).predict
         else:
-            from laya import Router
+            from laya import Router  # pyright: ignore[reportAttributeAccessIssue]
 
             _predict = Router().predict
         logger.info("Laya classifier loaded")

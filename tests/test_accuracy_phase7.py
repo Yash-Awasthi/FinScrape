@@ -2,6 +2,9 @@
 
 The backtest DB path (server.accuracy.backtest) is covered by the docker integration run.
 """
+
+import asyncio
+
 import pytest
 
 from finscrape.accuracy import calibration
@@ -32,7 +35,14 @@ def test_aggregate_hit_rate_and_equity_curve():
     assert agg["total"] == 4 and agg["scored"] == 3
     assert agg["hits"] == 2
     assert agg["hit_rate"] == round(2 / 3, 3)
-    assert agg["by_verdict"]["INVEST"] == {"hits": 1, "total": 2, "hit_rate": 0.5}
+    # Every rate carries its sample size and interval (plan m1.4.1).
+    assert {k: agg["by_verdict"]["INVEST"][k] for k in ("hits", "total", "hit_rate")} == {
+        "hits": 1,
+        "total": 2,
+        "hit_rate": 0.5,
+    }
+    assert agg["by_verdict"]["INVEST"]["ci95"] == (0.095, 0.905)
+    assert agg["sample"] == "n=3, 21–94% · wide interval"
     # cumulative +1 / -1 in time order: +1, 0, +1
     assert agg["equity_curve"] == [1, 0, 1]
 
@@ -81,9 +91,12 @@ def test_calibration_buckets_report_hit_rate():
         {"confidence": 0.1, "correct": False},
     ]
     b = calibration(rows)["buckets"]
-    assert b[".75-1"] == {"n": 3, "hit_rate": 0.667}
-    assert b["0-.25"] == {"n": 1, "hit_rate": 0.0}
-    assert b[".5-.75"] == {"n": 0, "hit_rate": None}
+    assert {k: b[".75-1"][k] for k in ("n", "hit_rate")} == {"n": 3, "hit_rate": 0.667}
+    assert b[".75-1"]["ci95"] == (0.208, 0.939)
+    assert {k: b["0-.25"][k] for k in ("n", "hit_rate")} == {"n": 1, "hit_rate": 0.0}
+    assert b["0-.25"]["ci95"] == (0.0, 0.793)
+    assert {k: b[".5-.75"][k] for k in ("n", "hit_rate")} == {"n": 0, "hit_rate": None}
+    assert b[".5-.75"]["ci95"] is None
 
 
 def test_equity_curve_follows_event_time_not_insert_order():
@@ -172,7 +185,7 @@ def test_each_ticker_is_scored_in_the_direction_the_analysis_gave_it():
     }
     moves = {"RTX": 3.0, "ZIM": -2.0}  # the winner rose, the unlabelled one fell
     assert asyncio.run(backtest(_pool(event, written), lambda t, a, h: moves)) == 1
-    event_id, ticker, verdict, called_move, correct = written[0]
+    event_id, _ticker, verdict, called_move, correct = written[0]
     assert (event_id, verdict, correct) == (9, "PULL_OUT", True)
     assert called_move == 2.5  # mean of +3.0 (up, as called) and +2.0 (down, as called)
 
@@ -244,4 +257,116 @@ def test_vs_spy_summary_counts_only_closed_windows():
     s = vs_spy_summary(rows)
     assert (s["d2"]["scored"], s["d2"]["hits"], s["d2"]["hit_rate"]) == (3, 2, 0.667)
     assert (s["d4"]["scored"], s["d4"]["hits"]) == (2, 1)
-    assert s["d4"]["by_verdict"]["PULL_OUT"] == {"hits": 1, "total": 1, "hit_rate": 1.0}
+    assert s["d4"]["by_verdict"]["PULL_OUT"]["hit_rate"] == 1.0
+    assert s["d4"]["ci95"] is not None and s["d4"]["sample"].startswith("n=")
+
+
+def test_aggregate_splits_the_record_by_analysis_source():
+    # A keyword-fallback row must not be able to pass as the model's own hit rate
+    # (plan m1.3.2).
+    rows = [
+        {"verdict": "INVEST", "correct": True, "at": "2026-01-01T00:00:00", "source": "model"},
+        {"verdict": "INVEST", "correct": False, "at": "2026-01-02T00:00:00", "source": "model"},
+        {"verdict": "INVEST", "correct": True, "at": "2026-01-03T00:00:00", "source": "heuristic"},
+        {"verdict": "OBSERVE", "correct": None, "at": "2026-01-04T00:00:00", "source": "model"},
+    ]
+    agg = aggregate(rows)
+
+    assert {k: agg["by_source"]["model"][k] for k in ("hits", "total", "hit_rate")} == {
+        "hits": 1,
+        "total": 2,
+        "hit_rate": 0.5,
+    }
+    assert {k: agg["by_source"]["heuristic"][k] for k in ("hits", "total", "hit_rate")} == {
+        "hits": 1,
+        "total": 1,
+        "hit_rate": 1.0,
+    }
+    # Rows without a source (pre-migration) are labelled, not folded into a real one.
+    unlabelled = aggregate([{"verdict": "INVEST", "correct": True, "at": "x"}])["by_source"]
+    assert set(unlabelled) == {"unknown"}
+    assert unlabelled["unknown"]["hit_rate"] == 1.0
+
+
+def test_heuristic_share_alerts_above_one_in_five():
+    from server.routes.health import HEURISTIC_ALERT_SHARE, heuristic_share
+
+    def pool_returning(heuristic: int, total: int):
+        class Pool:
+            async def fetchrow(self, *args):
+                return {"h": heuristic, "n": total}
+
+        return Pool()
+
+    assert asyncio.run(heuristic_share(pool_returning(3, 10))) == 0.3
+    assert asyncio.run(heuristic_share(pool_returning(0, 0))) is None, (
+        "a quiet feed is not evidence of health"
+    )
+    assert HEURISTIC_ALERT_SHARE == 0.20
+
+
+def test_a_missing_price_is_excluded_and_counted_not_scored_as_a_miss():
+    """A data outage must not become a batch of wrong calls (plan m1.4.2)."""
+    import asyncio
+    from datetime import UTC, datetime
+
+    from server.accuracy import backtest
+
+    written: list[tuple] = []
+    event = {
+        "id": 11,
+        "verdict": "INVEST",
+        "tickers": ["XOM"],
+        "timestamp": datetime(2026, 9, 25, 15, tzinfo=UTC),
+        "affected_entities": [],
+    }
+    stats: dict[str, int] = {}
+
+    assert asyncio.run(backtest(_pool(event, written), lambda t, a, h: {}, stats=stats)) == 0
+    assert written == [], "nothing was scored, so nothing was written"
+    assert stats["skipped_no_price"] == 1
+    assert stats["candidates"] == 1 and stats["written"] == 0
+
+
+def test_a_ticker_with_no_quote_does_not_drag_the_others_down():
+    import asyncio
+    from datetime import UTC, datetime
+
+    from server.accuracy import backtest
+
+    written: list[tuple] = []
+    event = {
+        "id": 12,
+        "verdict": "INVEST",
+        "tickers": ["XOM", "ZZZZ"],
+        "timestamp": datetime(2026, 9, 25, 15, tzinfo=UTC),
+        "affected_entities": [],
+    }
+    stats: dict[str, int] = {}
+
+    asyncio.run(
+        backtest(_pool(event, written), lambda t, a, h: {"XOM": 2.5}, stats=stats)
+    )
+
+    assert written == [(12, "XOM", "INVEST", 2.5, True)], "the mean is over priced tickers only"
+    assert stats["skipped_no_price"] == 0
+
+
+def test_vs_spy_counts_the_calls_it_could_not_price():
+    import asyncio
+    from datetime import UTC, datetime
+
+    from server.accuracy import score_vs_spy
+
+    class Pool:
+        async def fetch(self, *args):
+            return [{"id": 3, "verdict": "INVEST", "tickers": ["XOM"],
+                     "timestamp": datetime(2026, 9, 25, 15, tzinfo=UTC),
+                     "affected_entities": []}]
+
+        async def execute(self, *args):
+            raise AssertionError("an unpriced call must not be written")
+
+    stats: dict[str, int] = {}
+    assert asyncio.run(score_vs_spy(Pool(), lambda t, a: {}, stats=stats)) == 0
+    assert stats["skipped_no_price"] == 1

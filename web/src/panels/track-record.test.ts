@@ -73,3 +73,35 @@ it("marks each scored call right, wrong or still open", async () => {
     "open",
   ]);
 });
+
+it("flags a thin sample instead of showing a confident-looking rate", async () => {
+  // n=3 with 2 hits: the server's `sample` string says the interval is wide, and the panel
+  // must repeat that rather than rendering "67%" on its own (plan m1.4.1).
+  vi.spyOn(api, "accuracy").mockResolvedValue({
+    hits: 2,
+    scored: 3,
+    hit_rate: 2 / 3,
+    n: 3,
+    ci95: [0.208, 0.939],
+    sample: "n=3, 21–94% · wide interval",
+    by_verdict: {
+      INVEST: {
+        hits: 2,
+        total: 3,
+        hit_rate: 2 / 3,
+        n: 3,
+        ci95: [0.208, 0.939],
+        sample: "n=3, 21–94% · wide interval",
+      },
+    },
+    total: 3,
+    equity_curve: [1, 0, 1],
+  } as Accuracy);
+  const panel = new AccuracyPanel();
+  await panel.load();
+  await painted();
+  const text = panel.el.textContent ?? "";
+  expect(text).toContain("wide interval");
+  expect(text).toContain("n=3");
+  expect(text).toContain("95% 21%–94%");
+});

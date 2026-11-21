@@ -7,20 +7,23 @@ the `scrape_news()` method.
 
 from __future__ import annotations
 
+import datetime
+import json
 import logging
 import os
-import re
-import json
-import datetime
 import random
+import re
 import time
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from finscrape.models import ScrapedArticle
 
 if TYPE_CHECKING:
     from finscrape.engine import Response
+    # Imported at call time in get_breaker() to keep this module importable without
+    # the server package; naming it here is only for the annotations.
+    from server.circuit import CircuitBreaker
 
 logger = logging.getLogger(__name__)
 
@@ -42,10 +45,10 @@ CB_FAIL_THRESHOLD = int(os.getenv("FINSCRAPE_CB_FAIL_THRESHOLD", "5"))
 CB_RESET_AFTER_S = float(os.getenv("FINSCRAPE_CB_RESET_AFTER_S", "60.0"))
 
 # ── Per-source circuit breakers ────────────────────────────────────────────
-_breakers: dict[str, "CircuitBreaker"] = {}
+_breakers: dict[str, CircuitBreaker] = {}
 
 
-def get_breaker(name: str) -> "CircuitBreaker":
+def get_breaker(name: str) -> CircuitBreaker:
     """Get or create the circuit breaker for a named source."""
     if name not in _breakers:
         from server.circuit import CircuitBreaker
@@ -83,7 +86,7 @@ class BaseScraper(ABC):
 
     def fetch_page(
         self, url: str, stealthy: bool = False, dynamic: bool = False
-    ) -> Optional[Response]:
+    ) -> Response | None:
         """Fetch a page using the appropriate Scrapling fetcher.
 
         Uses a per-source circuit breaker to fast-fail when a source has been
@@ -94,7 +97,6 @@ class BaseScraper(ABC):
         circuit is open.
         """
         from finscrape.engine import DynamicFetcher, Fetcher, StealthyFetcher
-        from server.circuit import CircuitBreaker, CircuitOpen
 
         breaker = get_breaker(self.name)
 
@@ -105,7 +107,7 @@ class BaseScraper(ABC):
             logger.info("[%s] Circuit open — fast-failing fetch of %s", self.name, url)
             return None
 
-        last_error: Optional[Exception] = None
+        last_error: Exception | None = None
         for attempt in range(1, FETCH_MAX_RETRIES + 1):
             try:
                 if dynamic:
@@ -202,7 +204,7 @@ class BaseScraper(ABC):
 
     def extract_publish_date(
         self, page: Response
-    ) -> tuple[Optional[str], Optional[float]]:
+    ) -> tuple[str | None, float | None]:
         """Extract publication date and calculate age in hours."""
         pub_str = None
 
@@ -234,7 +236,7 @@ class BaseScraper(ABC):
         try:
             dt = datetime.datetime.fromisoformat(pub_str.replace("Z", "+00:00"))
             age_hours = (
-                datetime.datetime.now(datetime.timezone.utc) - dt
+                datetime.datetime.now(datetime.UTC) - dt
             ).total_seconds() / 3600
             return pub_str, round(age_hours, 1)
         except Exception:
@@ -269,4 +271,3 @@ class BaseScraper(ABC):
 
     def close(self):
         """No-op — Scrapling fetchers are class-level, no instance cleanup needed."""
-        pass

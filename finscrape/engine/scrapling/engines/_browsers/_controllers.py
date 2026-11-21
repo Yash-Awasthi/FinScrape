@@ -1,38 +1,53 @@
-from time import sleep as time_sleep
 from asyncio import sleep as asyncio_sleep
+from time import sleep as time_sleep
 
+from patchright.async_api import (
+    Locator as AsyncLocator,
+)
+from patchright.async_api import (
+    async_playwright,
+)
 from patchright.sync_api import (
     Locator,
     sync_playwright,
 )
-from patchright.async_api import (
-    async_playwright,
-    Locator as AsyncLocator,
-)
 
+from finscrape.engine.scrapling.core._types import List, Optional, ProxyType, Unpack
 from finscrape.engine.scrapling.core.utils import log
-from finscrape.engine.scrapling.core._types import Optional, List, ProxyType, Unpack
+from finscrape.engine.scrapling.engines._browsers._base import (
+    AsyncSession,
+    DynamicSessionMixin,
+    SyncSession,
+)
+from finscrape.engine.scrapling.engines._browsers._types import (
+    PlaywrightFetchParams,
+    PlaywrightSession,
+)
+from finscrape.engine.scrapling.engines._browsers._validators import PlaywrightConfig
+from finscrape.engine.scrapling.engines._browsers._validators import (
+    validate_fetch as _validate,
+)
+from finscrape.engine.scrapling.engines.toolbelt.convertor import (
+    Response,
+    ResponseFactory,
+)
 from finscrape.engine.scrapling.engines.toolbelt.proxy_rotation import is_proxy_error
-from finscrape.engine.scrapling.engines.toolbelt.convertor import Response, ResponseFactory
-from finscrape.engine.scrapling.engines._browsers._types import PlaywrightSession, PlaywrightFetchParams
-from finscrape.engine.scrapling.engines._browsers._base import SyncSession, AsyncSession, DynamicSessionMixin
-from finscrape.engine.scrapling.engines._browsers._validators import validate_fetch as _validate, PlaywrightConfig
 
 
 class DynamicSession(SyncSession, DynamicSessionMixin):
     """A Browser session manager with page pooling."""
 
     __slots__ = (
+        "_browser_options",
         "_config",
         "_context_options",
-        "_browser_options",
-        "_user_data_dir",
         "_headers_keys",
+        "_max_wait_for_page",
+        "_user_data_dir",
+        "context",
         "max_pages",
         "page_pool",
-        "_max_wait_for_page",
         "playwright",
-        "context",
     )
 
     def __init__(self, **kwargs: Unpack[PlaywrightSession]):
@@ -126,7 +141,7 @@ class DynamicSession(SyncSession, DynamicSessionMixin):
         if not self._is_alive:  # pragma: no cover
             raise RuntimeError("Context manager has been closed")
 
-        request_headers_keys = {h.lower() for h in params.extra_headers.keys()} if params.extra_headers else set()
+        request_headers_keys = {h.lower() for h in params.extra_headers} if params.extra_headers else set()
         referer = (
             "https://www.google.com/" if (params.google_search and "referer" not in request_headers_keys) else None
         )
@@ -216,11 +231,11 @@ class AsyncDynamicSession(AsyncSession, DynamicSessionMixin):
     """An async Browser session manager with page pooling, it's using a persistent browser Context by default with a temporary user profile directory."""
 
     __slots__ = (
+        "_browser_options",
         "_config",
         "_context_options",
-        "_browser_options",
-        "_user_data_dir",
         "_headers_keys",
+        "_user_data_dir",
     )
 
     def __init__(self, **kwargs: Unpack[PlaywrightSession]):
@@ -315,7 +330,7 @@ class AsyncDynamicSession(AsyncSession, DynamicSessionMixin):
         if not self._is_alive:  # pragma: no cover
             raise RuntimeError("Context manager has been closed")
 
-        request_headers_keys = {h.lower() for h in params.extra_headers.keys()} if params.extra_headers else set()
+        request_headers_keys = {h.lower() for h in params.extra_headers} if params.extra_headers else set()
         referer = (
             "https://www.google.com/" if (params.google_search and "referer" not in request_headers_keys) else None
         )

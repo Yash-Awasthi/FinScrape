@@ -5,9 +5,19 @@ How the FinScrape backend defends its trust boundaries. All knobs are env vars (
 
 ## Authentication
 
-- The four **mutating** routes (`/api/ingest`, …) require an API key — `X-API-Key: <key>`
-  or `Authorization: Bearer <key>` (`server/auth.py`). Everything else is read-only.
-- Key comes only from `FINSCRAPE_API_KEY` (env). No key is ever hard-coded or logged.
+- The four **mutating** routes (`POST /api/events` and the three alert-rule routes) require an
+  API key — `X-API-Key: <key>` or `Authorization: Bearer <key>` (`server/auth.py`);
+  `tests/server/test_route_auth.py` enumerates the app and fails if any other write route
+exists without a guard. Everything else is read-only. `POST /api/telegram/webhook` is the
+  one write path outside the key: it authenticates with `X-Telegram-Bot-Api-Secret-Token`
+  and answers 200 either way, so a bad sender learns nothing.
+- Key comes only from `FINSCRAPE_API_KEY` (env). No key is ever hard-coded or logged —
+  `finscrape/logging_config.py` runs a `RedactSecrets` filter in front of every handler, so
+  the values of `FINSCRAPE_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`,
+  `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `ANALYZE_DISPATCH_TOKEN` and both DSNs are
+  replaced with `<redacted>`, including inside tracebacks (`tests/test_log_redaction.py`).
+- `.env` is gitignored, nothing named `.env` is tracked, and the history carries no
+  live-looking key (`tests/test_secrets_hygiene.py`).
 - Rotate by changing the env var and restarting; no DB migration needed.
 
 ## Rate limiting
@@ -17,8 +27,10 @@ How the FinScrape backend defends its trust boundaries. All knobs are env vars (
 - Client identity = the peer IP; behind a proxy we operate (loopback/private/link-local) it is
   the rightmost `X-Forwarded-For` hop, the one our proxy appended. A header from a public peer
   is ignored so a caller cannot mint identities.
-- In-memory, process-local. Ceiling: a single API replica. Multi-replica upgrade path is a
-  Redis sorted-set window keyed on `WORLDFIN_REDIS_URL` — noted in the module docstring.
+- Two backends, one contract: in-memory by default (one process, one window); with
+  `WORLDFIN_REDIS_URL` set, a Redis sorted-set window shared by every replica. Production
+  refuses to start with `WEB_CONCURRENCY > 1` and no Redis, so the ceiling cannot be silently
+  multiplied by the replica count.
 
 ## Security headers / CSP
 
@@ -66,11 +78,31 @@ How the FinScrape backend defends its trust boundaries. All knobs are env vars (
   full-table aggregates (dates GROUP-BY-day, markets ticker rollup) seq-scan by design — no
   index applies — and run sub-6ms at that scale.
 
+## Supply chain
+
+Every dependency update arrives through one route and the gates are attached to it.
+
+| Concern | Where it is enforced |
+|---|---|
+| Who opens an update PR | `.github/dependabot.yml` — `uv` + `pip` in one grouped PR, plus `npm`, `github-actions` and `docker`, weekly |
+| What merges itself | `.github/workflows/dependabot-auto-merge.yml` — **patch only**, and only once every required check is green |
+| How updates are bounded | `pyproject.toml` — `lxml` on a stable release, and `yfinance`/`pandas`/`spacy`/`scipy` carry `<next-major` ceilings, so a data-shape change is a reviewed PR |
+| What ships | `Dockerfile.api`, `Dockerfile.worker`, `web/Dockerfile` — base images pinned by `@sha256:` digest as well as tag |
+| What is installed | `dist/sbom.cdx.json`, generated from `uv.lock` by `python -m scripts.sbom`, attached to every release |
+| What is vulnerable | `python -m scripts.audit --strict` (`pip-audit` + `npm audit --omit=dev`), with `security-audit-allowlist.json` carrying an owner and an expiry per tolerated advisory |
+
+An allowlist entry without an expiry, or with one in the past, fails the audit — a
+tolerated advisory is a scheduled decision rather than a comment nobody revisits.
+
 ## Verify
 
 ```bash
 # unit + middleware integration (no DB):
 uv run -p 3.14 --group server --group dev pytest tests/server/test_hardening.py -q
+# supply chain: pins, digests, one update route, patch-only auto-merge, SBOM, allowlist
+uv run -p 3.14 --group server --group dev pytest tests/test_supply_chain.py -q
+# the audit itself (needs the network; pip-audit runs through uvx)
+uv run -p 3.14 --group server --group dev python -m scripts.audit --strict
 ```
 - **429 past threshold:** `WORLDFIN_RATE_LIMIT_PER_MIN=3`, fire 5 requests → 3×200, 2×429
   (`test_rate_limit_returns_429_with_retry_after`).

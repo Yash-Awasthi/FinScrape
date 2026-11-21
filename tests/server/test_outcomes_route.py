@@ -29,6 +29,7 @@ ROWS = [
         "ex2": None,
         "ex4": None,
         "confidence": 0.6,
+        "analysis_source": "model",
     },
     {
         "event_id": 1,
@@ -43,6 +44,7 @@ ROWS = [
         "ex2": 0.8,
         "ex4": None,
         "confidence": 0.7,
+        "analysis_source": "heuristic",
     },
 ]
 
@@ -82,3 +84,14 @@ def test_accuracy_curve_runs_in_event_time(client):
     body = c.get("/api/accuracy").json()
     assert body["equity_curve"] == [1, 0]
     assert body["vs_spy"]["d2"]["hits"] == 1
+
+
+def test_accuracy_states_the_window_it_covers(client):
+    # plan m1.4.3: a rate without the span it covers is ambiguous, so the route names
+    # the first and last scored call.
+    c, _ = client
+    body = c.get("/api/accuracy").json()
+    assert body["window"] == {"from": T1.isoformat(), "to": T2.isoformat()}
+    # Every rate still carries its sample size and interval.
+    assert body["sample"].startswith("n=2")
+    assert body["ci95"] is not None

@@ -12,8 +12,8 @@ from __future__ import annotations
 
 import logging
 import uuid
-from dataclasses import dataclass, field, asdict
-from datetime import datetime, timezone
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import Any
 
 from curl_cffi import requests
@@ -130,7 +130,7 @@ class AlertRule:
     actions: list[Action] = field(default_factory=list)
     enabled: bool = True
     created_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+        default_factory=lambda: datetime.now(UTC).isoformat()
     )
 
     def matches(self, event: dict) -> bool:
@@ -288,7 +288,7 @@ class AlertEngine:
 
         payload = {
             "alert_type": "finscrape",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "event": {
                 "subject": event.get("subject", ""),
                 "verdict": event.get("verdict", ""),
@@ -448,7 +448,7 @@ class AlertEngine:
                 {"name": "Sector Impact", "value": s["sector"] or "—", "inline": True},
                 {"name": "Sources", "value": s["source_str"] or "—", "inline": False},
             ],
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "footer": {"text": "FinScrape Signal Alert"},
         }
         payload: dict[str, Any] = {"embeds": [embed]}
@@ -536,8 +536,8 @@ class AlertEngine:
         - Must not point to private/loopback IPs
         - Must have a valid hostname
         """
-        from urllib.parse import urlparse
         import ipaddress
+        from urllib.parse import urlparse
 
         try:
             parsed = urlparse(url)

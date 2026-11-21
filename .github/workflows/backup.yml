@@ -23,11 +23,24 @@ jobs:
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
           sudo apt-get install -y postgresql-client-17
           /usr/lib/postgresql/17/bin/pg_dump "$WORLDFIN_DATABASE_URL" -Fc --no-owner > worldfin.dump
+          # A dump is a backup only if an archive reader can list it: `test -s` passes on a
+          # truncated file, and the upload step would happily ship it (plan M2.5).
           test -s worldfin.dump
+          /usr/lib/postgresql/17/bin/pg_restore --list worldfin.dump > worldfin.dump.list
+          test "$(grep -cv '^;' worldfin.dump.list)" -gt 0
           openssl enc -aes-256-cbc -pbkdf2 -pass env:BACKUP_KEY -in worldfin.dump -out worldfin.dump.enc
+          # Decrypt and re-verify: the artifact is the encrypted file, so that is what has to
+          # be readable. A wrong key produces garbage, not a backup.
+          openssl enc -d -aes-256-cbc -pbkdf2 -pass env:BACKUP_KEY -in worldfin.dump.enc -out roundtrip.dump
+          cmp worldfin.dump roundtrip.dump
+          /usr/lib/postgresql/17/bin/pg_restore --list roundtrip.dump > /dev/null
           ls -lh worldfin.dump.enc
+          rm -f worldfin.dump roundtrip.dump worldfin.dump.list
+      # No `if: always()`: a failed dump must fail the job and upload nothing, because a
+      # partial artifact is indistinguishable from a good one at restore time.
       - uses: actions/upload-artifact@v7
         with:
           name: worldfin-${{ github.run_id }}
           path: worldfin.dump.enc
+          if-no-files-found: error
           retention-days: 14

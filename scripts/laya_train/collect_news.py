@@ -68,7 +68,7 @@ def worker_sources() -> list[tuple[str, str]]:
     for name, produce in build_sources(max_articles=1000).items():
         try:
             out += [(a.title, name) for a, _ in produce()]
-        except Exception as exc:  # noqa: BLE001 - one dead feed must not sink the harvest
+        except Exception as exc:
             print(f"  {name} failed: {exc}", flush=True)
     return out
 
@@ -85,7 +85,7 @@ def market_scrapers() -> list[tuple[str, str]]:
         )
         try:
             return [(a.title, mod) for a in cls(max_articles=100).scrape_news()]
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             print(f"  {mod} failed: {exc}", flush=True)
             return []
 

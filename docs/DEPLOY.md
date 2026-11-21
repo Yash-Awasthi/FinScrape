@@ -45,6 +45,9 @@ The API reads `$PORT` (Render injects it; `settings.port` aliases `WORLDFIN_PORT
 - GitHub skips schedules under load and turns them off after 60 days without commits, so no workflow has a GitHub schedule; the cron Worker dispatches them all.
 - Supabase free: 500 MB database, paused after a week without activity (the ingest cron keeps it active); TokenHarbor free models have usage caps — the heuristic fallback absorbs LLM exhaustion.
 
+**Cost and ceilings:** [COST.md](COST.md) states each free tier's limit, which one is hit
+first, and what the first paid step costs. Price claims there carry the date they were read.
+
 ## Choosing the model
 Measured 29 Sep 2026 on the 56-headline sector gold set with the real analysis prompt:
 
@@ -53,6 +56,19 @@ Measured 29 Sep 2026 on the 56-headline sector gold set with the real analysis p
 | `qwen3.8-flash:free` | 79% | 79.5% | 30 s (p90 82 s) |
 | `mimo-v2.6-flash:free` | 96% | 66.7% | 14 s (p90 21 s) |
 | `deepseek-v4.1-flash:free` | 77% | 67.4% | 13 s (p90 32 s) |
+
+Those numbers were hand-recorded. They are now reproducible and gated: the set lives in
+`tests/gold/sector_set.jsonl` (cases 1–56 are this table's benchmark, with verdict labels),
+`scripts/eval_model.py` measures any model against it, and `docs/EVAL.md` stores each run.
+
+**Switching a model is gated.** Measure the candidate first and let the harness refuse it:
+
+    python -m scripts.eval_model --model <candidate> --prompt v1 --gate --append-docs
+
+A candidate that costs more than **5 points of sector accuracy** against the stored
+baseline fails the gate, and CI runs the same gate offline (`make eval-gate`) on every pull
+request. A model switch ships with its `docs/EVAL.md` row attached, exactly as a deploy
+rollback names its Render deploy id.
 
 ## Keys / secrets
 These are **temporary throwaway account keys** — kept in **GitHub → Settings → Secrets** and

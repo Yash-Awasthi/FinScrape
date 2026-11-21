@@ -41,22 +41,90 @@ jobs:
         with:
           groups: --group server --group dev
 
-      # NEW_DIRS from the Makefile — the vendored finscrape/ tree carries pre-existing
-      # lint debt and is out of scope by design (see pyproject [tool.ruff]).
+      # ruff covers the whole tree; the per-file allowlist in ruff-baseline.toml is what keeps
+      # the vendored finscrape/ debt from moving (see pyproject [tool.ruff]).
       - name: Lint
         run: make lint
       - name: Format check
         run: make fmt-check
       - name: Typecheck
         run: uv run -p 3.14 pyright
-      # ty is pre-1.0; it reports next to pyright without gating the build.
+      # pyright now covers finscrape/ too, which carries 58 pre-existing errors. The committed
+      # fingerprint in pyright-baseline.json is the gate: new debt fails, shrinking is free.
+      - name: Type-debt ratchet
+        run: uv run -p 3.14 --group dev python -m scripts.pyright_baseline --check
+      # ty is pre-1.0, but its scope (the new, typed code) is at zero diagnostics, so it is a
+      # gate now. finscrape/ is deliberately out of ty's scope: 236 diagnostics of vendored
+      # pandas/lxml/typing pattern noise there, while pyright is clean over the whole tree.
       - name: Typecheck (ty)
-        continue-on-error: true
         run: uv run -p 3.14 ty check server worker
       - name: Selfcheck
         run: uv run -p 3.14 python -m tests.server.selfcheck
+      # plan M2.2: the contract clients read is pinned. A removed path, a dropped response
+      # field or a tightened bound fails here, before a panel goes quietly empty.
+      - name: API contract
+        run: make openapi-check
       - name: Test
         run: uv run -p 3.14 pytest -q
+
+  eval-gate:
+    # plan M2.1: any model or prompt change must hold its score on the frozen gold set
+    # (tests/gold/). The gate replays a recorded run, so it needs no network and no
+    # credentials — and because the recording carries a prompt fingerprint, editing a
+    # prompt without re-recording fails here instead of scoring yesterday's text.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-python
+        with:
+          groups: --group server --group dev
+      - name: Score the gold set offline
+        run: make eval-gate
+
+  supply-chain:
+    # plan M2.4: an unallowlisted advisory fails the build, and so does an allowlist entry
+    # whose expiry has passed. Both halves of the tree are audited, because a vulnerable
+    # npm dev-dependency in the web image is still shipped bytes.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-python
+        with:
+          groups: --group server --group dev
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - name: Audit the lock file and the web dependencies
+        run: make audit
+      - name: SBOM from the lock file
+        run: make sbom
+
+  docs-drift:
+    # Every count the docs quote must still be the count the tree produces. The job
+    # regenerates the facts blocks and fails on any diff, so a stale number is caught
+    # by the same pull request that changed it (`make facts` fixes it).
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-python
+        with:
+          groups: --group server --group dev
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      # The script counts Vitest and Playwright specs, so the CLIs must be installed.
+      - run: npm ci
+        working-directory: web
+      - name: Regenerate the facts blocks
+        run: make facts
+      - name: Fail on drift
+        run: git diff --exit-code
 
   web:
     runs-on: ubuntu-24.04

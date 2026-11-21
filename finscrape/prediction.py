@@ -24,6 +24,8 @@ import math
 from datetime import UTC, datetime
 from typing import Any
 
+from finscrape.accuracy import calibration
+
 _DECAY_HALF_LIFE_DAYS = 45.0  # outcomes older than this matter less
 _CONF_BUCKETS = ("0-.25", ".25-.5", ".5-.75", ".75-1")
 
@@ -194,12 +196,27 @@ def predict(text: str, verdict: str, confidence: float, source: str,
 
 
 def brier_summary(outcomes: list[dict[str, Any]]) -> dict[str, Any]:
-    """Brier score of recorded confidences vs realized correctness."""
-    scored = [o for o in outcomes if o.get("confidence") is not None and o.get("outcome") in ("correct", "incorrect")]
-    if not scored:
-        return {"brier": None, "n": 0}
-    brier = sum(
-        ((float(o["confidence"]) - (1.0 if o["outcome"] == "correct" else 0.0)) ** 2)
-        for o in scored
-    ) / len(scored)
-    return {"brier": round(brier, 4), "n": len(scored)}
+    """Brier score of recorded confidences vs realized correctness, with the Murphy
+    decomposition and the base rate.
+
+    Delegates to `finscrape.accuracy.calibration` rather than re-deriving the Brier score:
+    two implementations of the same number is how a dashboard ends up disagreeing with the
+    API that feeds it (plan m1.4.1).
+    """
+    scored = [
+        o
+        for o in outcomes
+        if o.get("confidence") is not None and o.get("outcome") in ("correct", "incorrect")
+    ]
+    calib = calibration(
+        [
+            {"confidence": float(o["confidence"]), "correct": o["outcome"] == "correct"}
+            for o in scored
+        ]
+    )
+    return {
+        "brier": calib["brier"],
+        "n": calib["n"],
+        "decomposition": calib["brier_decomposition"],
+        "base_rate": calib["base_rate"],
+    }

@@ -63,6 +63,8 @@ async function mockBackend(page: import("@playwright/test").Page) {
       if (path.endsWith("/api/storylines")) return { storylines: [] };
       if (path.endsWith("/api/scenarios")) return { scenarios: [] };
       if (path.endsWith("/api/sectors")) return { sectors: [] };
+      if (path.endsWith("/api/market/quotes"))
+        return { quotes: [], as_of: "2026-06-28T10:00:00Z", symbols: [] };
       return {};
     })();
     await route.fulfill({ json });

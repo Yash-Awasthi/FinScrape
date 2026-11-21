@@ -7,19 +7,21 @@ Verifies:
   - The breaker is per-source (each scraper name gets its own breaker)
   - reset_breakers() clears all state
 """
-import sys
-import types
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 # ── Install the shared fake engine ────────────────────────────────────────
-from tests._scraper_mocks import install_fake_engine, get_fake_fetcher, get_fake_response, reset_fetcher
+from tests._scraper_mocks import (
+    get_fake_fetcher,
+    get_fake_response,
+    install_fake_engine,
+)
 
 install_fake_engine()
 _FakeFetcher = get_fake_fetcher()
 _fake_response = get_fake_response()
 
-from finscrape.scrapers import get_breaker, reset_breakers  # noqa: E402
-from finscrape.scrapers.yahoo import YahooScraper  # noqa: E402
+from finscrape.scrapers import get_breaker, reset_breakers
+from finscrape.scrapers.yahoo import YahooScraper
 
 
 class _FakeError(Exception):

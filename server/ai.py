@@ -21,9 +21,71 @@ from server.settings import get_settings
 
 log = logging.getLogger("worldfin.ai")
 
-_SYSTEM = "You are a senior financial analyst. Return ONLY valid JSON, no markdown."
+_SYSTEM = (
+    "You are a senior financial analyst. Return ONLY valid JSON, no markdown. "
+    "Ground every claim in the supplied event data; never invent figures, "
+    "sources, or events that are not listed."
+)
 
 _TIMEOUT = 90
+
+# Longest slice of each free-text field sent to the model. The reasoning chain is
+# the only real prose the row keeps, so it gets the most room; everything else is
+# there to stop the summary restating the subject.
+_REASONING_CHARS = 900
+_FIELD_CHARS = 400
+
+
+def _clip(value: object, limit: int = _FIELD_CHARS) -> str:
+    """One line, whitespace-collapsed, bounded — prompt size must not follow input."""
+    text = " ".join(str(value or "").split())
+    return text if len(text) <= limit else text[:limit].rstrip() + "…"
+
+
+def _entities(event: dict) -> str:
+    names: list[str] = []
+    for entity in event.get("affected_entities") or []:
+        if not isinstance(entity, dict):
+            continue
+        name = _clip(entity.get("name"), 60)
+        if not name:
+            continue
+        ticker = entity.get("ticker")
+        role = entity.get("role")
+        label = f"{name} ({ticker})" if ticker else name
+        names.append(f"{label}{f' · {role}' if role else ''}")
+    return _clip("; ".join(names))
+
+
+def _grounding(event: dict) -> str:
+    """The stored analysis, so the summary is a compression of real work rather than
+    an expansion of the 12-word subject (which was all the prompt used to send)."""
+    lines = [
+        f"Sector: {_clip(event.get('sector_impact')) or 'unspecified'}",
+        (
+            f"Magnitude: {event.get('magnitude') or 'medium'} · "
+            f"Novelty: {event.get('novelty') or 'standard'} · "
+            f"Actionability: {event.get('actionability') or 'medium'}"
+        ),
+        f"Reasoning: {_clip(event.get('reasoning'), _REASONING_CHARS) or 'none provided'}",
+    ]
+    entities = _entities(event)
+    if entities:
+        lines.append(f"Affected entities: {entities}")
+    effects = event.get("second_order_effects") or []
+    rendered_effects = "; ".join(
+        _clip(e, 120) for e in effects if isinstance(e, str) and e.strip()
+    )
+    if rendered_effects:
+        lines.append(f"Second-order effects: {_clip(rendered_effects)}")
+    metrics = event.get("key_metrics") or {}
+    if metrics:
+        try:
+            rendered = json.dumps(metrics, default=str, ensure_ascii=False)
+        except TypeError, ValueError:
+            rendered = str(metrics)
+        lines.append(f"Key metrics: {_clip(rendered)}")
+    return "\n".join(lines)
 
 
 def _prompt(event: dict) -> str:
@@ -39,12 +101,14 @@ def _prompt(event: dict) -> str:
         "  ],\n"
         f'  "verdict_reason": "One sentence on why this warrants a {event.get("verdict")} verdict"\n'
         "}\n\n"
-        f"Subject: {event.get('subject')}\n"
+        "EVENT DATA (the only facts you may use):\n"
+        f"Subject: {_clip(event.get('subject'), 240)}\n"
         f"Verdict: {event.get('verdict')} (Score: {sign}{score})\n"
         f"Tickers: {tickers}\n"
         f"Event Type: {event.get('event_type')}\n"
         f"Direction: {event.get('impact_direction')}\n"
-        f"Sources: {', '.join(event.get('sources') or [])}"
+        f"Sources: {', '.join(event.get('sources') or []) or 'unknown'}\n"
+        f"{_grounding(event)}"
     )
 
 

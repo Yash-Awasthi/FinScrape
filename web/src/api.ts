@@ -24,12 +24,20 @@ export interface EventOut {
   divergence_flag?: boolean;
   sector_impact: string;
   sector?: string;
+  /** Geopolitical drivers tagged by the correlation engine (conflict, energy,
+   *  sanctions, shipping, elections, monetary, livestock). */
+  topics?: string[];
   tickers: string[];
   sources: string[];
   articles: string[];
   affected_entities: AffectedEntity[];
   second_order_effects: string[];
   key_metrics: Record<string, unknown>;
+  /** Which judge wrote the row: model | model_repaired | heuristic | laya | unknown.
+   *  A heuristic row is keyword output, not a model verdict (plan m1.3.2). */
+  analysis_source?: string;
+  /** The model behind the verdict; empty for rows no model produced. */
+  model_name?: string;
   lat: number | null;
   lon: number | null;
   timestamp: string | null;
@@ -81,7 +89,8 @@ export interface Scenario {
   size: number;
   /** Distinct reports behind it — corroboration, which `size` cannot show. */
   reports: number;
-  /** Probability the scenario's own call lands — never below 0.5. */
+  /** How often this scenario's calls have landed (its record) — never below 0.5.
+   *  A past hit rate, not a forecast of the next move (plan m1.4.3). */
   probability: number;
   direction: "up" | "down" | "flat";
   stance: "risk-on" | "risk-off" | "mixed";
@@ -120,11 +129,27 @@ export interface Correlation {
   detected_at: string;
 }
 
+export interface BucketRate {
+  hits: number;
+  total: number;
+  hit_rate: number;
+  /** Same as `total`, named so the sample size reads the same everywhere. */
+  n?: number;
+  /** 95% Wilson score interval, [low, high] as 0..1 fractions. */
+  ci95?: [number, number] | null;
+  /** Human one-liner from the server: "n=12, 30–90% · wide interval". */
+  sample?: string;
+}
+
 export interface HitRate {
   scored: number;
   hits: number;
   hit_rate: number;
-  by_verdict: Record<string, { hits: number; total: number; hit_rate: number }>;
+  n?: number;
+  ci95?: [number, number] | null;
+  sample?: string;
+  by_verdict: Record<string, BucketRate>;
+  by_source?: Record<string, BucketRate>;
 }
 
 export interface Accuracy extends HitRate {
@@ -132,6 +157,29 @@ export interface Accuracy extends HitRate {
   equity_curve: number[];
   equity_metrics?: { sharpe_ratio: number; sortino_ratio: number; max_drawdown: number };
   vs_spy?: { d2: HitRate; d4: HitRate };
+  calibration?: Calibration;
+  /** The span of event times the record covers, so a rate is never quoted without one. */
+  window?: { from: string | null; to: string | null };
+}
+
+export interface Calibration {
+  n: number;
+  brier: number | null;
+  /** Murphy decomposition: reliability − resolution + uncertainty = brier. */
+  brier_decomposition: {
+    reliability: number;
+    resolution: number;
+    uncertainty: number;
+  } | null;
+  base_rate: number | null;
+  reliability_curve: Array<{
+    bucket: string;
+    n: number;
+    predicted: number;
+    realised: number;
+    gap: number;
+  }>;
+  buckets: Record<string, { n: number; hit_rate: number | null; ci95?: [number, number] | null }>;
 }
 
 export interface AIAnalysis {
@@ -184,6 +232,22 @@ export interface Candle {
   v: number;
 }
 
+/** One tile on the live market tape. */
+export interface Quote {
+  symbol: string;
+  price: number;
+  previous_close: number;
+  change_percent: number;
+  /** Last ~30 intraday closes, used for the tile sparkline. */
+  spark: number[];
+}
+
+export interface QuoteResponse {
+  quotes: Quote[];
+  as_of: string;
+  symbols: string[];
+}
+
 export interface Prediction {
   p_positive_move: number;
   p_verdict_correct: number;
@@ -212,7 +276,17 @@ export interface Reliability {
     by_source: Record<string, { hit_rate: number | null; weight: number }>;
     by_confidence: Record<string, { hit_rate: number | null; weight: number }>;
   };
-  brier: { brier: number | null; n: number };
+  brier: {
+    brier: number | null;
+    n: number;
+    /** Murphy decomposition; reliability − resolution + uncertainty = brier. */
+    decomposition?: {
+      reliability: number;
+      resolution: number;
+      uncertainty: number;
+    } | null;
+    base_rate?: number | null;
+  };
 }
 
 /** One scored call: the move after it, signed toward the call, and vs SPY at +2/+4 days. */
@@ -286,6 +360,10 @@ export const api = {
   candles: (symbol: string, period = "1mo", interval = "1d") =>
     getJSON<{ symbol: string; candles: Candle[] }>(
       `/api/candles${qs({ symbol, period, interval })}`,
+    ),
+  quotes: (symbols?: string[]) =>
+    getJSON<QuoteResponse>(
+      `/api/market/quotes${symbols?.length ? qs({ symbols: symbols.join(",") }) : ""}`,
     ),
   predict: (id: number) => getJSON<Prediction>(`/api/predict/${id}`),
   reliability: () => getJSON<Reliability>("/api/reliability"),

@@ -383,3 +383,131 @@ def test_openai_key_reaches_the_chat_call(monkeypatch):
     assert captured["auth"] == "Bearer sk-real-key"
     assert captured["model"] == "some-model"
     get_settings.cache_clear()
+
+
+# --- multi-replica rate limiting (plan M1.6) --------------------------------
+
+
+class FakeRedis:
+    """Just enough of a sorted-set client for the sliding window, in one dict."""
+
+    def __init__(self) -> None:
+        self.sets: dict[str, dict[str, float]] = {}
+
+    async def zremrangebyscore(self, key: str, lo, hi) -> int:
+        bucket = self.sets.setdefault(key, {})
+        gone = [m for m, s in bucket.items() if s <= float(hi)]
+        for m in gone:
+            del bucket[m]
+        return len(gone)
+
+    async def zcard(self, key: str) -> int:
+        return len(self.sets.get(key, {}))
+
+    async def zrange(self, key: str, start: int, end: int, withscores: bool = False):
+        items = sorted(self.sets.get(key, {}).items(), key=lambda kv: kv[1])[start : end + 1]
+        return [(m, s) for m, s in items] if withscores else [m for m, _ in items]
+
+    async def zadd(self, key: str, mapping: dict[str, float]) -> int:
+        self.sets.setdefault(key, {}).update(mapping)
+        return len(mapping)
+
+    async def expire(self, key: str, ttl: int) -> bool:
+        return True
+
+
+def test_redis_limiter_shares_one_window_across_replicas():
+    from server.rate_limit import RedisLimiter
+
+    shared = FakeRedis()
+    # Two API replicas, one Redis: the third request in the window is refused no
+    # matter which replica it lands on. A per-process limiter would have allowed it.
+    a = RedisLimiter("redis://unused", limit_per_min=2, window_s=60.0, client=shared)
+    b = RedisLimiter("redis://unused", limit_per_min=2, window_s=60.0, client=shared)
+    import asyncio
+
+    allowed = asyncio.run(a.hit("1.2.3.4", now=1000.0))[0]
+    allowed = allowed and asyncio.run(b.hit("1.2.3.4", now=1001.0))[0]
+    third, retry = asyncio.run(a.hit("1.2.3.4", now=1002.0))
+    assert allowed and third is False and retry == 59
+    # The window slides: once the first hit ages out there is room again.
+    later, _ = asyncio.run(b.hit("1.2.3.4", now=1061.0))
+    assert later is True
+    # Different clients never share a bucket.
+    assert asyncio.run(a.hit("9.9.9.9", now=1002.0))[0] is True
+
+
+def test_redis_limiter_zero_disables_without_touching_redis():
+    from server.rate_limit import RedisLimiter
+
+    lim = RedisLimiter("redis://unused", limit_per_min=0, client=None)
+    import asyncio
+
+    assert asyncio.run(lim.hit("x", now=0.0)) == (True, 0)
+
+
+def test_hardening_picks_the_redis_limiter_when_redis_is_configured(monkeypatch):
+    from server import middleware
+
+    seen: dict = {}
+
+    class Recorder:
+        def __init__(self, url, limit, *a, **kw):
+            seen["url"], seen["limit"] = url, limit
+
+        async def hit(self, key, now=None):
+            return True, 0
+
+    monkeypatch.setenv("WORLDFIN_REDIS_URL", "redis://cache:6379/0")
+    get_settings.cache_clear()
+    monkeypatch.setattr(middleware, "RedisLimiter", Recorder)
+    middleware.configure_hardening(FastAPI())
+    assert seen == {"url": "redis://cache:6379/0", "limit": get_settings().rate_limit_per_min}
+    monkeypatch.delenv("WORLDFIN_REDIS_URL")
+    get_settings.cache_clear()
+
+
+def test_production_refuses_more_than_one_replica_without_redis(monkeypatch):
+    monkeypatch.setenv("WORLDFIN_ENV", "production")
+    monkeypatch.setenv("FINSCRAPE_API_KEY", "operator-chosen")
+    monkeypatch.setenv("WORLDFIN_CORS_ORIGINS", "https://example.test")
+    monkeypatch.setenv("WEB_CONCURRENCY", "4")
+    monkeypatch.delenv("WORLDFIN_REDIS_URL", raising=False)
+    get_settings.cache_clear()
+    problems = get_settings().production_problems()
+    assert len(problems) == 1 and "WEB_CONCURRENCY" in problems[0]
+
+    # With Redis the ceiling is shared, so four replicas are allowed.
+    monkeypatch.setenv("WORLDFIN_REDIS_URL", "redis://cache:6379/0")
+    get_settings.cache_clear()
+    assert get_settings().production_problems() == []
+
+    # One replica is the documented default and needs nothing.
+    monkeypatch.delenv("WORLDFIN_REDIS_URL")
+    monkeypatch.setenv("WEB_CONCURRENCY", "1")
+    get_settings.cache_clear()
+    assert get_settings().production_problems() == []
+    monkeypatch.delenv("WORLDFIN_ENV")
+    get_settings.cache_clear()
+
+
+def test_production_startup_actually_refuses_open_cors(monkeypatch):
+    """The guard is only real if boot fails, not if it logs (plan M1.6)."""
+    import asyncio
+
+    from server.app import create_app
+
+    monkeypatch.setenv("WORLDFIN_ENV", "production")
+    monkeypatch.setenv("FINSCRAPE_API_KEY", "operator-chosen")
+    monkeypatch.setenv("WORLDFIN_CORS_ORIGINS", "*")
+    get_settings.cache_clear()
+    app = create_app()
+
+    async def boot() -> None:
+        async with app.router.lifespan_context(app):
+            pass
+
+    with pytest.raises(RuntimeError, match="CORS"):
+        asyncio.run(boot())
+    monkeypatch.delenv("WORLDFIN_ENV")
+    get_settings.cache_clear()

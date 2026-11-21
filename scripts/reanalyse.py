@@ -23,10 +23,10 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from finscrape.models import ScrapedArticle  # noqa: E402
-from finscrape.pipeline import FinScrapePipeline  # noqa: E402
-from server import db  # noqa: E402
-from server.settings import get_settings  # noqa: E402
+from finscrape.models import ScrapedArticle
+from finscrape.pipeline import FinScrapePipeline
+from server import db
+from server.settings import get_settings
 
 _SET = """
 UPDATE events SET event_type = $2, impact_direction = $3, signal_score = $4,

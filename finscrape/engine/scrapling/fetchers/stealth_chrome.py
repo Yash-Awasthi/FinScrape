@@ -1,7 +1,10 @@
 from finscrape.engine.scrapling.core._types import Unpack
+from finscrape.engine.scrapling.engines._browsers._stealth import (
+    AsyncStealthySession,
+    StealthySession,
+)
 from finscrape.engine.scrapling.engines._browsers._types import StealthSession
 from finscrape.engine.scrapling.engines.toolbelt.custom import BaseFetcher, Response
-from finscrape.engine.scrapling.engines._browsers._stealth import StealthySession, AsyncStealthySession
 
 
 class StealthyFetcher(BaseFetcher):

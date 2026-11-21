@@ -2,12 +2,20 @@ __author__ = "Karim Shoair (karim.shoair@pm.me)"
 __version__ = "0.4.6"
 __copyright__ = "Copyright (c) 2024 Karim Shoair"
 
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from finscrape.engine.scrapling.core.custom_types import (
+        AttributesHandler,
+        TextHandler,
+    )
+    from finscrape.engine.scrapling.fetchers import (
+        AsyncFetcher,
+        DynamicFetcher,
+        Fetcher,
+        StealthyFetcher,
+    )
     from finscrape.engine.scrapling.parser import Selector, Selectors
-    from finscrape.engine.scrapling.core.custom_types import AttributesHandler, TextHandler
-    from finscrape.engine.scrapling.fetchers import Fetcher, AsyncFetcher, StealthyFetcher, DynamicFetcher
 
 
 # Lazy import mapping
@@ -21,7 +29,16 @@ _LAZY_IMPORTS = {
     "StealthyFetcher": ("finscrape.engine.scrapling.fetchers", "StealthyFetcher"),
     "DynamicFetcher": ("finscrape.engine.scrapling.fetchers", "DynamicFetcher"),
 }
-__all__ = ["Selector", "Fetcher", "AsyncFetcher", "StealthyFetcher", "DynamicFetcher"]
+__all__ = [
+    "AsyncFetcher",
+    "AttributesHandler",
+    "DynamicFetcher",
+    "Fetcher",
+    "Selector",
+    "Selectors",
+    "StealthyFetcher",
+    "TextHandler",
+]
 
 
 def __getattr__(name: str) -> Any:

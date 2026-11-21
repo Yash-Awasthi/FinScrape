@@ -1,8 +1,8 @@
 """Tests for the alert rules engine."""
 
 import pytest
-from finscrape.alerts import AlertEngine, AlertRule, Condition, Action
 
+from finscrape.alerts import Action, AlertEngine, AlertRule, Condition
 
 # ---------------------------------------------------------------------------
 # Fixtures

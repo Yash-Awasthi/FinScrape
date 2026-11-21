@@ -1,0 +1,1030 @@
+{
+  "components": {
+    "DashboardStats": {
+      "fields": {
+        "by_verdict": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "last_update": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "total_events": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "total_events"
+      ]
+    },
+    "DateCount": {
+      "fields": {
+        "count": {
+          "type": "integer"
+        },
+        "day": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "count",
+        "day"
+      ]
+    },
+    "DatesResponse": {
+      "fields": {
+        "dates": {
+          "items": {
+            "$ref": "DateCount"
+          },
+          "type": "array"
+        }
+      },
+      "required": []
+    },
+    "EventIn": {
+      "fields": {
+        "actionability": {
+          "type": "string"
+        },
+        "affected_entities": {
+          "items": {},
+          "type": "array"
+        },
+        "analysis_source": {
+          "type": "string"
+        },
+        "articles": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "confidence": {
+          "type": "number"
+        },
+        "divergence_flag": {
+          "type": "boolean"
+        },
+        "event_type": {
+          "type": "string"
+        },
+        "heuristic_impact": {
+          "type": "number"
+        },
+        "impact_direction": {
+          "type": "string"
+        },
+        "key_metrics": {
+          "type": "object"
+        },
+        "magnitude": {
+          "type": "string"
+        },
+        "model_name": {
+          "type": "string"
+        },
+        "novelty": {
+          "type": "string"
+        },
+        "reasoning": {
+          "type": "string"
+        },
+        "second_order_effects": {
+          "items": {},
+          "type": "array"
+        },
+        "sector_impact": {
+          "type": "string"
+        },
+        "signal_score": {
+          "type": "integer"
+        },
+        "sources": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "tickers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "timestamp": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "verdict": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_type",
+        "subject",
+        "verdict"
+      ]
+    },
+    "HTTPValidationError": {
+      "fields": {
+        "detail": {
+          "items": {
+            "$ref": "ValidationError"
+          },
+          "type": "array"
+        }
+      },
+      "required": []
+    },
+    "HealthResponse": {
+      "fields": {
+        "db": {
+          "type": "boolean"
+        },
+        "heuristic_alert": {
+          "type": "boolean"
+        },
+        "heuristic_share_24h": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "llm": {
+          "type": "boolean"
+        },
+        "sources": {
+          "items": {
+            "$ref": "SourceHealth"
+          },
+          "type": "array"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "db",
+        "llm",
+        "status"
+      ]
+    },
+    "IngestBatch": {
+      "fields": {
+        "events": {
+          "items": {
+            "$ref": "EventIn"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "events"
+      ]
+    },
+    "IngestResponse": {
+      "fields": {
+        "duplicates": {
+          "type": "integer"
+        },
+        "inserted": {
+          "type": "integer"
+        },
+        "inserted_ids": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "ok": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "duplicates",
+        "inserted"
+      ]
+    },
+    "SourceHealth": {
+      "fields": {
+        "fetched_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "record_count": {
+          "type": "integer"
+        },
+        "source": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "status"
+      ]
+    },
+    "ValidationError": {
+      "fields": {
+        "ctx": {
+          "type": "object"
+        },
+        "input": {},
+        "loc": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
+          "type": "array"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "loc",
+        "msg",
+        "type"
+      ]
+    }
+  },
+  "paths": {
+    "/api/accuracy": {
+      "get": {
+        "auth": false,
+        "parameters": {},
+        "responses": {
+          "200": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "/api/accuracy/by-variant": {
+      "get": {
+        "auth": false,
+        "parameters": {},
+        "responses": {
+          "200": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "/api/ai/analyze": {
+      "get": {
+        "auth": false,
+        "parameters": {
+          "id": {
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      }
+    },
+    "/api/ai/council": {
+      "get": {
+        "auth": false,
+        "parameters": {
+          "id": {
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      }
+    },
+    "/api/alerts/rules": {
+      "get": {
+        "auth": false,
+        "parameters": {},
+        "responses": {
+          "200": {
+            "type": "object"
+          }
+        }
+      },
+      "post": {
+        "auth": false,
+        "parameters": {
+          "authorization": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "x-api-key": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      }
+    },
+    "/api/alerts/rules/{rule_id}": {
+      "delete": {
+        "auth": false,
+        "parameters": {
+          "authorization": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "rule_id": {
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "x-api-key": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      },
+      "patch": {
+        "auth": false,
+        "parameters": {
+          "authorization": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "rule_id": {
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "x-api-key": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      }
+    },
+    "/api/candles": {
+      "get": {
+        "auth": false,
+        "parameters": {
+          "interval": {
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "period": {
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "symbol": {
+            "in": "query",
+            "required": true,
+            "schema": {
+              "maxLength": 16,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      }
+    },
+    "/api/correlations": {
+      "get": {
+        "auth": false,
+        "parameters": {
+          "date": {
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "limit": {
+            "in": "query",
+            "required": false,
+            "schema": {
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      }
+    },
+    "/api/dates": {
+      "get": {
+        "auth": false,
+        "parameters": {},
+        "responses": {
+          "200": {
+            "$ref": "DatesResponse"
+          }
+        }
+      }
+    },
+    "/api/events": {
+      "get": {
+        "auth": false,
+        "parameters": {
+          "date": {
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "dir": {
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "event_type": {
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "limit": {
+            "in": "query",
+            "required": false,
+            "schema": {
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "offset": {
+            "in": "query",
+            "required": false,
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "sort": {
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "source": {
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "ticker": {
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "verdict": {
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      },
+      "post": {
+        "auth": false,
+        "parameters": {
+          "authorization": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "x-api-key": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "IngestResponse"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      }
+    },
+    "/api/feeds": {
+      "get": {
+        "auth": false,
+        "parameters": {},
+        "responses": {
+          "200": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "auth": false,
+        "parameters": {},
+        "responses": {
+          "200": {
+            "$ref": "HealthResponse"
+          }
+        }
+      }
+    },
+    "/api/market/quotes": {
+      "get": {
+        "auth": false,
+        "parameters": {
+          "symbols": {
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 400,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      }
+    },
+    "/api/outcomes": {
+      "get": {
+        "auth": false,
+        "parameters": {
+          "event_id": {
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "limit": {
+            "in": "query",
+            "required": false,
+            "schema": {
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      }
+    },
+    "/api/predict/{event_id}": {
+      "get": {
+        "auth": false,
+        "parameters": {
+          "event_id": {
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      }
+    },
+    "/api/reliability": {
+      "get": {
+        "auth": false,
+        "parameters": {},
+        "responses": {
+          "200": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "/api/scenarios": {
+      "get": {
+        "auth": false,
+        "parameters": {
+          "limit": {
+            "in": "query",
+            "required": false,
+            "schema": {
+              "maximum": 20,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "window": {
+            "in": "query",
+            "required": false,
+            "schema": {
+              "maximum": 500,
+              "minimum": 20,
+              "type": "integer"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      }
+    },
+    "/api/sectors": {
+      "get": {
+        "auth": false,
+        "parameters": {},
+        "responses": {
+          "200": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "/api/stats": {
+      "get": {
+        "auth": false,
+        "parameters": {},
+        "responses": {
+          "200": {
+            "$ref": "DashboardStats"
+          }
+        }
+      }
+    },
+    "/api/storylines": {
+      "get": {
+        "auth": false,
+        "parameters": {
+          "limit": {
+            "in": "query",
+            "required": false,
+            "schema": {
+              "maximum": 50,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      }
+    },
+    "/api/suggestions": {
+      "get": {
+        "auth": false,
+        "parameters": {
+          "limit": {
+            "in": "query",
+            "required": false,
+            "schema": {
+              "maximum": 50,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      }
+    },
+    "/api/telegram/webhook": {
+      "post": {
+        "auth": false,
+        "parameters": {
+          "x-telegram-bot-api-secret-token": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "auth": false,
+        "parameters": {},
+        "responses": {
+          "200": {
+            "$ref": "HealthResponse"
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "auth": false,
+        "parameters": {},
+        "responses": {
+          "200": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,83 @@
+version: 2
+
+# plan M2.4: one place where every dependency update arrives, with the CI gate already
+# attached. Patch updates land together and auto-merge when CI is green (see
+# .github/workflows/dependabot-auto-merge.yml); a major bump is a human decision, because
+# yfinance/pandas/spacy majors change a data shape on the extraction path.
+
+multi-ecosystem-groups:
+  python:
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "05:00"
+      timezone: "Etc/UTC"
+    # Monday 05:00 UTC is before the weekly ingest, so a bad lock file is caught by CI
+    # before the cron Worker runs against the new environment.
+
+updates:
+  # `uv` reads pyproject.toml + uv.lock; `pip` covers the same manifest for the
+  # requirement lines Dependabot's uv parser still ignores. Grouped so one PR moves both.
+  - package-ecosystem: "uv"
+    directory: "/"
+    multi-ecosystem-group: python
+    patterns: ["*"]
+    groups:
+      python-patch:
+        applies-to: version-updates
+        update-types: ["patch"]
+      python-minor:
+        applies-to: version-updates
+        update-types: ["minor"]
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "pip"
+    directory: "/"
+    multi-ecosystem-group: python
+    patterns: ["*"]
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "npm"
+    directory: "/web"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      web-patch:
+        update-types: ["patch"]
+      web-minor:
+        update-types: ["minor"]
+    ignore:
+      # vite-plus pins its own toolchain; a major here is a migration, not an update.
+      - dependency-name: "vite"
+        update-types: ["version-update:semver-major"]
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      actions:
+        patterns: ["*"]
+    open-pull-requests-limit: 3
+
+  # Base images. A digest bump is how a CVE in the slim image reaches us, and pinning by
+  # digest (Dockerfile.*) is what makes this the only way it arrives.
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      base-images:
+        patterns: ["*"]
+    open-pull-requests-limit: 3
+
+  - package-ecosystem: "docker"
+    directory: "/web"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 2

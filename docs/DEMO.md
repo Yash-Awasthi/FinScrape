@@ -20,7 +20,8 @@ the README quickstart).
 
 - Each card is a recent story turned into an instruction: risk-on or risk-off, which
   sector to add or reduce, and the tickers that carry it (▲ ▼).
-- The percentage is the chance the call is right, from the verdict's past record.
+- The percentage is how often that verdict's past calls came right — its record, not a
+  forecast of this event's price.
 - The footer names the sources and says when a call has no scored record yet.
 - Click a ticker chip: the chart re-aims to that symbol.
 

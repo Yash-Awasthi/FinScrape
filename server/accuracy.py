@@ -15,7 +15,7 @@ from datetime import datetime
 
 import asyncpg
 
-from finscrape.accuracy import calibration, equity_metrics
+from finscrape.accuracy import calibration, equity_metrics, sample_note, wilson_interval
 
 THRESHOLD_PCT = 1.0
 DIRECTIONAL = ("INVEST", "PULL_OUT")
@@ -64,19 +64,29 @@ def verdict_outcome(verdict: str, change_pct: float) -> str:
 
 
 def aggregate(rows: list[dict]) -> dict:
-    """rows: {verdict, correct(bool|None), at, move?}. `at` is the event time and `move` the
-    % move signed toward the call. Returns hit-rate overall + by verdict + a cumulative
+    """rows: {verdict, correct(bool|None), at, move?, source?}. `at` is the event time and
+    `move` the % move signed toward the call. Returns hit-rate overall + by verdict + by
+    analysis source (so a heuristic row can never inflate the model's record) + a cumulative
     equity curve (+1 correct / -1 incorrect, in event order)."""
     scored = [r for r in rows if r.get("correct") is not None]
     hits = sum(1 for r in scored if r["correct"])
     by_verdict: dict[str, dict] = {}
+    by_source: dict[str, dict] = {}
     for r in scored:
-        b = by_verdict.setdefault(r["verdict"], {"hits": 0, "total": 0})
-        b["total"] += 1
-        if r["correct"]:
-            b["hits"] += 1
-    for b in by_verdict.values():
-        b["hit_rate"] = round(b["hits"] / b["total"], 3) if b["total"] else 0.0
+        for bucket, key in (
+            (by_verdict, r["verdict"]),
+            (by_source, r.get("source") or "unknown"),
+        ):
+            b = bucket.setdefault(key, {"hits": 0, "total": 0})
+            b["total"] += 1
+            if r["correct"]:
+                b["hits"] += 1
+    for bucket in (by_verdict, by_source):
+        for b in bucket.values():
+            b["hit_rate"] = round(b["hits"] / b["total"], 3) if b["total"] else 0.0
+            b["n"] = b["total"]
+            b["ci95"] = wilson_interval(b["hits"], b["total"])
+            b["sample"] = sample_note(b["hits"], b["total"])
 
     equity: list[float] = []
     cum = 0.0
@@ -94,9 +104,15 @@ def aggregate(rows: list[dict]) -> dict:
     return {
         "total": len(rows),
         "scored": len(scored),
+        "n": len(scored),
         "hits": hits,
         "hit_rate": round(hits / len(scored), 3) if scored else 0.0,
+        # A percentage without n and an interval is a claim the sample cannot support
+        # (plan m1.4.1).
+        "ci95": wilson_interval(hits, len(scored)),
+        "sample": sample_note(hits, len(scored)),
         "by_verdict": by_verdict,
+        "by_source": by_source,
         "equity_curve": equity,
         "equity_metrics": equity_metrics(step_returns),
         "calibration": calibration(scored),
@@ -110,9 +126,14 @@ async def backtest(
     hours_after: float = 24,
     lookback_days: int = 30,
     limit: int = 500,
+    stats: dict[str, int] | None = None,
 ) -> int:
     """Score directional events old enough to have a realized move, into
-    accuracy_outcomes (idempotent — skips events already scored). Returns rows written."""
+    accuracy_outcomes (idempotent — skips events already scored). Returns rows written.
+
+    A call with no price data is **excluded and counted** (`stats["skipped_no_price"]`),
+    never written as a miss: a missing quote is missing evidence, not a wrong call
+    (plan m1.4.2)."""
     events = await pool.fetch(
         """
         SELECT e.id, e.verdict, e.tickers, e.timestamp, e.affected_entities
@@ -133,11 +154,13 @@ async def backtest(
         limit,
     )
     written = 0
+    counted = {"candidates": len(events), "written": 0, "skipped_no_price": 0}
     for ev in events:
         tickers = ev["tickers"] or []
         moves = price_fetcher(tickers, ev["timestamp"], hours_after)
         change = called_move(ev["verdict"], ev["affected_entities"] or [], moves)
         if change is None:
+            counted["skipped_no_price"] += 1
             continue
         # `change` is already signed toward the call, so INVEST's rule applies.
         outcome = verdict_outcome("INVEST", change)
@@ -155,6 +178,9 @@ async def backtest(
         )
         if inserted is not None:
             written += 1
+    counted["written"] = written
+    if stats is not None:
+        stats.update(counted)
     return written
 
 
@@ -168,6 +194,7 @@ async def score_vs_spy(
     *,
     lookback_days: int = 30,
     limit: int = 500,
+    stats: dict[str, int] | None = None,
 ) -> int:
     """Fill ex2/ex4 on scored calls: the called-direction return over SPY's, +2 and +4
     trading days on. A call hits when it beat SPY that way; no band. Returns rows updated."""
@@ -184,6 +211,7 @@ async def score_vs_spy(
         limit,
     )
     updated = 0
+    counted = {"candidates": len(rows), "updated": 0, "skipped_no_price": 0}
     for r in rows:
         excess = excess_fetcher(r["tickers"] or [], r["timestamp"])
         ex = [
@@ -191,6 +219,7 @@ async def score_vs_spy(
             for h in (2, 4)
         ]
         if ex[0] is None:
+            counted["skipped_no_price"] += 1
             continue
         hit = [None if x is None or x == 0 else x > 0 for x in ex]
         await pool.execute(
@@ -200,6 +229,9 @@ async def score_vs_spy(
             *hit,
         )
         updated += 1
+    counted["updated"] = updated
+    if stats is not None:
+        stats.update(counted)
     return updated
 
 
@@ -210,5 +242,8 @@ def vs_spy_summary(rows: list[dict]) -> dict:
         agg = aggregate(
             [{"verdict": r["verdict"], "correct": r[f"correct{h}"]} for r in rows]
         )
-        out[f"d{h}"] = {k: agg[k] for k in ("scored", "hits", "hit_rate", "by_verdict")}
+        out[f"d{h}"] = {
+            k: agg[k]
+            for k in ("scored", "n", "hits", "hit_rate", "ci95", "sample", "by_verdict")
+        }
     return out

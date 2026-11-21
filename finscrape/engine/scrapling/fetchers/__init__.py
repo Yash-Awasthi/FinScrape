@@ -1,17 +1,32 @@
 from typing import TYPE_CHECKING, Any
+
 from finscrape.engine.scrapling.engines.toolbelt import ProxyRotator
 
 if TYPE_CHECKING:
-    from finscrape.engine.scrapling.fetchers.requests import Fetcher, AsyncFetcher, FetcherSession
-    from finscrape.engine.scrapling.fetchers.chrome import DynamicFetcher, DynamicSession, AsyncDynamicSession
-    from finscrape.engine.scrapling.fetchers.stealth_chrome import StealthyFetcher, StealthySession, AsyncStealthySession
+    from finscrape.engine.scrapling.engines.static import (
+        FetcherSession,
+    )
+    from finscrape.engine.scrapling.fetchers.chrome import (
+        AsyncDynamicSession,
+        DynamicFetcher,
+        DynamicSession,
+    )
+    from finscrape.engine.scrapling.fetchers.requests import (
+        AsyncFetcher,
+        Fetcher,
+    )
+    from finscrape.engine.scrapling.fetchers.stealth_chrome import (
+        AsyncStealthySession,
+        StealthyFetcher,
+        StealthySession,
+    )
 
 
 # Lazy import mapping
 _LAZY_IMPORTS = {
     "Fetcher": ("finscrape.engine.scrapling.fetchers.requests", "Fetcher"),
     "AsyncFetcher": ("finscrape.engine.scrapling.fetchers.requests", "AsyncFetcher"),
-    "FetcherSession": ("finscrape.engine.scrapling.fetchers.requests", "FetcherSession"),
+    "FetcherSession": ("finscrape.engine.scrapling.engines.static", "FetcherSession"),
     "DynamicFetcher": ("finscrape.engine.scrapling.fetchers.chrome", "DynamicFetcher"),
     "DynamicSession": ("finscrape.engine.scrapling.fetchers.chrome", "DynamicSession"),
     "AsyncDynamicSession": ("finscrape.engine.scrapling.fetchers.chrome", "AsyncDynamicSession"),
@@ -21,16 +36,16 @@ _LAZY_IMPORTS = {
 }
 
 __all__ = [
-    "Fetcher",
+    "AsyncDynamicSession",
     "AsyncFetcher",
-    "ProxyRotator",
-    "FetcherSession",
+    "AsyncStealthySession",
     "DynamicFetcher",
     "DynamicSession",
-    "AsyncDynamicSession",
+    "Fetcher",
+    "FetcherSession",
+    "ProxyRotator",
     "StealthyFetcher",
     "StealthySession",
-    "AsyncStealthySession",
 ]
 
 

@@ -36,6 +36,10 @@ class EventIn(BaseModel):
     affected_entities: list[Any] = Field(default_factory=list)
     second_order_effects: list[Any] = Field(default_factory=list)
     key_metrics: dict[str, Any] = Field(default_factory=dict)
+    # Which judge produced the row (plan m1.3.1): model / model_repaired / heuristic / laya.
+    # 'unknown' only appears on rows written before the column existed.
+    analysis_source: str = "unknown"
+    model_name: str = ""
     timestamp: str | None = None  # ISO; UTC-normalized at ingest
 
 
@@ -84,3 +88,8 @@ class HealthResponse(BaseModel):
     db: bool
     llm: bool
     sources: list[SourceHealth] = Field(default_factory=list)
+    # Share of the last 24 h of events written by the keyword fallback instead of a model
+    # (plan m1.3.2). None when the DB is down, so "no data" never reads as "healthy".
+    heuristic_share_24h: float | None = None
+    # True when that share is above the point where the feed is mostly not model-judged.
+    heuristic_alert: bool = False

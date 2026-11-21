@@ -102,6 +102,9 @@ def test_world_rss_reports_each_feed(monkeypatch):
         b"<link>https://example.org/a</link></item></channel></rss>"
     )
     monkeypatch.setattr(rss, "fast_get", lambda url: None if "dead" in url else xml)
+    # The world scraper's mirror is a second network path; fail it too so this
+    # test stays offline and measures the no-feed-at-all health row.
+    monkeypatch.setattr("finscrape.scrapers.world.fast_get", lambda *_a, **_k: None)
     monkeypatch.setattr(
         "finscrape.scrapers.world.feed_urls",
         lambda: {
@@ -280,3 +283,27 @@ def test_merge_waits_for_an_event_another_source_has_not_written():
 
     asyncio.run(cycle())
     assert applied == ["https://b"] and w._unmerged == []
+
+
+def test_the_retention_job_is_scheduled_with_the_documented_window():
+    """plan M1.5: the sweep is a scheduled job, and its window is the setting the docs
+    quote — not a literal that can drift from RUNBOOK."""
+    from typing import ClassVar
+
+    from server.settings import Settings
+    from worker import main as worker_main
+
+    class Workerish:
+        sources: ClassVar[dict] = {}
+
+        async def run_correlations(self) -> None:  # the scheduled correlate job
+            return None
+
+    s = Settings(_env_file=None)
+    scheduler = worker_main._schedule(Workerish(), s)
+    job = scheduler.get_job("retention")
+    assert job is not None
+    assert job.trigger.interval.total_seconds() == 24 * 3600
+    # args: (worker, days, event_days, max_mb) — the configured values, in order.
+    assert job.args[1:] == (s.retention_days, s.event_retention_days, s.db_max_mb)
+    assert (s.retention_days, s.event_retention_days) == (90, 365)

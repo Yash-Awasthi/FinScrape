@@ -227,11 +227,14 @@ def score_scenario(
     probability = p_positive if p_positive >= 0.5 else 1.0 - p_positive
 
     member_ids = [m.get("id") for m in members if m.get("id") is not None]
+    # Cluster ids are ints; the cast only exists for `min`, which the stubs will not accept
+    # on a list that may still contain None.
+    numeric_ids = [mid for mid in member_ids if isinstance(mid, int)]
     sectors = _rank(sector_tilt, _MAX_SECTORS, total_weight)
     exposure = _rank(ticker_tilt, _MAX_EXPOSURE, total_weight)
 
     return {
-        "id": f"s{min(member_ids)}" if member_ids else "s0",
+        "id": f"s{min(numeric_ids)}" if numeric_ids else "s0",
         "title": cluster.get("top_subject") or members[0].get("subject") or "Untitled",
         "size": len(members),
         "reports": int(cluster.get("reports") or len(members)),
@@ -279,8 +282,10 @@ def build_scenarios(
         # member of every cluster is one call. Build them once per request.
         tables = reliability_tables(outcomes)
 
-        def predict_fn(**kwargs: Any) -> dict[str, Any]:
+        def _default_predict(**kwargs: Any) -> dict[str, Any]:
             return _predict(tables=tables, **kwargs)
+
+        predict_fn = _default_predict
 
     def _score(pool: list[dict[str, Any]]) -> list[dict[str, Any]]:
         scored = [score_scenario(c, outcomes, predict_fn) for c in pool]

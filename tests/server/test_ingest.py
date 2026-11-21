@@ -50,23 +50,43 @@ def test_parse_timestamp_garbage_falls_back_to_now():
     assert parse_timestamp(None).tzinfo is not None
 
 
+def test_feeds_in_three_timezone_shapes_normalise_before_ordering():
+    # plan M1.5: a feed with no zone, one with +0530 and one with a Z suffix must all
+    # become the same UTC instants, so ordering them cannot depend on the feed's style.
+    naive = parse_timestamp("2026-05-03T12:00:00")  # assumed UTC
+    offset = parse_timestamp("2026-05-03T17:30:00+05:30")  # == 12:00Z
+    zulu = parse_timestamp("2026-05-03T12:00:00Z")
+    assert naive == offset == zulu
+    assert {d.utcoffset().total_seconds() for d in (naive, offset, zulu)} == {0}
+    # Ordering the three feed shapes is the UTC order, whatever the source sent.
+    later_offset = parse_timestamp("2026-05-03T20:00:00+05:30")  # 14:30Z
+    assert sorted([later_offset, offset, naive]) == [offset, naive, later_offset]
+
+
 def test_content_hash_is_deterministic_and_dedupes_same_story():
     ts1 = parse_timestamp("2026-05-03T01:00:00Z")
     ts2 = parse_timestamp("2026-05-03T23:00:00Z")  # same UTC day
-    h1 = content_hash("Apple beats earnings", ["https://x.com/a?utm_source=z"], ts1)
-    h2 = content_hash("apple   beats   earnings", ["https://x.com/a"], ts2)
-    assert h1 == h2  # subject norm + url canon + same day => same hash
+    h1 = content_hash("Apple beats earnings", ts1)
+    h2 = content_hash("apple   beats   earnings", ts2)
+    assert h1 == h2  # subject norm + same UTC day => same hash
+
+
+def test_content_hash_ignores_the_url_so_one_story_is_one_row():
+    # plan M1.5: RSS, GDELT and a blocked-feed fallback each carry their own link.
+    # Keying on the link is what wrote the story three times.
+    ts = parse_timestamp("2026-05-03T12:00:00Z")
+    assert content_hash("Hormuz shut", ts) == content_hash("HORMUZ  shut", ts)
 
 
 def test_content_hash_differs_across_days():
-    a = content_hash("S", ["https://x.com/a"], parse_timestamp("2026-05-03T23:00:00Z"))
-    b = content_hash("S", ["https://x.com/a"], parse_timestamp("2026-05-04T00:00:00Z"))
+    a = content_hash("S", parse_timestamp("2026-05-03T23:00:00Z"))
+    b = content_hash("S", parse_timestamp("2026-05-04T00:00:00Z"))
     assert a != b
 
 
 def test_content_hash_no_articles_uses_subject_and_day():
-    h1 = content_hash("Manual signal", [], parse_timestamp("2026-05-03T00:00:00Z"))
-    h2 = content_hash("manual signal", None, parse_timestamp("2026-05-03T12:00:00Z"))
+    h1 = content_hash("Manual signal", parse_timestamp("2026-05-03T00:00:00Z"))
+    h2 = content_hash("manual signal", parse_timestamp("2026-05-03T12:00:00Z"))
     assert h1 == h2
 
 

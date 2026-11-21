@@ -4,10 +4,8 @@ import pytest
 
 from finscrape.analysis.nlp import (
     FinancialNLP,
-    analyze_financial_text,
-    ExtractedEntity,
-    FinancialMetric,
     NLPResult,
+    analyze_financial_text,
 )
 
 

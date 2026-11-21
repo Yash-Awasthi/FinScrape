@@ -148,11 +148,13 @@ class AgentCouncil:
 
         # Appends market_facts only when set, so an agent.analyze() override that
         # only takes (title, text, metadata) keeps working unchanged.
-        analyze_args = (title, text, metadata) if market_facts is None else (title, text, metadata, market_facts)
-
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             future_to_agent = {
-                executor.submit(agent.analyze, *analyze_args): agent
+                (
+                    executor.submit(agent.analyze, title, text, metadata, market_facts)
+                    if market_facts is not None
+                    else executor.submit(agent.analyze, title, text, metadata)
+                ): agent
                 for agent in self.agents
             }
 
@@ -190,16 +192,17 @@ class AgentCouncil:
     ) -> list[AgentVerdict]:
         """Every agent sees every other agent's prior-round verdict and re-answers, in parallel."""
         verdicts: list[AgentVerdict] = []
-        rebut_tail = (metadata, round_num) if market_facts is None else (metadata, round_num, market_facts)
-
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             future_to_agent = {
-                executor.submit(
-                    agent.rebut, title, text,
-                    [v for v in prior_verdicts if v.agent_name != agent.name and not v.error],
-                    *rebut_tail,
+                (
+                    executor.submit(agent.rebut, title, text, opponents, metadata, round_num, market_facts)
+                    if market_facts is not None
+                    else executor.submit(agent.rebut, title, text, opponents, metadata, round_num)
                 ): agent
                 for agent in self.agents
+                for opponents in [
+                    [v for v in prior_verdicts if v.agent_name != agent.name and not v.error]
+                ]
             }
 
             for future in as_completed(future_to_agent):
@@ -345,7 +348,7 @@ class AgentCouncil:
         )
 
     @staticmethod
-    def _calculate_agreement(scores: list[int | float]) -> float:
+    def _calculate_agreement(scores: Sequence[int | float]) -> float:
         """
         Calculate agreement level from a list of scores.
 

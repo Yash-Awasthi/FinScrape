@@ -39,7 +39,7 @@ from transformers import AutoTokenizer
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-from finscrape.analysis.laya import _QUESTIONS  # noqa: E402
+from finscrape.analysis.laya import _QUESTIONS
 
 BASE = "convaiinnovations/laya"
 SEED = 20260929

@@ -1,0 +1,10 @@
+{
+  "_comment": [
+    "Tolerated security advisories. Every entry needs an owner and an expiry, and CI runs",
+    "`python -m scripts.audit --strict`, which fails once the date passes — a tolerated",
+    "advisory is a scheduled decision, not a permanent silence (plan M2.4).",
+    "Empty on purpose: the last run (opentelemetry-api 1.45.1, setuptools 84.0.0) was fixed",
+    "by upgrading the lock file instead of tolerating it."
+  ],
+  "entries": []
+}

@@ -8,6 +8,7 @@ stands in, and it adds what the DOC API lacked: CAMEO codes, mention counts, geo
 from __future__ import annotations
 
 import csv
+import datetime as _dt
 import io
 import logging
 import re
@@ -48,6 +49,33 @@ def _float(v: str) -> float | None:
         return None
 
 
+_EXPORT_TS = re.compile(r"/(\d{14})\.export\.CSV\.zip$")
+
+
+def export_urls(listing: str, attempts: int = 8) -> list[str]:
+    """The listed export followed by earlier 15-minute files.
+
+    GDELT publishes `lastupdate.txt` before the file it names is downloadable, so
+    the newest entry can answer 404 for a few minutes. Walking backwards costs one
+    request in the normal case and keeps the source alive across that gap.
+    """
+    line = next(
+        (ln for ln in listing.splitlines() if ln.rstrip().endswith(".export.CSV.zip")),
+        "",
+    )
+    url = line.split()[-1] if line else ""
+    match = _EXPORT_TS.search(url)
+    if not match:
+        return []
+    stamp = _dt.datetime.strptime(match.group(1), "%Y%m%d%H%M%S")
+    base = url[: match.start()]
+    out = []
+    for step in range(attempts):
+        when = (stamp - _dt.timedelta(minutes=15 * step)).strftime("%Y%m%d%H%M%S")
+        out.append(f"{base}/{when}.export.CSV.zip".replace("http://", "https://"))
+    return out
+
+
 class GDELTIngestor(BaseIngestor):
     name = "gdelt"
     base_url = LASTUPDATE
@@ -60,19 +88,15 @@ class GDELTIngestor(BaseIngestor):
         try:
             listing = requests.get(LASTUPDATE, headers=_HEADERS, timeout=_TIMEOUT)
             listing.raise_for_status()
-            export = next(
-                line.split()[-1]
-                for line in listing.text.splitlines()
-                if line.endswith(".export.CSV.zip")
-            )
-            resp = requests.get(
-                export.replace("http://", "https://"),
-                headers=_HEADERS,
-                timeout=_TIMEOUT,
-            )
-            resp.raise_for_status()
-            return resp.content
-        except (RequestException, StopIteration) as exc:
+            for export in export_urls(listing.text):
+                resp = requests.get(export, headers=_HEADERS, timeout=_TIMEOUT)
+                if resp.status_code == 404:
+                    continue  # published a minute before the file exists
+                resp.raise_for_status()
+                return resp.content
+            logger.warning("[ingestor/gdelt] no export file available yet")
+            return None
+        except RequestException as exc:
             logger.warning("[ingestor/gdelt] export fetch failed: %s", exc)
             return None
 

@@ -25,6 +25,10 @@ import urllib.request
 
 import curl_cffi.requests as curl_requests
 
+# The exceptions live in their own module; `curl_requests.exceptions` is the same object at
+# runtime but is not in curl_cffi's type stubs.
+from curl_cffi.requests.exceptions import ConnectionError as CurlConnectionError
+
 logger = logging.getLogger(__name__)
 
 # Rotation order on block responses. Generic aliases (stable across curl_cffi
@@ -52,7 +56,7 @@ def _cached(url: str) -> tuple[str, str, bytes] | None:
 def fast_get(
     url: str,
     *,
-    timeout: float = 15.0,
+    timeout: float = 20.0,
     retries: int = 2,
     use_cache: bool = True,
 ) -> bytes | None:
@@ -76,11 +80,21 @@ def fast_get(
                 resp = curl_requests.get(
                     url, headers=headers, timeout=timeout, impersonate=profile
                 )
-            except Exception:  # noqa: BLE001 — unknown/unsupported profile: plain GET
+            except Exception:
                 resp = curl_requests.get(url, headers=headers, timeout=timeout)
 
             if resp.status_code == 304 and cached:
                 return cached[2]
+
+            # Throttled feeds tell us how long to wait; obey it instead of burning
+            # the remaining attempts on the same block window.
+            if resp.status_code == 429 and attempt < retries:
+                try:
+                    wait = min(5.0, float(resp.headers.get("Retry-After", "")))
+                except ValueError:
+                    wait = random.uniform(0.8, 1.8) * (attempt + 1)
+                time.sleep(wait)
+                continue
 
             resp.raise_for_status()
             content = resp.content
@@ -94,21 +108,23 @@ def fast_get(
                 )
             return content
 
-        except Exception as e:  # noqa: BLE001 — any transport failure → retry/rotate
+        except Exception as e:
             last_error = e
             status = getattr(e, "code", None) or getattr(
                 getattr(e, "response", None), "status_code", None
             )
             # Client block (403/429): rotate fingerprint before retrying.
             if status not in (403, 429, 500, 502, 503, 504):
-                if isinstance(e, curl_requests.exceptions.ConnectionError):
+                if isinstance(e, CurlConnectionError):
                     return _plain_get(url, timeout)
                 logger.warning("[fastfetch] %s failed permanently: %s", url, e)
                 return None
             if attempt < retries:
                 time.sleep(random.uniform(0.4, 1.2) * (attempt + 1))
 
-    logger.warning("[fastfetch] %s failed after %d attempts: %s", url, retries + 1, last_error)
+    logger.warning(
+        "[fastfetch] %s failed after %d attempts: %s", url, retries + 1, last_error
+    )
     return None
 
 

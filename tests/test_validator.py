@@ -3,14 +3,13 @@
 import pytest
 
 from finscrape.analysis.validator import (
+    apply_recency_decay,
+    apply_source_credibility,
     calculate_heuristic_score,
     check_divergence,
     clean_tickers,
     fuse_confidence,
-    apply_source_credibility,
-    apply_recency_decay,
 )
-
 
 # ---------------------------------------------------------------------------
 # calculate_heuristic_score
@@ -64,7 +63,7 @@ class TestCalculateHeuristicScore:
         assert impact_boosted > impact_plain
 
     def test_unknown_event_type_uses_default(self):
-        sentiment, impact = calculate_heuristic_score("neutral text", "nonexistent_type")
+        _sentiment, impact = calculate_heuristic_score("neutral text", "nonexistent_type")
         assert 0.0 <= impact <= 1.0
 
 

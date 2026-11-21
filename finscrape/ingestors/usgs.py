@@ -1,4 +1,8 @@
-"""USGS earthquakes (M4.5+, past week). Keyless GeoJSON. Carries exact lat/lon."""
+"""USGS earthquakes (M4.5+, past day). Keyless GeoJSON. Carries exact lat/lon.
+
+The week feed produced 142 items a cycle and crowded out actual news. One day is
+enough for a disaster signal, and `max_records` keeps quakes a minority source.
+"""
 
 from __future__ import annotations
 
@@ -13,8 +17,11 @@ _MIN_MAG = 4.5
 class USGSQuakesIngestor(BaseIngestor):
     name = "usgs_quakes"
     base_url = (
-        "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson"
+        "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson"
     )
+
+    def __init__(self, max_records: int = 8):
+        self.max_records = max_records
 
     def parse(self, data: Any) -> list[RawGeoEvent]:
         events: list[RawGeoEvent] = []
@@ -45,4 +52,6 @@ class USGSQuakesIngestor(BaseIngestor):
                     url=props.get("url", ""),
                 )
             )
+            if len(events) >= self.max_records:
+                break
         return events

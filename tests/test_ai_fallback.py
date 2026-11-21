@@ -102,3 +102,31 @@ def test_server_chat_tries_each_fallback_model_in_order(monkeypatch):
     finally:
         get_settings.cache_clear()
     assert asked == ["first", "second", "third"]
+
+
+def test_disabled_proxy_route_falls_back_to_openrouter(monkeypatch):
+    """TokenHarbor can answer 403 free_models_disabled for every model on the
+    proxy. OpenRouter is a separate account, so ingest must try it before
+    landing a heuristic-only event."""
+    asked: list[str] = []
+
+    def proxy(prompt, system_prompt, model):
+        return None
+
+    def openrouter(prompt, system_prompt, model):
+        asked.append(model)
+        return dict(GOOD)
+
+    ai_client.clear_cache()
+    monkeypatch.setattr(ai_client, "_call_openai_proxy", proxy)
+    monkeypatch.setattr(ai_client, "_call_openrouter", openrouter)
+    monkeypatch.setattr(ai_client, "RETRY_BASE_DELAY", 0)
+    monkeypatch.setenv("OPENAI_BASE_URL", "http://llm.invalid/v1")
+    monkeypatch.setenv("FINSCRAPE_WIRE_API", "chat")
+    monkeypatch.setenv("OPENAI_API_KEY", "proxy")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "or-key")
+    monkeypatch.setenv("FINSCRAPE_OPENROUTER_MODEL", "deepseek/deepseek-chat")
+    monkeypatch.setattr(ai_client, "OPENROUTER_API_KEY", "or-key")
+    result = ai_client.call_ai("prompt", "system")
+    assert result is not None and result["tickers"] == ["XOM"]
+    assert asked == ["deepseek/deepseek-chat"]
