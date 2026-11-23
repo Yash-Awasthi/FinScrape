@@ -156,7 +156,7 @@ class TestCleanTickers:
         assert clean_tickers(tickers) == ["RELIANCE.NS", "BRK-B", "LMT"]
 
     def test_scenario_exposure_skips_placeholder_entity_tickers(self):
-        from finscrape.scenarios import _tickers_of
+        from finscrape.signals.scenarios import _tickers_of
 
         event = {
             "tickers": ["LMT", "N/A"],

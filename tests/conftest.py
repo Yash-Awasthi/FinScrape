@@ -23,13 +23,13 @@ except ImportError:
 def _reset_breakers():
     """Reset circuit breakers between tests so no test inherits a tripped breaker."""
     try:
-        from finscrape.scrapers import reset_breakers
+        from finscrape.fetchers import reset_breakers
         reset_breakers()
     except ImportError:
         pass
     yield
     try:
-        from finscrape.scrapers import reset_breakers
+        from finscrape.fetchers import reset_breakers
         reset_breakers()
     except ImportError:
         pass

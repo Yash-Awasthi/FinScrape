@@ -13,12 +13,15 @@ import json
 import logging
 import threading
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 
 import asyncpg
 
 from finscrape.logging_config import correlation_id
 from finscrape.market_data import get_market_data
+from finscrape.models import ScrapedArticle
 from finscrape.pipeline import FinScrapePipeline
+from finscrape.settings import env_int
 from server.ai import analyze_event
 from server.alert_rules import fire_alerts
 from server.correlate import (
@@ -279,6 +282,22 @@ def velocity_history(rows: list, now: float, window_hours: int) -> dict[str, lis
     }
 
 
+def _analyze_workers() -> int:
+    """Articles in one cycle are independent until ingest, and the model call is
+    network-bound, so a small pool cuts a 6-article cycle roughly to latency ×
+    ceil(n/workers). The default equals the per-source article cap (6), so one wave
+    finishes inside the 60 s p90 gate even at the documented 32 s p90; the provider's
+    rate limit, not this machine, is the ceiling, and a 429 already rotates the key
+    queue. 1 restores the old sequential loop; 8 is the cap so a typo cannot open one
+    socket per article. (plan M3.2; measured in docs/PERF.md)"""
+    raw = env_int("WORLDFIN_ANALYZE_WORKERS", 6)
+    try:
+        value = int(raw)
+    except ValueError:
+        value = 6
+    return max(1, min(8, value))
+
+
 class Worker:
     def __init__(self, pool: asyncpg.Pool, max_articles: int = 20):
         self.pool = pool
@@ -287,6 +306,7 @@ class Worker:
         self.enrichers = build_enrichers()
         self.pipeline = FinScrapePipeline(PostgresEvents(pool))
         self._unmerged: list[tuple[str, str, str]] = []
+        self.analyze_workers = _analyze_workers()
 
     def _analyze_blocking(
         self, source_name: str, items: list[Item]
@@ -296,34 +316,61 @@ class Worker:
         An article the LLM never answered for is left out of the judged URLs so the
         next cycle retries it instead of losing it.
         """
+        # `getattr` keeps the method usable on a `Worker.__new__` instance (the tests
+        # build one to exercise the thread body without a pool).
+        workers = getattr(self, "analyze_workers", None) or _analyze_workers()
+        if workers == 1 or len(items) <= 1:
+            per_article = [
+                self._analyze_one(source_name, article, geo) for article, geo in items
+            ]
+        else:
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                per_article = list(
+                    pool.map(
+                        lambda pair: self._analyze_one(source_name, pair[0], pair[1]),
+                        items,
+                    )
+                )
         dicts: list[dict] = []
         merges: list[tuple[str, str, str]] = []
         judged: list[str] = []
-        enrich = self.enrichers.get(source_name)
-        for article, geo in items:
-            try:
-                if enrich:
-                    article = enrich(article)
-                # The article's tag carries the tier correlation types read.
-                tag = article.source or source_name
-                fe = self.pipeline._analyze_article(tag, article)
-            except Exception as exc:
-                log.warning("[%s] analyze failed: %s", source_name, exc)
-                continue
-            if not self.pipeline.ai_failed():
-                judged.append(article.url)
-            if fe is None:
-                matched = self.pipeline.merged_into()
-                if matched and matched.get("subject"):
-                    merges.append((matched["subject"], article.url, tag))
-                continue
-            d = fe.to_dict()
-            lat, lon = geocode_event(
-                fe.subject, fe.affected_entities, explicit_latlon=geo
-            )
-            d["lat"], d["lon"] = lat, lon
-            dicts.append(d)
+        for feeding, merge, url in per_article:
+            if feeding is not None:
+                dicts.append(feeding)
+            if merge is not None:
+                merges.append(merge)
+            if url is not None:
+                judged.append(url)
         return dicts, merges, judged
+
+    def _analyze_one(
+        self,
+        source_name: str,
+        article: ScrapedArticle,
+        geo: tuple[float | None, float | None] | None,
+    ) -> tuple[dict | None, tuple[str, str, str] | None, str | None]:
+        """Analyse one article. Pure per-call state: the pipeline's mutable fields live in
+        thread-local storage, so pool workers cannot see each other's merge/failure flags."""
+        try:
+            enrich = self.enrichers.get(source_name)
+            if enrich:
+                article = enrich(article)
+            # The article's tag carries the tier correlation types read.
+            tag = article.source or source_name
+            fe = self.pipeline._analyze_article(tag, article)
+        except Exception as exc:
+            log.warning("[%s] analyze failed: %s", source_name, exc)
+            return None, None, None
+        judged = None if self.pipeline.ai_failed() else article.url
+        if fe is None:
+            matched = self.pipeline.merged_into()
+            if matched and matched.get("subject"):
+                return None, (matched["subject"], article.url, tag), judged
+            return None, None, judged
+        d = fe.to_dict()
+        lat, lon = geocode_event(fe.subject, fe.affected_entities, explicit_latlon=geo)
+        d["lat"], d["lon"] = lat, lon
+        return d, None, judged
 
     async def run_source(self, name: str) -> dict:
         """Run one source end to end. Returns the ingest result (or zeros on failure)."""

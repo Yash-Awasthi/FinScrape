@@ -682,7 +682,7 @@ def _ticker_is(ticker: object, name: str) -> bool:
     """The LLM writes a symbol for unlisted names (flydubai "FZ") or borrows another
     issuer's (Vanguard "VGI"), so the curated map or the SEC title must agree."""
     from finscrape.analysis.ticker_map import resolve_company_tickers
-    from finscrape.entity_map import listed_titles
+    from finscrape.extract.entity_map import listed_titles
 
     if not isinstance(ticker, str):
         return False

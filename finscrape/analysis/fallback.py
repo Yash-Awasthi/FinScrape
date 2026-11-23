@@ -29,7 +29,7 @@ from finscrape.analysis.validator import (
     calculate_sentence_sentiment,
     extract_financial_magnitudes,
 )
-from finscrape.entity_map import (
+from finscrape.extract.entity_map import (
     lede_tickers,
     listed_titles,
     resolve_company_tickers,

@@ -7,12 +7,13 @@ from __future__ import annotations
 import datetime as dt
 import logging
 import math
-import os
 import time
 from typing import cast
 
 import pandas as pd
 import yfinance as yf
+
+from finscrape.settings import env_float
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ _reaction_cache: dict[str, tuple[dict, float]] = {}
 
 def _ttl() -> float:
     try:
-        return float(os.getenv("FINSCRAPE_MARKET_TTL", "600"))
+        return env_float("FINSCRAPE_MARKET_TTL", 600.0)
     except ValueError:
         return 600.0
 
@@ -60,7 +61,7 @@ def clear_quote_cache() -> None:
 
 def _quote_ttl() -> float:
     try:
-        return float(os.getenv("FINSCRAPE_QUOTE_TTL", "60"))
+        return env_float("FINSCRAPE_QUOTE_TTL", 60.0)
     except ValueError:
         return 60.0
 
@@ -176,7 +177,7 @@ DEFAULT_FETCH_TIMEOUT_S = 8.0
 
 def _fetch_timeout() -> float:
     try:
-        return float(os.getenv("WORLDFIN_UPSTREAM_TIMEOUT_S", DEFAULT_FETCH_TIMEOUT_S))
+        return env_float("WORLDFIN_UPSTREAM_TIMEOUT_S", DEFAULT_FETCH_TIMEOUT_S)
     except ValueError:
         return DEFAULT_FETCH_TIMEOUT_S
 
@@ -190,7 +191,7 @@ _quote_failures: dict[str, float] = {}
 
 def _quote_fail_ttl() -> float:
     try:
-        return float(os.getenv("FINSCRAPE_QUOTE_FAIL_TTL", "30"))
+        return env_float("FINSCRAPE_QUOTE_FAIL_TTL", 30.0)
     except ValueError:
         return 30.0
 
@@ -218,7 +219,10 @@ def _fetch_quotes(symbols: list[str], timeout: float | None = None) -> dict[str,
             group_by="ticker",
             progress=False,
             threads=True,
-            timeout=_fetch_timeout() if timeout is None else timeout,
+            # yfinance annotates this as int, but the value is a requests/urllib3
+            # socket timeout and accepts fractional seconds; truncating it would
+            # silently shorten the configured budget (tests pin 3.5 s and 1.25 s).
+            timeout=_fetch_timeout() if timeout is None else timeout,  # pyright: ignore[reportArgumentType]
         )
     except Exception as exc:
         logger.warning("Quote fetch failed: %s", exc)
@@ -302,7 +306,7 @@ def get_quotes(symbols: list[str], timeout: float | None = None) -> list[dict]:
 
 def _reaction_ttl() -> float:
     try:
-        return float(os.getenv("FINSCRAPE_REACTION_TTL", "300"))
+        return env_float("FINSCRAPE_REACTION_TTL", 300.0)
     except ValueError:
         return 300.0
 

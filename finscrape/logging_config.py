@@ -10,11 +10,12 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import re
 import sys
 from contextvars import ContextVar
 from datetime import UTC, datetime
+
+from finscrape import settings
 
 # Per-request / per-cycle correlation id. The API sets it from the X-Request-ID
 # header (or a generated uuid) per request; the worker sets it per source cycle.
@@ -50,7 +51,7 @@ _MIN_SECRET_LEN = 6
 
 def secret_values(environ=None) -> list[str]:
     """The currently configured secrets, longest first so a substring cannot survive."""
-    env = os.environ if environ is None else environ
+    env = settings.environ() if environ is None else environ
     values = [env.get(name, "") for name in SECRET_ENV_VARS]
     return sorted({v for v in values if len(v) >= _MIN_SECRET_LEN}, key=len, reverse=True)
 

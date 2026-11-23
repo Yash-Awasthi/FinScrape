@@ -1,4 +1,4 @@
-"""Scenario advice (finscrape.scenarios).
+"""Scenario advice (finscrape.signals.scenarios).
 
 `predict_fn` is injected everywhere, so these run without Postgres, Ollama or the
 sentiment lexicon: the tests pin the aggregation, not the probability engine.
@@ -10,7 +10,7 @@ from typing import Any
 
 import pytest
 
-from finscrape.scenarios import build_scenarios, event_weight, score_scenario
+from finscrape.signals.scenarios import build_scenarios, event_weight, score_scenario
 
 
 def fake_predict(p_positive: float, tier: str = "empirical"):

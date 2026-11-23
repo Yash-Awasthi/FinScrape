@@ -44,6 +44,21 @@ export interface EventOut {
   created_at: string;
 }
 
+export type FollowKind = "ticker" | "sector" | "topic" | "region";
+
+export interface WatchlistItem {
+  id: number;
+  kind: FollowKind;
+  value: string;
+}
+
+export interface Watchlist {
+  id: number;
+  name: string;
+  created_at: string;
+  items: WatchlistItem[];
+}
+
 export interface DashboardStats {
   total_events: number;
   by_verdict: Record<string, number>;
@@ -205,6 +220,8 @@ export interface EventQuery {
   ticker?: string;
   source?: string;
   event_type?: string;
+  /** Poll delta: only rows newer than this id (plan M3.3). */
+  since_id?: number;
   sort?: string;
   dir?: string;
 }
@@ -339,6 +356,12 @@ export const api = {
   stats: () => getJSON<DashboardStats>("/api/stats"),
   dates: () => getJSON<{ dates: DateCount[] }>("/api/dates").then((r) => r.dates),
   sectors: () => getJSON<{ sectors: Sector[] }>("/api/sectors").then((r) => r.sectors),
+  watchlists: () =>
+    getJSON<{ watchlists: Watchlist[] }>("/api/watchlists").then((r) => r.watchlists),
+  watchlistFeed: (id: number, limit = 100) =>
+    getJSON<{ events: EventOut[] }>(`/api/watchlists/${id}/feed${qs({ limit })}`).then(
+      (r) => r.events,
+    ),
   storylines: () =>
     getJSON<{ storylines: Storyline[] }>("/api/storylines").then((r) => r.storylines),
   scenarios: (limit = 6) =>

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from finscrape.accuracy import calibration, sample_note, wilson_interval
+from finscrape.signals.accuracy import calibration, sample_note, wilson_interval
 
 
 def test_wilson_interval_matches_the_textbook_example():

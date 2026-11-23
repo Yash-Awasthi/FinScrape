@@ -26,6 +26,8 @@ API_KEY_ROUTES = {
     ("POST", "/api/alerts/rules"),
     ("PATCH", "/api/alerts/rules/{rule_id}"),
     ("DELETE", "/api/alerts/rules/{rule_id}"),
+    ("POST", "/api/watchlists"),
+    ("DELETE", "/api/watchlists/{watchlist_id}"),
 }
 # …and the Telegram webhook authenticates with its own secret header on every call
 # (it must answer 200 to a bad sender, so it cannot 401 like the others).
@@ -67,15 +69,18 @@ def test_the_mutating_surface_matches_what_the_openapi_schema_publishes():
         for method in ops
         if method.upper() not in READ_METHODS
     }
-    assert published == {(m, p) for m, p, _ in _mutating()} == API_KEY_ROUTES | WEBHOOK_ROUTES
+    assert (
+        published
+        == {(m, p) for m, p, _ in _mutating()}
+        == API_KEY_ROUTES | WEBHOOK_ROUTES
+    )
 
 
 def test_every_api_route_that_can_write_is_behind_the_api_key():
     unguarded = [
         f"{method} {path}"
         for method, path, route in _mutating()
-        if (method, path) in API_KEY_ROUTES
-        and "require_api_key" not in _guards(route)
+        if (method, path) in API_KEY_ROUTES and "require_api_key" not in _guards(route)
     ]
     assert not unguarded, unguarded
 
@@ -101,7 +106,9 @@ def test_no_mutating_route_answers_200_without_the_key(monkeypatch):
             resp = client.request(method, url, json={})
             assert resp.status_code == 401, (method, url, resp.status_code)
         # The webhook cannot 401 by design; a bad secret must still do nothing.
-        resp = client.post("/api/telegram/webhook", json={"message": {"text": "/today"}})
+        resp = client.post(
+            "/api/telegram/webhook", json={"message": {"text": "/today"}}
+        )
         assert resp.status_code == 200 and resp.json() == {"ok": True}
     finally:
         get_settings.cache_clear()

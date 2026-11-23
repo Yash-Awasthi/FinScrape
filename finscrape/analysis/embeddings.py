@@ -20,13 +20,14 @@ from __future__ import annotations
 import functools
 import json
 import math
-import os
 import time
 import urllib.error
 import urllib.request
 
-_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
-_MODEL = os.environ.get("FINSCRAPE_EMBED_MODEL", "nomic-embed-text")
+from finscrape.settings import env
+
+_HOST = (env("OLLAMA_HOST", "http://localhost:11434") or "").rstrip("/")
+_MODEL = env("FINSCRAPE_EMBED_MODEL", "nomic-embed-text") or ""
 _TIMEOUT = 8.0
 _COOLDOWN = 60.0  # seconds of no-embeddings after a failed call
 

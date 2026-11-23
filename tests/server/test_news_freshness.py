@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from finscrape.ingestors.gdelt import export_urls
-from finscrape.ingestors.reliefweb import ReliefWebIngestor
-from finscrape.ingestors.usgs import USGSQuakesIngestor
+from finscrape.fetchers.ingestors.gdelt import export_urls
+from finscrape.fetchers.ingestors.reliefweb import ReliefWebIngestor
+from finscrape.fetchers.ingestors.usgs import USGSQuakesIngestor
 from finscrape.models import ScrapedArticle
-from finscrape.scrapers.world import WorldRSSScraper, google_news_mirror
+from finscrape.fetchers.world import WorldRSSScraper, google_news_mirror
 
 
 def _quake(mag: float, place: str) -> dict:
@@ -55,7 +55,7 @@ def test_collect_puts_the_freshest_stories_first(monkeypatch):
         )
 
     monkeypatch.setattr(
-        "finscrape.scrapers.world.feed_urls",
+        "finscrape.fetchers.world.feed_urls",
         lambda: {"defense_one": "https://a", "crisis_group": "https://b"},
     )
     monkeypatch.setattr(

@@ -65,6 +65,8 @@ To analyse live news, set `OPENAI_BASE_URL`, `OPENAI_API_KEY` and `FINSCRAPE_MOD
 `.env` (any OpenAI-compatible endpoint; a host Ollama is `http://host.docker.internal:11434/v1`
 from inside compose) and run `docker compose up -d`.
 
+Pre-push gate: `make verify` — `make ci` minus the browser E2E, green before you push.
+
 ### No Docker?
 
 ```bash
@@ -76,6 +78,7 @@ uv run python -m worker.main --once             # one ingest cycle
 cd web && npm ci && npm run dev                 # dashboard at :8080, proxies /api to :8010
 ```
 
+Fresh clone → populated dashboard: [docs/ONBOARDING.md](docs/ONBOARDING.md).
 [docs/DEMO.md](docs/DEMO.md) is a scripted 5-minute walkthrough;
 [docs/LOCAL-READINESS.md](docs/LOCAL-READINESS.md) covers isolated test databases.
 
@@ -101,7 +104,8 @@ Cloudflare cron Worker ──(every N hours)──▶ GitHub Action "ingest"
   `mimo-v2.6-flash:free` as fallback; `make llm MODEL=... URL=... KEY=...` switches it
   everywhere.
 
-Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · deploy and operations:
+Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · the ingest state machine and its
+failure paths: [docs/INGEST.md](docs/INGEST.md) · deploy and operations:
 [docs/DEPLOY.md](docs/DEPLOY.md), [docs/RUNBOOK.md](docs/RUNBOOK.md) · what the track
 record numbers mean and when they are too thin to trust: [docs/CALIBRATION.md](docs/CALIBRATION.md).
 
@@ -135,7 +139,7 @@ make e2e-live    # the built SPA against the real API and a seeded, empty *_test
 ```
 
 <!-- facts:start -->
-977 pytest cases, 83 Vitest tests and 8 Playwright specs; CI runs all of them. Counted by `python -m scripts.repo_facts`.
+1044 pytest cases, 83 Vitest tests and 12 Playwright specs; CI runs all of them. Counted by `python -m scripts.repo_facts`.
 <!-- facts:end -->
 
 ---

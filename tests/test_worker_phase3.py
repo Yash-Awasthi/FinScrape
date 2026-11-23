@@ -94,7 +94,7 @@ def test_backtest_failure_does_not_take_the_worker_down():
 
 def test_world_rss_reports_each_feed(monkeypatch):
     """A dead feed must be visible on its own, not folded into one world_rss row."""
-    from finscrape.scrapers import rss
+    from finscrape.fetchers import rss
     from worker.sources import _WorldRSS
 
     xml = (
@@ -104,9 +104,9 @@ def test_world_rss_reports_each_feed(monkeypatch):
     monkeypatch.setattr(rss, "fast_get", lambda url: None if "dead" in url else xml)
     # The world scraper's mirror is a second network path; fail it too so this
     # test stays offline and measures the no-feed-at-all health row.
-    monkeypatch.setattr("finscrape.scrapers.world.fast_get", lambda *_a, **_k: None)
+    monkeypatch.setattr("finscrape.fetchers.world.fast_get", lambda *_a, **_k: None)
     monkeypatch.setattr(
-        "finscrape.scrapers.world.feed_urls",
+        "finscrape.fetchers.world.feed_urls",
         lambda: {
             "bbc_world": "https://ok.example/rss",
             "gone": "https://dead.example/rss",

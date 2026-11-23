@@ -29,6 +29,7 @@ async def get_events(
     ticker: str | None = None,
     source: str | None = None,
     event_type: str | None = None,
+    since_id: int | None = None,
     sort: str = "id",
     direction: str = "desc",
 ) -> list[dict]:
@@ -38,6 +39,11 @@ async def get_events(
     def p(v) -> str:
         params.append(v)
         return f"${len(params)}"
+
+    if since_id is not None:
+        # The 60 s poll asks for what landed since its last id, not the whole window
+        # (plan M3.3). `id` is monotonic, so this is both cheap and exact.
+        conds.append(f"id > {p(since_id)}")
 
     if date:
         start, end = day_bounds(date)
@@ -204,3 +210,109 @@ async def get_recent_predictions(
             if ticker and abs(shift) > abs(strongest.get(ticker, 0.0)):
                 strongest[ticker] = shift
     return strongest
+
+
+# --- Watchlists (plan m4.1.1) -------------------------------------------------
+
+# One row per item, so a list is assembled without a second round trip and the
+# ordering is stable (created_at, then id) rather than whatever the planner returns.
+_WATCHLIST_SQL = """
+SELECT w.id, w.name, w.created_at, wi.id AS item_id, wi.kind, wi.value
+FROM watchlists w
+LEFT JOIN watchlist_items wi ON wi.watchlist_id = w.id
+WHERE w.owner_key = $1
+ORDER BY w.created_at, w.id, wi.id
+"""
+
+
+def fold_watchlists(rows: list[asyncpg.Record]) -> list[dict]:
+    """Group the join rows into watchlists with their items (pure, unit-tested)."""
+    out: dict[int, dict] = {}
+    for row in rows:
+        watchlist = out.get(row["id"])
+        if watchlist is None:
+            watchlist = {
+                "id": row["id"],
+                "name": row["name"],
+                "created_at": row["created_at"],
+                "items": [],
+            }
+            out[row["id"]] = watchlist
+        if row["item_id"] is not None:
+            watchlist["items"].append(
+                {"id": row["item_id"], "kind": row["kind"], "value": row["value"]}
+            )
+    return list(out.values())
+
+
+async def list_watchlists(pool: asyncpg.Pool, owner_key: str) -> list[dict]:
+    return fold_watchlists(await pool.fetch(_WATCHLIST_SQL, owner_key))
+
+
+async def create_watchlist(
+    pool: asyncpg.Pool, owner_key: str, name: str, items: list[dict]
+) -> dict:
+    async with pool.acquire() as conn, conn.transaction():
+        watchlist_id = await conn.fetchval(
+            "INSERT INTO watchlists (owner_key, name) VALUES ($1, $2) RETURNING id",
+            owner_key,
+            name.strip(),
+        )
+        for item in items:
+            await conn.execute(
+                "INSERT INTO watchlist_items (watchlist_id, kind, value) VALUES ($1, $2, $3)",
+                watchlist_id,
+                item["kind"],
+                item["value"].strip(),
+            )
+        rows = await conn.fetch(_WATCHLIST_SQL, owner_key)
+    return next(w for w in fold_watchlists(rows) if w["id"] == watchlist_id)
+
+
+async def delete_watchlist(
+    pool: asyncpg.Pool, owner_key: str, watchlist_id: int
+) -> bool:
+    status = await pool.execute(
+        "DELETE FROM watchlists WHERE id = $1 AND owner_key = $2",
+        watchlist_id,
+        owner_key,
+    )
+    return status != "DELETE 0"
+
+
+# A watchlist feed is one indexed pass over the items, not one query per item:
+# tickers use the GIN index, sectors and the free-text kinds use ILIKE on the stored
+# text. `region` has no column of its own, so it matches the story text (documented
+# in docs/API.md); it is deliberately the loosest kind.
+_FEED_SQL = """
+SELECT DISTINCT e.*
+FROM events e
+JOIN watchlist_items wi ON wi.watchlist_id = $1
+WHERE {shown}
+  AND (
+    (wi.kind = 'ticker' AND e.tickers ? wi.value)
+    OR (wi.kind = 'sector' AND e.sector_impact ILIKE '%' || wi.value || '%')
+    OR (
+      wi.kind IN ('topic', 'region')
+      AND (e.subject ILIKE '%' || wi.value || '%'
+           OR e.reasoning ILIKE '%' || wi.value || '%')
+    )
+  )
+ORDER BY e.id DESC
+LIMIT $2
+"""
+
+
+async def get_watchlist_feed(
+    pool: asyncpg.Pool, watchlist_id: int, owner_key: str, limit: int
+) -> list[dict] | None:
+    """None when the watchlist is not this owner's; [] when it simply has no matches."""
+    owned = await pool.fetchval(
+        "SELECT 1 FROM watchlists WHERE id = $1 AND owner_key = $2",
+        watchlist_id,
+        owner_key,
+    )
+    if owned is None:
+        return None
+    rows = await pool.fetch(_FEED_SQL.format(shown=_SHOWN), watchlist_id, limit)
+    return [dict(row) for row in rows]

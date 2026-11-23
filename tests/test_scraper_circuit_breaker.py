@@ -20,8 +20,8 @@ install_fake_engine()
 _FakeFetcher = get_fake_fetcher()
 _fake_response = get_fake_response()
 
-from finscrape.scrapers import get_breaker, reset_breakers
-from finscrape.scrapers.yahoo import YahooScraper
+from finscrape.fetchers import get_breaker, reset_breakers
+from finscrape.fetchers.yahoo import YahooScraper
 
 
 class _FakeError(Exception):
@@ -32,9 +32,9 @@ def _make_scraper():
     return YahooScraper(max_articles=1)
 
 
-@patch("finscrape.scrapers.FETCH_MAX_RETRIES", 1)  # no retries — fast fail
-@patch("finscrape.scrapers.CB_FAIL_THRESHOLD", 3)
-@patch("finscrape.scrapers.CB_RESET_AFTER_S", 60.0)
+@patch("finscrape.fetchers.FETCH_MAX_RETRIES", 1)  # no retries — fast fail
+@patch("finscrape.fetchers.CB_FAIL_THRESHOLD", 3)
+@patch("finscrape.fetchers.CB_RESET_AFTER_S", 60.0)
 @patch("time.sleep")
 def test_breaker_trips_after_consecutive_failures(mock_sleep):
     """After CB_FAIL_THRESHOLD consecutive failures, breaker should be open."""
@@ -55,10 +55,10 @@ def test_breaker_trips_after_consecutive_failures(mock_sleep):
     reset_breakers()
 
 
-@patch("finscrape.scrapers.FETCH_MAX_RETRIES", 3)
-@patch("finscrape.scrapers.FETCH_BASE_DELAY", 0.01)
-@patch("finscrape.scrapers.FETCH_MAX_DELAY", 0.05)
-@patch("finscrape.scrapers.CB_FAIL_THRESHOLD", 3)
+@patch("finscrape.fetchers.FETCH_MAX_RETRIES", 3)
+@patch("finscrape.fetchers.FETCH_BASE_DELAY", 0.01)
+@patch("finscrape.fetchers.FETCH_MAX_DELAY", 0.05)
+@patch("finscrape.fetchers.CB_FAIL_THRESHOLD", 3)
 @patch("time.sleep")
 def test_breaker_resets_on_success(mock_sleep):
     """A successful fetch resets the breaker to closed."""
@@ -84,8 +84,8 @@ def test_breaker_resets_on_success(mock_sleep):
     reset_breakers()
 
 
-@patch("finscrape.scrapers.FETCH_MAX_RETRIES", 1)
-@patch("finscrape.scrapers.CB_FAIL_THRESHOLD", 3)
+@patch("finscrape.fetchers.FETCH_MAX_RETRIES", 1)
+@patch("finscrape.fetchers.CB_FAIL_THRESHOLD", 3)
 @patch("time.sleep")
 def test_breaker_fast_fails_when_open(mock_sleep):
     """When the breaker is open, fetch_page returns None without hitting the network."""

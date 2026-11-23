@@ -405,7 +405,9 @@ class FakeRedis:
         return len(self.sets.get(key, {}))
 
     async def zrange(self, key: str, start: int, end: int, withscores: bool = False):
-        items = sorted(self.sets.get(key, {}).items(), key=lambda kv: kv[1])[start : end + 1]
+        items = sorted(self.sets.get(key, {}).items(), key=lambda kv: kv[1])[
+            start : end + 1
+        ]
         return [(m, s) for m, s in items] if withscores else [m for m, _ in items]
 
     async def zadd(self, key: str, mapping: dict[str, float]) -> int:
@@ -462,7 +464,10 @@ def test_hardening_picks_the_redis_limiter_when_redis_is_configured(monkeypatch)
     get_settings.cache_clear()
     monkeypatch.setattr(middleware, "RedisLimiter", Recorder)
     middleware.configure_hardening(FastAPI())
-    assert seen == {"url": "redis://cache:6379/0", "limit": get_settings().rate_limit_per_min}
+    assert seen == {
+        "url": "redis://cache:6379/0",
+        "limit": get_settings().rate_limit_per_min,
+    }
     monkeypatch.delenv("WORLDFIN_REDIS_URL")
     get_settings.cache_clear()
 

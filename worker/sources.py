@@ -12,9 +12,9 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from finscrape.ingestors import EVENT_INGESTORS
+from finscrape.fetchers.ingestors import EVENT_INGESTORS
 from finscrape.models import ScrapedArticle
-from finscrape.scrapers.world import WorldRSSScraper
+from finscrape.fetchers.world import WorldRSSScraper
 
 Item = tuple[ScrapedArticle, tuple[float | None, float | None]]
 Producer = Callable[[], list[Item]]

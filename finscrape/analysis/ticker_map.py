@@ -3,7 +3,7 @@ Company name → ticker symbol mapping for extracting tickers from article text.
 
 The one map. Every caller that turns a company name into a ticker reads this
 dict through `resolve_company_tickers`, which reuses the word-boundary match
-from `finscrape.entity_map._matches` so a single alnum name like "arm" or
+from `finscrape.extract.entity_map._matches` so a single alnum name like "arm" or
 "target" cannot fire on a substring buried in an unrelated word ("pharma",
 "price target"). Multi-word phrases still match as substrings, same as
 entity_map's own keyword map.
@@ -17,7 +17,7 @@ mints a false ticker.
 
 from __future__ import annotations
 
-from finscrape.entity_map import _matches
+from finscrape.extract.entity_map import _matches
 
 # Map of company name fragments (lowercase) → ticker symbol
 # Use the shortest unambiguous form of the company name

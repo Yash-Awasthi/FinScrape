@@ -1,6 +1,6 @@
 """Insight routes: calibrated predictions + reliability, from Postgres outcomes.
 
-The CEIP engine (finscrape.prediction) is pure — these routes feed it outcome
+The CEIP engine (finscrape.signals.prediction) is pure — these routes feed it outcome
 rows from `accuracy_outcomes` joined to `events` (for source/event_type/
 confidence) and return the audited prediction payload.
 """
@@ -97,7 +97,7 @@ async def _outcomes_from_pool() -> list[dict[str, Any]]:
 @router.get("/api/reliability")
 async def reliability() -> dict:
     """Reliability tables + Brier score — the audit view of prediction quality."""
-    from finscrape.prediction import brier_summary, reliability_tables
+    from finscrape.signals.prediction import brier_summary, reliability_tables
 
     outcomes = await _outcomes_from_pool()
     return {
@@ -110,7 +110,7 @@ async def reliability() -> dict:
 async def predict_event(event_id: int) -> dict:
     """Calibrated Event-Impact Probability for one stored event, with the
     reliability evidence attached (per verdict/source/type, sample sizes)."""
-    from finscrape.prediction import predict
+    from finscrape.signals.prediction import predict
 
     ev = await db.pool().fetchrow(
         """
@@ -179,7 +179,7 @@ async def scenarios(
     that probability implies — the advice, rather than the evidence.
     """
     from finscrape.analysis.clusters import build_storylines
-    from finscrape.scenarios import build_scenarios
+    from finscrape.signals.scenarios import build_scenarios
 
     # Settle a hit before paying for 200 event rows. Coverage merges add articles
     # to old rows without a new id, so their total size is part of the key.

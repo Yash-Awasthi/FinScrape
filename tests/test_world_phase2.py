@@ -5,14 +5,14 @@ worker run (Phase 3 verify).
 """
 
 from finscrape.analysis.prompts import ANALYSIS_PROMPT, SYSTEM_PROMPT
-from finscrape.ingestors import (
+from finscrape.fetchers.ingestors import (
     CoinGeckoIngestor,
     GDELTIngestor,
     OpenSkyIngestor,
     ReliefWebIngestor,
     USGSQuakesIngestor,
 )
-from finscrape.scrapers.world.feeds import (
+from finscrape.fetchers.world.feeds import (
     FEEDS,
     VALID_RISK,
     VALID_TIERS,
@@ -76,7 +76,7 @@ def test_usgs_parse_filters_and_geo():
 
 
 def test_gdelt_title_comes_from_the_url_slug():
-    from finscrape.ingestors.gdelt import slug_title
+    from finscrape.fetchers.ingestors.gdelt import slug_title
 
     assert (
         slug_title(
@@ -202,7 +202,7 @@ def test_prompt_widened_to_world():
 
 # --- feed registry invariants (offline; liveness is a network check, not a test) ---
 def test_feed_registry_invariants():
-    from finscrape.scrapers.world.feeds import FEEDS, VALID_RISK, VALID_TIERS
+    from finscrape.fetchers.world.feeds import FEEDS, VALID_RISK, VALID_TIERS
 
     keys = [f.key for f in FEEDS]
     assert len(keys) == len(set(keys)), "duplicate feed key — the key is the source tag"
@@ -218,7 +218,7 @@ def test_feed_registry_invariants():
 def test_every_tier_the_correlation_engine_scores_is_represented():
     """detect_convergence needs >=3 distinct source types in one cluster; a registry
     that only spans two tiers can never produce a convergence signal."""
-    from finscrape.scrapers.world.feeds import FEEDS
+    from finscrape.fetchers.world.feeds import FEEDS
     from server.correlate import _TIER_WEIGHT
 
     tiers = {f.tier for f in FEEDS}

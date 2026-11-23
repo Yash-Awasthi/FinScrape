@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from curl_cffi.requests.exceptions import HTTPError, Timeout
 
-from finscrape.ingestors import base
-from finscrape.ingestors.base import BaseIngestor, RawGeoEvent
+from finscrape.fetchers.ingestors import base
+from finscrape.fetchers.ingestors.base import BaseIngestor, RawGeoEvent
 
 
 class Probe(BaseIngestor):

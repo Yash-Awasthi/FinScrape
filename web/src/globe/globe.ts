@@ -21,9 +21,19 @@ export class GlobeView {
       .pointLabel("label")
       .onPointClick((p: object) => onSelect((p as GlobePoint).event));
 
-    const controls = this.globe.controls() as { autoRotate: boolean; autoRotateSpeed: number };
-    controls.autoRotate = true;
-    controls.autoRotateSpeed = 0.4;
+    const controls = this.globe.controls() as {
+      autoRotate: boolean;
+      autoRotateSpeed: number;
+    };
+    // The globe never stops turning, so respect the OS setting that asks it to. The
+    // listener keeps a mid-session change honest instead of requiring a reload.
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const applyMotion = (): void => {
+      controls.autoRotate = !motion.matches;
+      controls.autoRotateSpeed = 0.4;
+    };
+    applyMotion();
+    motion.addEventListener("change", applyMotion);
   }
 
   setEvents(events: EventOut[]): void {

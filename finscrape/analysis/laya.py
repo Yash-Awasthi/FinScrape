@@ -14,6 +14,9 @@ pipeline keeps its LLM/keyword behaviour. FINSCRAPE_LAYA=0 disables it outright.
 """
 
 from __future__ import annotations
+from finscrape.settings import env, env_disabled, env_float
+
+from functools import lru_cache
 
 import logging
 import os
@@ -31,9 +34,9 @@ from finscrape.analysis.ticker_map import TICKER_SECTOR
 
 logger = logging.getLogger(__name__)
 
-_MLX_REPO = os.environ.get("FINSCRAPE_LAYA_MLX_MODEL", "aac6fef/laya-mlx")
+_MLX_REPO = env("FINSCRAPE_LAYA_MLX_MODEL", "aac6fef/laya-mlx")
 # A local fine-tuned checkpoint (scripts/laya_train); unset uses the router's default.
-_MODEL = os.environ.get("FINSCRAPE_LAYA_MODEL", "")
+_MODEL = env("FINSCRAPE_LAYA_MODEL", "") or ""
 _MAX_CHARS = 2000  # headline + lede carry the decision; bodies only add latency
 
 # Below this, Laya is no more sure than the LLM it would overrule.
@@ -41,7 +44,7 @@ CONFIDENT = 0.55
 # Below this even as a last resort the pick is noise, and "other" is the honest label.
 _FLOOR = 0.35
 # Tuned by scripts/laya_train/tune_neutral.py on the current checkpoint (holdout 0.638 to 0.716).
-NEUTRAL_SCALE = float(os.environ.get("FINSCRAPE_LAYA_NEUTRAL_SCALE", "0.3"))
+NEUTRAL_SCALE = env_float("FINSCRAPE_LAYA_NEUTRAL_SCALE", 0.3)
 
 _SECTOR_CRITERIA = {
     "technology": "software, semiconductors, internet platforms, cyber security",
@@ -109,7 +112,7 @@ def _load() -> Any:
         _predict, _stamp = None, None
     if _predict is not None or _unavailable:
         return _predict
-    if os.environ.get("FINSCRAPE_LAYA", "").lower() in ("0", "false", "no", "off"):
+    if env_disabled("FINSCRAPE_LAYA"):
         _unavailable = True
         return None
     try:
@@ -170,9 +173,15 @@ def _discount_neutral(answer: Any) -> Any:
     return {"probabilities": {k: v / total for k, v in scaled.items()}}
 
 
-def classify(title: str, text: str) -> LayaView | None:
-    """Sector and direction for one article, or None when Laya is not installed."""
-    state = f"{title}. {text}"[:_MAX_CHARS] if title else text[:_MAX_CHARS]
+@lru_cache(maxsize=512)
+def _classify_state(state: str) -> LayaView | None:
+    """One Laya prediction per distinct (title + lede) state.
+
+    Laya is deterministic and the call is the most expensive CPU stage of an ingest
+    cycle, so the same story re-analysed (a retry, a duplicate feed, a re-scoring run)
+    must not pay for it twice. Keyed on the truncated state, which is exactly what the
+    model sees — no other input can change the answer (plan M3.2).
+    """
     # One lock for load and predict: worker threads would otherwise race to load
     # the ~800MB checkpoint twice.
     with _lock:
@@ -188,6 +197,14 @@ def classify(title: str, text: str) -> LayaView | None:
     sector, sector_p = _pick(answers.get("sector"))
     direction, direction_p = _pick(_discount_neutral(answers.get("direction")))
     return LayaView(sector, sector_p, direction, direction_p)
+
+
+def classify(title: str, text: str) -> LayaView | None:
+    """Sector and direction for one article, or None when Laya is not installed."""
+    state = f"{title}. {text}"[:_MAX_CHARS] if title else text[:_MAX_CHARS]
+    if not state.strip():
+        return None
+    return _classify_state(state)
 
 
 def choose_sector(

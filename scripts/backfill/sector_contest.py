@@ -242,7 +242,7 @@ def no_model_inputs(rows: pd.DataFrame) -> pd.DataFrame:
     the stored LLM sector when a live event carries the same URL."""
     from finscrape.analysis.nlp import FinancialNLP
     from finscrape.analysis.sp500 import headline_tickers
-    from finscrape.entity_map import resolve_company_tickers
+    from finscrape.extract.entity_map import resolve_company_tickers
 
     nlp = FinancialNLP()
     live = (

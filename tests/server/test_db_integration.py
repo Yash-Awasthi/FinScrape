@@ -170,6 +170,7 @@ def test_size_cap_evicts_oldest_events_instead_of_stopping():
 def test_same_story_from_three_sources_merges_into_one_row():
     """plan M1.5: RSS, GDELT and a blocked-feed fallback carry the same story with
     three different links. That is one row, with the union of sources and articles."""
+
     async def body():
         pool = await _fresh_pool()
         story = {

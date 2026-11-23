@@ -8,7 +8,7 @@ export interface PanelSlot {
   h: number;
 }
 
-export type ViewId = "today" | "tickers" | "record" | "sources";
+export type ViewId = "today" | "desk" | "tickers" | "record" | "sources";
 
 export const VIEWS: Record<ViewId, { label: string; slots: PanelSlot[] }> = {
   today: {
@@ -20,6 +20,14 @@ export const VIEWS: Record<ViewId, { label: string; slots: PanelSlot[] }> = {
       { id: "globe", w: 7, h: 9 },
       { id: "stats", w: 4, h: 4 },
       { id: "calendar", w: 8, h: 4 },
+    ],
+  },
+  desk: {
+    label: "My Desk",
+    slots: [
+      // The followed feed first; the tally beside it is a counter, not a recommendation.
+      { id: "desk", w: 8, h: 9 },
+      { id: "exposure", w: 4, h: 9 },
     ],
   },
   tickers: {

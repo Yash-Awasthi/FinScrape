@@ -105,7 +105,7 @@ async def recent_subjects() -> list[str]:
 
 
 def harvest(known: set[str]) -> list[str]:
-    from finscrape.scrapers.world import WorldRSSScraper
+    from finscrape.fetchers.world import WorldRSSScraper
 
     titles = asyncio.run(recent_subjects())
     titles += [a.title for a in WorldRSSScraper(max_age_hours=48).collect()]

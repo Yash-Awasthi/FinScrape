@@ -1,6 +1,6 @@
 import io
 
-from finscrape.scrapers import fastfetch
+from finscrape.fetchers import fastfetch
 
 
 def test_connection_drop_falls_back_to_plain_client(monkeypatch):

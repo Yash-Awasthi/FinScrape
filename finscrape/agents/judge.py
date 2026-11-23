@@ -11,12 +11,12 @@ caller falls straight back to the arithmetic consensus — zero regression.
 from __future__ import annotations
 
 import logging
-import os
 from dataclasses import asdict, dataclass
 from typing import Any
 
 from finscrape.agents.base import AgentVerdict
 from finscrape.analysis.ai_client import call_ai
+from finscrape.settings import env
 
 logger = logging.getLogger(__name__)
 
@@ -154,7 +154,7 @@ def judge_debate(
         lessons_section=f"\n{lessons_block}\n" if lessons_block else "",
     )
 
-    model = os.getenv(JUDGE_MODEL_ENV) or None
+    model = env(JUDGE_MODEL_ENV) or None
     raw = call_ai(prompt, JUDGE_SYSTEM_PROMPT, model=model)
 
     if raw is None:

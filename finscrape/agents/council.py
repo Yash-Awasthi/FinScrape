@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import logging
 import math
-import os
 from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, field
@@ -20,6 +19,7 @@ from typing import Any
 
 from finscrape.agents.base import AgentVerdict, BaseAgent
 from finscrape.agents.judge import judge_debate
+from finscrape.settings import env_int
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +83,7 @@ class AgentCouncil:
         self.max_workers = max_workers or min(len(agents), 8)
         self.judge = judge
         if rounds is None:
-            rounds = int(os.environ.get(COUNCIL_ROUNDS_ENV_VAR, "1"))
+            rounds = env_int(COUNCIL_ROUNDS_ENV_VAR, 1)
         self.rounds = max(1, rounds)
 
     def deliberate(

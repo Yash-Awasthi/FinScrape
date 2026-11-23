@@ -19,6 +19,8 @@ from typing import Any
 from curl_cffi import requests
 from curl_cffi.requests.exceptions import RequestException
 
+from finscrape.settings import env
+
 logger = logging.getLogger(__name__)
 
 
@@ -229,9 +231,8 @@ class AlertEngine:
 
     def _send_telegram_alert(self, event: dict, action: Action) -> dict:
         """Send alert via Telegram Bot API."""
-        import os
-        bot_token = action.config.get("bot_token") or os.getenv("TELEGRAM_BOT_TOKEN", "")
-        chat_id = action.config.get("chat_id") or os.getenv("TELEGRAM_CHAT_ID", "")
+        bot_token = action.config.get("bot_token") or env("TELEGRAM_BOT_TOKEN", "")
+        chat_id = action.config.get("chat_id") or env("TELEGRAM_CHAT_ID", "")
 
         if not bot_token or not chat_id:
             logger.warning("Telegram alert: missing bot_token or chat_id")
@@ -424,8 +425,7 @@ class AlertEngine:
             avatar_url (optional): override bot avatar
         Env fallback: DISCORD_WEBHOOK_URL
         """
-        import os
-        url = action.config.get("url") or os.getenv("DISCORD_WEBHOOK_URL", "")
+        url = action.config.get("url") or env("DISCORD_WEBHOOK_URL", "")
         if not url:
             logger.warning("Discord alert: missing webhook url")
             return {"action_type": "discord", "status": "skipped", "reason": "missing config"}
@@ -477,8 +477,7 @@ class AlertEngine:
             icon_emoji (optional): override bot icon
         Env fallback: SLACK_WEBHOOK_URL
         """
-        import os
-        url = action.config.get("url") or os.getenv("SLACK_WEBHOOK_URL", "")
+        url = action.config.get("url") or env("SLACK_WEBHOOK_URL", "")
         if not url:
             logger.warning("Slack alert: missing webhook url")
             return {"action_type": "slack", "status": "skipped", "reason": "missing config"}

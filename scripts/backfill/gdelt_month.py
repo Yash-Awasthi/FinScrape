@@ -22,7 +22,7 @@ from curl_cffi import requests
 from curl_cffi.requests.exceptions import RequestException
 
 from finscrape.analysis.sp500 import compile_matcher
-from finscrape.ingestors.gdelt import (
+from finscrape.fetchers.ingestors.gdelt import (
     _ADDED,
     _CAMEO,
     _COUNTRY,

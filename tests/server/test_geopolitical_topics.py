@@ -7,7 +7,7 @@ agriculture trade press.
 
 from __future__ import annotations
 
-from finscrape.scrapers.world.feeds import (
+from finscrape.fetchers.world.feeds import (
     FEEDS,
     SECTION_ORDER,
     section_of,
@@ -81,7 +81,7 @@ def test_every_feed_has_an_analysis_section():
 def test_collect_round_robins_sections_before_feeds(monkeypatch):
     """With a six-article budget and 40 feeds, registry order used to decide which
     kinds of news were ever analysed. The first slots must cover sections instead."""
-    from finscrape.scrapers import rss
+    from finscrape.fetchers import rss
 
     def xml(title: str, link: str) -> bytes:
         return (
@@ -93,7 +93,7 @@ def test_collect_round_robins_sections_before_feeds(monkeypatch):
         )
 
     monkeypatch.setattr(
-        "finscrape.scrapers.world.feed_urls",
+        "finscrape.fetchers.world.feed_urls",
         lambda: {
             "bbc_world": "https://example.org/bbc",
             "defense_one": "https://example.org/defense",
@@ -108,7 +108,7 @@ def test_collect_round_robins_sections_before_feeds(monkeypatch):
             else xml("World headline", "https://example.org/b")
         ),
     )
-    from finscrape.scrapers.world import WorldRSSScraper
+    from finscrape.fetchers.world import WorldRSSScraper
 
     articles = WorldRSSScraper(max_articles=1).collect()
     assert articles[0].title == "Defense headline"

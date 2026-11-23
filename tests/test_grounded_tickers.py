@@ -36,7 +36,7 @@ def test_company_named_in_text_keeps_its_ticker():
 
 
 def test_sector_keywords_come_from_the_headline_and_lede_only():
-    from finscrape.entity_map import lede_tickers
+    from finscrape.extract.entity_map import lede_tickers
 
     body = "Italian bond spreads narrowed. " * 20 + "Markets were hit by the U.S.-Iran war."
     assert lede_tickers("Italy's Meloni government achieves political stability", body) == []

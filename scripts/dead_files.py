@@ -77,7 +77,7 @@ def importers(module: str, sources: dict[Path, str], self_path: Path) -> list[Pa
 
 def dynamic_prefixes(sources: dict[Path, str]) -> set[str]:
     """Prefixes that some file imports through a computed name, e.g.
-    `importlib.import_module(f"finscrape.scrapers.{mod}")`."""
+    `importlib.import_module(f"finscrape.fetchers.{mod}")`."""
     found = set()
     for text in sources.values():
         for match in re.finditer(r"import_module\(f?[\"']([\w.]+)\.\{", text):

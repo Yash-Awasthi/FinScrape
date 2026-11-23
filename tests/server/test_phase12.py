@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 
 import finscrape.market_data as md
-from finscrape.entity_map import keywords_for_ticker, resolve_tickers
+from finscrape.extract.entity_map import keywords_for_ticker, resolve_tickers
 from server import pubsub
 from server.correlate import (
     Market,
@@ -39,7 +39,7 @@ def test_keywords_for_ticker_is_reverse_of_resolve():
 
 def test_entity_index_tickers_pass_clean_gate():
     # every mapped ticker must satisfy the pipeline's clean_tickers gate (2-5 upper)
-    from finscrape.entity_map import _forward
+    from finscrape.extract.entity_map import _forward
 
     for tickers in _forward().values():
         for t in tickers:

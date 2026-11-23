@@ -15,7 +15,12 @@ from datetime import datetime
 
 import asyncpg
 
-from finscrape.accuracy import calibration, equity_metrics, sample_note, wilson_interval
+from finscrape.signals.accuracy import (
+    calibration,
+    equity_metrics,
+    sample_note,
+    wilson_interval,
+)
 
 THRESHOLD_PCT = 1.0
 DIRECTIONAL = ("INVEST", "PULL_OUT")

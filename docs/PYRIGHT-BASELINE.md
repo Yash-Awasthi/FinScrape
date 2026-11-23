@@ -6,19 +6,17 @@ fingerprint in `pyright-baseline.json` lists the type debt that already existed,
 `--check` fails when the tree produces a hit that is not in it. Debt may shrink freely
 and may only grow on purpose (plan m1.2.2).
 
-**1 errors in 1 files.**
+**0 errors in 0 files.**
 
 ## By rule
 
 | Count | Code |
 |---|---|
-| 1 | `reportArgumentType` |
 
 ## By file
 
 | Count | Path | Codes |
 |---|---|---|
-| 1 | `finscrape/market_data.py` | `reportArgumentType`×1 |
 
 ## Scope
 

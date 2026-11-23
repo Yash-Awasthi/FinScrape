@@ -22,7 +22,7 @@ from finscrape.analysis.temporal import (
     get_next_catalyst_date,
 )
 from finscrape.analysis.ticker_map import COMPANY_TO_TICKER
-from finscrape.entity_map import (
+from finscrape.extract.entity_map import (
     _matches,
     parenthesised_tickers,
     resolve_company_tickers,

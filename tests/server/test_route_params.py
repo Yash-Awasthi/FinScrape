@@ -83,7 +83,9 @@ def test_market_quotes_filter_junk_before_yfinance(client, monkeypatch):
 def test_market_quotes_default_tape_and_cap(client, monkeypatch):
     seen: list[list[str]] = []
     monkeypatch.setattr(
-        market_routes, "get_quotes", lambda symbols, timeout=None: seen.append(symbols) or []
+        market_routes,
+        "get_quotes",
+        lambda symbols, timeout=None: seen.append(symbols) or [],
     )
     assert client.get("/api/market/quotes").json()["symbols"] == list(
         market_routes.DEFAULT_QUOTE_SYMBOLS

@@ -3,8 +3,8 @@
 import trafilatura
 
 from finscrape.models import ScrapedArticle
-from finscrape.scrapers import rss
-from finscrape.scrapers.world import WorldRSSScraper
+from finscrape.fetchers import rss
+from finscrape.fetchers.world import WorldRSSScraper
 from worker.sources import build_enrichers
 
 BODY = "Oil prices jumped after the strait closed. " * 40

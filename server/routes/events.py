@@ -73,6 +73,11 @@ async def list_events(
     ticker: str | None = None,
     source: str | None = None,
     event_type: str | None = None,
+    since_id: int | None = Query(
+        None,
+        ge=0,
+        description="Only events newer than this id; the dashboard's poll uses it.",
+    ),
     sort: str = "id",
     dir: str = "desc",
 ) -> dict:
@@ -85,6 +90,7 @@ async def list_events(
         ticker=ticker,
         source=source,
         event_type=event_type,
+        since_id=since_id,
         sort=sort,
         direction=dir,
     )

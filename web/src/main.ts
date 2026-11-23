@@ -9,6 +9,7 @@ import type { GlobeView } from "./globe/globe";
 import type { EventOut } from "./api";
 import { RefreshLoop } from "./live";
 import { PanelLayoutManager } from "./panels/layout";
+import { DeskPanel, ExposurePanel } from "./panels/desk";
 import { Panel } from "./panels/panel";
 import {
   AccuracyPanel,
@@ -42,6 +43,8 @@ const layout = new PanelLayoutManager();
 
 const feedPanel = new SignalFeedPanel((e) => store.select(e));
 const globePanel = new Panel({ id: "globe", title: "Globe", w: 7, h: 9 });
+const deskPanel = new DeskPanel((e) => store.select(e));
+const exposurePanel = new ExposurePanel();
 const statsPanel = new StatsPanel();
 const datesPanel = new CalendarPanel((day) => void loadDay(day));
 const scenarioPanel = new ScenarioPanel();
@@ -62,6 +65,8 @@ for (const p of [
   scenarioPanel,
   feedPanel,
   globePanel,
+  deskPanel,
+  exposurePanel,
   statsPanel,
   datesPanel,
   suggestionsPanel,
@@ -84,8 +89,11 @@ shell.bannerSlot.append(banner.el);
 layout.mount(shell.grid);
 shell.railSlot.append(inspector.el);
 
+let currentView: ViewId = "today";
+
 function showView(id: string): void {
   const view: ViewId = isView(id) ? id : "today";
+  currentView = view;
   layout.applyVariant(VIEWS[view].slots);
   shell.setView(view);
   if (location.hash !== `#${view}`) history.replaceState(null, "", `#${view}`);
@@ -94,25 +102,40 @@ function showView(id: string): void {
     dayScope = false;
     void loadAll();
   }
-  // The globe measures its panel, which has no size while its view is hidden.
-  if (view === "today") requestAnimationFrame(sizeGlobe);
+  // The globe only exists on Today: a visitor who lands on Tickers, Track record or
+  // Sources never downloads its 1.8MB chunk. It measures its panel on arrival, since
+  // the panel has no size while its view is hidden.
+  if (view === "today") {
+    ensureGlobe();
+    requestAnimationFrame(sizeGlobe);
+  }
 }
 window.addEventListener("hashchange", () => showView(location.hash.slice(1)));
 
-// globe.gl (+three.js) is ~1.8MB — lazy chunk so the shell paints immediately.
+// globe.gl (+three.js) is ~1.8MB — its own chunk, imported on the first Today view
+// rather than on module load, so the shell paints before it is even requested.
 let globe: GlobeView | null = null;
+let globeLoading = false;
 function sizeGlobe(): void {
   if (!globe) return;
   const r = globePanel.body.getBoundingClientRect();
   if (r.width && r.height) globe.resize(r.width, r.height);
 }
+function ensureGlobe(): void {
+  // Guard on the current view as well as the instance: the import resolves a moment
+  // later, and a fast click to another view should not mount a globe off-screen.
+  if (globe || globeLoading || currentView !== "today") return;
+  globeLoading = true;
+  void import("./globe/globe").then(({ GlobeView }) => {
+    globeLoading = false;
+    if (currentView !== "today") return;
+    globePanel.body.replaceChildren();
+    globe = new GlobeView(globePanel.body, (e) => store.select(e));
+    sizeGlobe();
+    globe.setEvents(store.get().events);
+  });
+}
 window.addEventListener("resize", sizeGlobe);
-void import("./globe/globe").then(({ GlobeView }) => {
-  globePanel.body.replaceChildren();
-  globe = new GlobeView(globePanel.body, (e) => store.select(e));
-  sizeGlobe();
-  globe.setEvents(store.get().events);
-});
 
 // The globe re-creates its meshes on setEvents — only feed it when the event
 // array actually changed (loads / WS pushes), never on row clicks/selection.
@@ -255,12 +278,17 @@ let dayScope = false;
 const refresher = new RefreshLoop(
   () => api.stats(),
   async (stats) => {
+    // Ask only for rows newer than the newest id already on screen, then merge: the
+    // 60 s poll should not re-download 200 unchanged events (plan M3.3). An empty
+    // feed has no id to ask from, so the first poll falls back to the full window.
+    const known = store.get().events.reduce((max, e) => Math.max(max, e.id), 0);
     const [events, correlations] = await Promise.all([
-      api.events({ limit: 200 }),
+      api.events(known ? { since_id: known, limit: 200 } : { limit: 200 }),
       api.correlations(),
     ]);
     store.setStats(stats);
-    store.setEvents(events);
+    if (known) store.addEvents(events);
+    else store.setEvents(events);
     store.setCorrelations(correlations);
   },
 );

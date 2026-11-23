@@ -286,6 +286,40 @@
         "msg",
         "type"
       ]
+    },
+    "WatchlistIn": {
+      "fields": {
+        "items": {
+          "items": {
+            "$ref": "WatchlistItemIn"
+          },
+          "type": "array"
+        },
+        "name": {
+          "maxLength": 80,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "WatchlistItemIn": {
+      "fields": {
+        "kind": {
+          "type": "string"
+        },
+        "value": {
+          "maxLength": 80,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "value"
+      ]
     }
   },
   "paths": {
@@ -648,6 +682,21 @@
               "type": "integer"
             }
           },
+          "since_id": {
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
           "sort": {
             "in": "query",
             "required": false,
@@ -991,6 +1040,199 @@
                   "type": "null"
                 }
               ]
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      }
+    },
+    "/api/watchlists": {
+      "get": {
+        "auth": false,
+        "parameters": {
+          "X-Watchlist-Owner": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      },
+      "post": {
+        "auth": false,
+        "parameters": {
+          "X-Watchlist-Owner": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "authorization": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "x-api-key": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      }
+    },
+    "/api/watchlists/{watchlist_id}": {
+      "delete": {
+        "auth": false,
+        "parameters": {
+          "X-Watchlist-Owner": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "authorization": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "watchlist_id": {
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          "x-api-key": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      }
+    },
+    "/api/watchlists/{watchlist_id}/feed": {
+      "get": {
+        "auth": false,
+        "parameters": {
+          "X-Watchlist-Owner": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "limit": {
+            "in": "query",
+            "required": false,
+            "schema": {
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "watchlist_id": {
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
             }
           }
         },

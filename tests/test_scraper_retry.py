@@ -18,8 +18,8 @@ install_fake_engine()
 _FakeFetcher = get_fake_fetcher()
 _fake_response = get_fake_response()
 
-from finscrape.scrapers import reset_breakers
-from finscrape.scrapers.yahoo import YahooScraper
+from finscrape.fetchers import reset_breakers
+from finscrape.fetchers.yahoo import YahooScraper
 
 # Global reset at import time
 reset_fetcher()
@@ -34,9 +34,9 @@ def _make_scraper():
     return YahooScraper(max_articles=1)
 
 
-@patch("finscrape.scrapers.FETCH_MAX_RETRIES", 3)
-@patch("finscrape.scrapers.FETCH_BASE_DELAY", 0.01)
-@patch("finscrape.scrapers.FETCH_MAX_DELAY", 0.05)
+@patch("finscrape.fetchers.FETCH_MAX_RETRIES", 3)
+@patch("finscrape.fetchers.FETCH_BASE_DELAY", 0.01)
+@patch("finscrape.fetchers.FETCH_MAX_DELAY", 0.05)
 @patch("time.sleep")
 def test_retry_on_429_then_succeed(mock_sleep):
     """A 429 on first attempt should retry and succeed on second."""
@@ -54,9 +54,9 @@ def test_retry_on_429_then_succeed(mock_sleep):
         _FakeFetcher.get.return_value = _fake_response
 
 
-@patch("finscrape.scrapers.FETCH_MAX_RETRIES", 3)
-@patch("finscrape.scrapers.FETCH_BASE_DELAY", 0.01)
-@patch("finscrape.scrapers.FETCH_MAX_DELAY", 0.05)
+@patch("finscrape.fetchers.FETCH_MAX_RETRIES", 3)
+@patch("finscrape.fetchers.FETCH_BASE_DELAY", 0.01)
+@patch("finscrape.fetchers.FETCH_MAX_DELAY", 0.05)
 @patch("time.sleep")
 def test_no_retry_on_non_retryable_error(mock_sleep):
     """A ValueError (not transient) should not retry."""
@@ -73,9 +73,9 @@ def test_no_retry_on_non_retryable_error(mock_sleep):
         _FakeFetcher.get.return_value = _fake_response
 
 
-@patch("finscrape.scrapers.FETCH_MAX_RETRIES", 2)
-@patch("finscrape.scrapers.FETCH_BASE_DELAY", 0.01)
-@patch("finscrape.scrapers.FETCH_MAX_DELAY", 0.05)
+@patch("finscrape.fetchers.FETCH_MAX_RETRIES", 2)
+@patch("finscrape.fetchers.FETCH_BASE_DELAY", 0.01)
+@patch("finscrape.fetchers.FETCH_MAX_DELAY", 0.05)
 @patch("time.sleep")
 def test_all_retries_exhausted_returns_none(mock_sleep):
     """When all retries fail with a transient error, return None."""
@@ -92,9 +92,9 @@ def test_all_retries_exhausted_returns_none(mock_sleep):
         _FakeFetcher.get.return_value = _fake_response
 
 
-@patch("finscrape.scrapers.FETCH_MAX_RETRIES", 3)
-@patch("finscrape.scrapers.FETCH_BASE_DELAY", 0.01)
-@patch("finscrape.scrapers.FETCH_MAX_DELAY", 0.05)
+@patch("finscrape.fetchers.FETCH_MAX_RETRIES", 3)
+@patch("finscrape.fetchers.FETCH_BASE_DELAY", 0.01)
+@patch("finscrape.fetchers.FETCH_MAX_DELAY", 0.05)
 @patch("time.sleep")
 def test_retry_on_timeout_error(mock_sleep):
     """Timeout errors should trigger retry."""
@@ -111,9 +111,9 @@ def test_retry_on_timeout_error(mock_sleep):
         _FakeFetcher.get.return_value = _fake_response
 
 
-@patch("finscrape.scrapers.FETCH_MAX_RETRIES", 3)
-@patch("finscrape.scrapers.FETCH_BASE_DELAY", 0.01)
-@patch("finscrape.scrapers.FETCH_MAX_DELAY", 0.05)
+@patch("finscrape.fetchers.FETCH_MAX_RETRIES", 3)
+@patch("finscrape.fetchers.FETCH_BASE_DELAY", 0.01)
+@patch("finscrape.fetchers.FETCH_MAX_DELAY", 0.05)
 @patch("time.sleep")
 def test_retry_on_connection_reset(mock_sleep):
     """Connection reset errors should trigger retry."""
@@ -130,9 +130,9 @@ def test_retry_on_connection_reset(mock_sleep):
         _FakeFetcher.get.return_value = _fake_response
 
 
-@patch("finscrape.scrapers.FETCH_MAX_RETRIES", 3)
-@patch("finscrape.scrapers.FETCH_BASE_DELAY", 0.01)
-@patch("finscrape.scrapers.FETCH_MAX_DELAY", 0.05)
+@patch("finscrape.fetchers.FETCH_MAX_RETRIES", 3)
+@patch("finscrape.fetchers.FETCH_BASE_DELAY", 0.01)
+@patch("finscrape.fetchers.FETCH_MAX_DELAY", 0.05)
 @patch("time.sleep")
 def test_no_retry_on_first_success(mock_sleep):
     """A successful fetch should not trigger any retry."""

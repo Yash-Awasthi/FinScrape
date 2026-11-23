@@ -13,7 +13,7 @@ import time
 
 from finscrape.analysis.clusters import cluster_meta
 from finscrape.analysis.sectors import TAXONOMY, normalize
-from finscrape.scenarios import build_scenarios, score_scenario
+from finscrape.signals.scenarios import build_scenarios, score_scenario
 from server import cache
 
 

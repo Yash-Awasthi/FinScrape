@@ -1277,3 +1277,236 @@ tr.story-member.hidden {
     min-width: 160px;
   }
 }
+
+/* Follow controls (plan m4.1.2): one tap adds the ticker or sector to My Desk. */
+.follow {
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1.3;
+}
+.follow:hover {
+  border-color: var(--accent);
+  color: var(--text-strong);
+}
+.follow:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+.follow.followed {
+  border-color: var(--up);
+  color: var(--up);
+}
+/* Sibling, not a child: a button nested inside the sector chip is invalid HTML. */
+.sector-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* Empty state (plan m4.1.2): what a watchlist is, and three lists to start from. */
+.desk-empty .empty {
+  margin: 0 0 4px;
+}
+.starters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 11px;
+}
+.starter {
+  padding: 4px 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel-2);
+  color: var(--text-strong);
+  cursor: pointer;
+  font-size: 12px;
+}
+.starter:hover {
+  border-color: var(--accent);
+}
+.starter:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+/* My Desk (plan m4.1.2): the followed list, its scored calls, then the feed. */
+.desk-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+}
+.followed-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 7px 0 9px;
+}
+.followed {
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel-2);
+  font-size: 11px;
+  cursor: pointer;
+}
+.followed:hover {
+  border-color: var(--down);
+  color: var(--down);
+}
+/* The key form is chrome for writes; reads work without it. */
+.desk-key {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 10px;
+  font-size: 11px;
+}
+.desk-key label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.desk-key input {
+  width: 180px;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 11px;
+}
+.desk-key button {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 11px;
+}
+.desk-key button:hover {
+  border-color: var(--accent);
+  color: var(--text-strong);
+}
+/* Positions (plan m4.1.3): the owner's own note, so the chips read like follows. */
+.desk-positions {
+  margin: 0 0 10px;
+}
+.held-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0 0 6px;
+}
+.held {
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel-2);
+  font-size: 11px;
+  cursor: pointer;
+}
+.held:hover {
+  border-color: var(--down);
+  color: var(--down);
+}
+.desk-position {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+.desk-position input {
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 11px;
+}
+.desk-position button {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 11px;
+}
+.desk-position button:hover {
+  border-color: var(--accent);
+  color: var(--text-strong);
+}
+.desk-calls {
+  margin: 0 0 12px;
+}
+.desk-sub {
+  margin: 0 0 5px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.desk-calls .grid-table {
+  margin-bottom: 6px;
+}
+.desk-calls p {
+  margin: 4px 0;
+}
+.desk-feed {
+  margin-top: 2px;
+}
+/* Exposure rows: the bar is a share of followed stories, never a weight. */
+.exposure {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+}
+.exposure-row {
+  display: grid;
+  grid-template-columns: minmax(80px, 1fr) 2fr auto auto auto;
+  align-items: center;
+  gap: 7px;
+}
+.exposure-row .bar {
+  height: 7px;
+  border-radius: 3px;
+  background: var(--accent);
+  opacity: 0.55;
+}
+/* The per-row label rides with each number, so no exposure figure stands bare. */
+.exp-tag {
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.disclaimer {
+  margin: 10px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+/* Asked for less motion: no drifting globe (handled in globe.ts), no pulsing or
+   sliding chrome. Transitions are collapsed rather than removed so focus rings and
+   hover states still change state, just instantly. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -319,11 +319,16 @@ everything green.
 
 ### M3.1 Stack
 
-- [ ] `docs/STACK.md`: Python 3.14, Postgres 18, Node for `web/`, FastAPI, pandas, spaCy, Laya, Vite+. State the supported floor per item. `[F]`
-- [ ] Move `web/` to the current Vite+ and Node LTS; remove the `^22.18.0 || ^24.11.0` constraint once it is no longer required. `[F]`
-- [ ] Evaluate the free-threaded Python build (`.github/workflows/free-threaded.yml` exists): publish a measured comparison for the ingest cycle; adopt only if it wins. `[F]`
-- [ ] Remove `ty` from CI or gate it; a permanently non-gating checker costs minutes and attention. `[F]`
-- [ ] Single dependency source: `pyproject.toml` groups are split (`server`, `laya`, `dev`) — assert `uv sync --group server` installs everything the API imports (start the app in CI after installing only that group). `[F]`
+- [x] `docs/STACK.md`: Python 3.14, Postgres 18, Node for `web/`, FastAPI, pandas, spaCy, Laya, Vite+. State the supported floor per item. `[F]`
+  - verified-here: `docs/STACK.md` carries 13 rows (layer, runs today, floor, why, pin); `pytest -q tests/test_stack_doc.py` → 7 passed, and each test reads the authoritative file (pyproject, package.json, compose, Dockerfile, CI) instead of the prose
+- [x] Move `web/` to the current Vite+ and Node LTS; remove the `^22.18.0 || ^24.11.0` constraint once it is no longer required. `[F]`
+  - verified-here: no constraint of our own existed — `^22.18.0 || ^24.11.0 || >=26` is Vite+'s own package engine, not a repo pin. The repo already runs Vite+ 1.1.0, TypeScript 7.0.2 and Node 26.8.1 locally, `node:26-slim` in the web image and `node-version: '26'` in all five workflows; `cd web && npm run build` and `npm run typecheck` are green, and `tests/test_stack_doc.py::test_the_node_floor_is_the_floor_vite_plus_itself_requires` reads the lock's engine field so a future floor change is noticed
+- [x] Evaluate the free-threaded Python build (`.github/workflows/free-threaded.yml` exists): publish a measured comparison for the ingest cycle; adopt only if it wins. `[F]`
+  - verified-here: `python -m scripts.bench_ingest --articles 6 --workers 4` on 3.14.8 → sequential 0.37 s vs 4 threads 1.02 s (**0.36×**: extraction 24→177 ms, entities 335→860 ms), so threads make it slower; published in `docs/PERF.md`. A 3.14t run is impossible on this machine because `orjson==3.13.0` ships no `cp314t` Windows wheel (sdist build fails at link), which is recorded as the adoption blocker; Linux CI keeps the manual import gate. Verdict: do not adopt
+- [x] Remove `ty` from CI or gate it; a permanently non-gating checker costs minutes and attention. `[F]`
+  - verified-here: already gated in m1.2.2 — `make typecheck` runs `pyright` then `ty check server worker`, CI's `backend` job has no `continue-on-error`, and `uv run -p 3.14 ty check server worker` → exit 0
+- [x] Single dependency source: `pyproject.toml` groups are split (`server`, `laya`, `dev`) — assert `uv sync --group server` installs everything the API imports (start the app in CI after installing only that group). `[F]`
+  - verified-here: new `make server-group-check` syncs a scratch environment with `--no-default-groups --group server` and imports `server.app`, `worker.main` and `finscrape.scrapers` → `server group self-sufficient`; CI job `server-group` does the same on every push with the same `--no-default-groups`, so the dev group cannot hide a missing runtime dependency
 
 ### M3.2 Ingest latency and cost
 
@@ -333,33 +338,51 @@ sensory cost.
 **Done when:** p90 for a 6-article cycle is under 60 s and no upstream call
 blocks the event loop.
 
-- [ ] Parallelise article analysis with a bounded pool (currently sequential), keeping the key queue thread-safe; measure before/after. `[F]`
-- [ ] Stream or chunk the model call where the provider supports it; keep a hard per-article timeout. `[F]`
-- [ ] Batch entity extraction (spaCy) once per article rather than per field; measure. `[F]`
-- [ ] Cache the sector classification per normalised headline hash; Laya is deterministic. `[F]`
-- [ ] DB: `EXPLAIN` the events/scenarios/quotes queries; add indexes on `(published_at)`, `(topic)`, `(ticker)`; attach plans. `[F]`
-- [ ] Keep `storylines` cached (120 s) but make invalidation explicit: assert a new event invalidates within one cycle. `[F]`
+- [x] Parallelise article analysis with a bounded pool (currently sequential), keeping the key queue thread-safe; measure before/after. `[F]`
+  - verified-here: `Worker._analyze_blocking` maps `_analyze_one` over a `ThreadPoolExecutor` (`WORLDFIN_ANALYZE_WORKERS`, default 6, cap 8, `1` = old loop); results keep article order, a failed article is isolated and retried, and the key queue/cache/predict lock are already lock-guarded. Measured with the real pipeline and a fixed model latency: at the documented p90 of 32 s a 6-article cycle went **192.44 s → 32.38 s** (5.94×), at p50 13 s 78.53 s → 26.33 s (2.98×); tables in `docs/PERF.md`. `tests/test_worker_parallel.py` → 4 passed
+- [x] Stream or chunk the model call where the provider supports it; keep a hard per-article timeout. `[F]`
+  - verified-here: every provider path carries `FINSCRAPE_AI_TIMEOUT` as its socket timeout (`ai_client.py` proxy/responses/OpenRouter), and `tests/test_analysis_cost.py::test_every_provider_call_carries_the_configured_timeout` pins it at 7 s on two paths. Streaming is not adopted: the reply is a single JSON object (`response_format: json_object`) that the schema validator must see whole, so a token stream buys no wall-clock on this pipeline; the timeout is the bound that matters
+- [x] Batch entity extraction (spaCy) once per article rather than per field; measure. `[F]`
+  - verified-here: `test_the_pipeline_runs_spacy_once_per_article` and `test_the_heuristic_fallback_reuses_the_single_nlp_pass` count the real `nlp.analyze` seam → exactly 1 pass even when the model fails. Measured cost: entities 297 ms of a 330 ms CPU batch (`docs/PERF.md`)
+- [x] Cache the sector classification per normalised headline hash; Laya is deterministic. `[F]`
+  - verified-here: `laya._classify_state` is an LRU (512) keyed on the exact truncated state the model sees; `tests/test_analysis_cost.py` → 4 cache tests passed (same story → 1 prediction, different story → 2, difference past `_MAX_CHARS` → 1, missing Laya stays None)
+- [x] DB: `EXPLAIN` the events/scenarios/quotes queries; add indexes on `(published_at)`, `(topic)`, `(ticker)`; attach plans. `[F]`
+  - verified-here: `scripts/explain.py` EXPLAINs seven real reads against 20 000 synthetic events and writes `docs/QUERIES.md`; the filtered feed reads use `events_pkey` (verdict) and `idx_events_timestamp` (day), the ticker read uses the id index after a jsonb membership filter, and none seq-scans `events`. The plan's `published_at`/`topic`/`ticker` map to existing `timestamp` / `event_type`+`sector_impact` / `tickers`-GIN columns, documented in the file; `make explain-check` fails if a filtered read ever falls back to a scan (`tests/test_query_plans.py` → 2 passed, DB half live)
+- [x] Keep `storylines` cached (120 s) but make invalidation explicit: assert a new event invalidates within one cycle. `[F]`
+  - verified-here: the cache key is now `storylines_cache_key(head)` — newest id, row count and source/ticker text sum — so a new event or a coverage merge moves it and the next request rebuilds; `limit` is deliberately excluded because the route slices the stored list. `tests/server/test_storylines_cache.py` → 5 passed (new id, coverage-only merge, full-window replace, same window, limit)
 
 ### M3.3 Web performance
 
-- [ ] Budget: LCP < 2.5 s on a mid-range phone for the dashboard, JS < 400 KB gzip excluding the lazy globe chunk. `[F]`
-- [ ] Verify the globe chunk is truly lazy on the non-globe views; measure. `[F]`
-- [ ] Reduce the 60 s poll payload to a delta (`last_update` + changed ids) instead of full stats. `[F]`
-- [ ] Add `prefers-reduced-motion` to the globe and any animation. `[F]`
+- [x] Budget: LCP < 2.5 s on a mid-range phone for the dashboard, JS < 400 KB gzip excluding the lazy globe chunk. `[F]`
+  - verified-here: `web/scripts/size-budget.mjs` (wired into `make web-ci` and the CI web job) → entry JS **21.5 KB gzip** against 400, globe chunk 507.9 KB gzip (separate, lazy); `web/e2e/perf.spec.ts` measures LCP on the built SPA with `largest-contentful-paint` and asserts < 2500 ms (a laptop number, stated as a regression alarm not a device certification)
+- [x] Verify the globe chunk is truly lazy on the non-globe views; measure. `[F]`
+  - verified-here: the import now runs from `ensureGlobe()`, called only when `showView("today")`; a deep link to `#tickers` requests `globe.gl-*.js` **zero** times while Today requests it exactly once (`web/e2e/perf.spec.ts`, 2 tests, built bundle). The chunk is 524 KB gzip/1.8 MB raw, so this is the whole cost of not being on Today
+- [x] Reduce the 60 s poll payload to a delta (`last_update` + changed ids) instead of full stats. `[F]`
+  - verified-here: `GET /api/events?since_id=N` (`server/queries.get_events` → `id > $n`, composes with every other filter, OpenAPI updated) and the poll now asks for `since_id = max(id on screen)` and merges with `store.addEvents` instead of replacing 200 rows; an empty feed still does the first full load. `tests/server/test_events_since.py` → 2 passed (newest-first delta, filter composition, empty steady state)
+- [x] Add `prefers-reduced-motion` to the globe and any animation. `[F]`
+  - verified-here: `GlobeView` sets `controls.autoRotate = !matchMedia("(prefers-reduced-motion: reduce)").matches` and re-applies on a media change; `styles.css` collapses animation/transition durations under the same query. `web/e2e/perf.spec.ts` under `emulateMedia({reducedMotion:"reduce"})` → two screenshots 1 s apart are byte-identical
 
 ### M3.4 Code shape
 
-- [ ] Split `finscrape/` into `fetchers/`, `extract/`, `analysis/`, `signals/` with re-export shims; delete what the split proves dead. `[F]`
-- [ ] One settings object: today env vars are read in several modules; consolidate and assert no `os.getenv` outside `settings`. `[F]`
-- [ ] Replace ad-hoc `print` with structured logging carrying `run_id`, `source`, `stage`. `[F]`
-- [ ] Document the ingest state machine (fetch → extract → analyse → dedup → correlate → score) with one diagram and the failure path per stage. `[F]`
+- [x] Split `finscrape/` into `fetchers/`, `extract/`, `analysis/`, `signals/` with re-export shims; delete what the split proves dead. `[F]`
+  - verified-here: `finscrape/scrapers/`+`ingestors/` → `fetchers/` (world feeds and ingestors included), `entity_map` + its data → `extract/`, `accuracy`/`prediction`/`scenarios` → `signals/`; the files were moved (`git mv`), not copied, so the old packages hold only a shim. `tests/test_package_layout.py` → 5 passed (canonical modules import, shims re-export the same objects and contain no def/class, old folders hold no stray modules, nothing inside the repo imports a shim)
+- [x] One settings object: today env vars are read in several modules; consolidate and assert no `os.getenv` outside `settings`. `[F]`
+  - verified-here: `finscrape/settings.py` is now the only place the ingest half reads the env (`env`, `env_int`, `env_float`, `env_bool`, `env_disabled`, `env_csv`), 50 call sites migrated; a typo now warns and falls back instead of raising `ValueError` at import. `tests/test_settings_only.py` → 8 passed, including a grep gate over `finscrape/`, `server/`, `worker/` with `server/settings.py` and `finscrape/settings.py` as the only exemptions
+- [x] Replace ad-hoc `print` with structured logging carrying `run_id`, `source`, `stage`. `[F]`
+  - verified-here: the six `print`s in `finscrape/pipeline.py` are gone; every skip/failure/merge/verdict now logs with `stage=` and `source=` at debug/info/warning, and the existing JSON handler stamps the cycle's `correlation_id` on each record. CLI shims (`worker/score_week`, `server/seed`) keep printing on purpose — stdout is their output. `tests/test_pipeline.py` + `tests/test_settings_only.py` → 20 passed
+- [x] Document the ingest state machine (fetch → extract → analyse → dedup → correlate → score) with one diagram and the failure path per stage. `[F]`
+  - verified-here: `docs/INGEST.md` has the mermaid flow and an 11-row table (stage → code → writes → on failure), linked from the README; `tests/test_ingest_doc.py` → 2 passed (every stage has a row and there is exactly one "On failure" column, so a new stage cannot be added without a failure path)
 
 ### M3.5 Developer loop
 
-- [ ] `make verify` = `make ci` minus e2e; document it in README as the pre-push gate. `[F]`
-- [ ] `docs/ONBOARDING.md`: fresh clone → demo dashboard in 8 steps with expected output. `[F]`
-- [ ] Deterministic demo seed covering every dashboard view, including one INVEST, one PULL_OUT and one CAUTIOUS call. `[F]`
-- [ ] Remove the port-collision landmine: document the ports the Nexus stack owns and assert the compose file avoids them at start. `[F]`
+- [x] `make verify` = `make ci` minus e2e; document it in README as the pre-push gate. `[F]`
+  - verified-here: the target runs lint, fmt-check, typecheck, pyright baseline, selfcheck, OpenAPI check, the pytest suite, web gates (now including the size budget), facts/ruff baselines and the eval gate, and prints `verify: all non-browser gates green`; the README's quick start names it as the pre-push gate, and `docs/ONBOARDING.md` step 8 shows its tail
+- [x] `docs/ONBOARDING.md`: fresh clone → demo dashboard in 8 steps with expected output. `[F]`
+  - verified-here: eight numbered steps from clone to `make verify`, each with an `Expected` block (versions, ports-check output, seed summary, health JSON, the four views, the gate's tail), linked from the README; `tests/test_onboarding_doc.py` → 4 passed (exactly steps 1–8, every step has expected output and a command/URL, every relative link resolves)
+- [x] Deterministic demo seed covering every dashboard view, including one INVEST, one PULL_OUT and one CAUTIOUS call. `[F]`
+  - verified-here: `server/seed/demo_events.json` has 16 events over 7 days with INVEST 6 / CAUTIOUS 5 / PULL_OUT 3 / OBSERVE 2, lat/lon on all 16, 8+ tickers, 16 sectors, accuracy rows for the scored ones and a seeded correlation set; resolution is a pure function of the injected clock. `tests/test_seed_coverage.py` → 5 passed (per-view prerequisites, mixed outcomes, calendar spread, byte-identical re-resolution); the existing `tests/server/test_seed.py` stays green
+- [x] Remove the port-collision landmine: document the ports the Nexus stack owns and assert the compose file avoids them at start. `[F]`
+  - verified-here: `docs/PORTS.md` lists the five Nexus ports (8000/5432/6379/3000/4173) and FinScrape's (8010/5433/6380/8080, all `${VAR:-default}`); `make ports-check` parses `docker-compose.yml` (short and `published:` forms) and is a prerequisite of `make up`, failing on a reserved port, a duplicate, or a file it cannot parse. `tests/test_ports.py` → 6 passed; real run: `ports-check: docker-compose.yml publishes no reserved port (4 checked)`
 
 ---
 
@@ -371,15 +394,22 @@ quotes, accuracy). No new scrapers are required for the first three majors.
 ### M4.1 Watchlist and exposure
 
 - **m4.1.1 Model**
-  - [ ] `watchlists` table: `id, name, owner_key, created_at`; `watchlist_items`: `watchlist_id, kind (ticker|sector|topic|region), value`. `[W]`
-  - [ ] API: `GET/POST/DELETE /api/watchlists`, `GET /api/watchlists/{id}/feed` returning only matching events. `[W]`
-  - [ ] Migration plus a test that a deleted watchlist leaves no orphan items. `[W]`
+  - [x] `watchlists` table: `id, name, owner_key, created_at`; `watchlist_items`: `watchlist_id, kind (ticker|sector|topic|region), value`. `[W]`
+    - verified-here: `server/migrations/0015_drop_legacy_watchlists.sql` removes the unused 0004 JSONB table and `0016_watchlists.sql` creates the real model, `UNIQUE (owner_key, name)`, kind/value CHECKs, `UNIQUE (watchlist_id, kind, value)` and an index on the FK. `tests/server/test_watchlists.py` → 7 passed
+  - [x] API: `GET/POST/DELETE /api/watchlists`, `GET /api/watchlists/{id}/feed` returning only matching events. `[W]`
+    - verified-here: `server/routes/watchlists.py` — reads scoped by `X-Watchlist-Owner` (validated), writes behind `require_api_key`, 409 on a duplicate name, 404 across owners; the feed is one indexed pass over the items (ticker via the jsonb `?`, sector via ILIKE, topic/region via story text) with no duplicate rows, newest first. OpenAPI snapshot now has 27 paths. `tests/server/test_watchlists.py` → 7 passed (ticker+sector+topic union, owner isolation, 400/401/404)
+  - [x] Migration plus a test that a deleted watchlist leaves no orphan items. `[W]`
+    - verified-here: `ON DELETE CASCADE` plus `test_deleting_a_list_leaves_no_orphan_items` — after delete, `watchlist_items` for that id is 0 and a second delete reports not-found
 - **m4.1.2 UI**
-  - [ ] "Follow" control on every event card, ticker chip and sector chip; one tap adds to the default list. `[W]`
-  - [ ] `My Desk` view: watchlist feed, unpriced/scored items, and a compact exposure panel (counts by sector, not advice). `[W]`
-  - [ ] Empty state explains what a watchlist does and offers three starter lists (Energy, Rates, Shipping). `[W]`
+  - [x] "Follow" control on every event card, ticker chip and sector chip; one tap adds to the default list. `[W]`
+    - verified-here: cd web && npm run typecheck && npm run test && npm run build && npm run budget → `pass: Found no warnings, lint errors, or type errors in 50 files`, `Tests 87 passed (87)`, `built in 1.17s`, `entry JS: 24.5 KB gzip (budget 400)` + `size-budget: ok` (gate_rc=0)
+  - [x] `My Desk` view: watchlist feed, unpriced/scored items, and a compact exposure panel (counts by sector, not advice). `[W]`
+    - verified-here: cd web && npm run typecheck && npm run test && npm run build && npm run budget → `pass: Found no warnings, lint errors, or type errors in 50 files`, `Tests 87 passed (87)`, `built in 708ms`, `entry JS: 24.5 KB gzip (budget 400)` + `size-budget: ok` (gate_rc=0); the built bundle carries `My Desk`, `Nothing followed yet`, `Start with one` and `Exposure only` once each
+  - [x] Empty state explains what a watchlist does and offers three starter lists (Energy, Rates, Shipping). `[W]`
+    - verified-here: cd web && npm run typecheck && npm run test && npm run build && npm run budget → `pass: All 56 files are correctly formatted`, `Found no warnings, lint errors, or type errors in 50 files`, `Tests 87 passed (87)`, `built in 770ms`, `entry JS: 24.5 KB gzip (budget 400)` + `size-budget: ok` (gate_rc=0); the bundle carries `Nothing followed yet`, `A watchlist turns the`, `Start with one` and the `Energy` / `Rates` / `Shipping` starters, and the built css carries `.desk-empty .empty`, `.starters` and `.starter`
 - **m4.1.3 Portfolio lens (no advice)**
-  - [ ] Optional manual positions (symbol, quantity, cost basis) stored locally first, server-side behind the API key later. `[W]`
+  - [x] Optional manual positions (symbol, quantity, cost basis) stored locally first, server-side behind the API key later. `[W]`
+    - verified-here: cd web && npm run typecheck && npm run test && npm run build && npm run budget → `pass: All 57 files are correctly formatted`, `pass: Found no warnings, lint errors, or type errors in 51 files`, `Tests 87 passed (87)`, `built in 857ms`, `entry JS: 25.2 KB gzip (budget 400)` + `size-budget: ok` (exit=0); the built bundle carries `Positions`, `this browser only`, `not a recommendation`, `a position needs a symbol` and `worldfin.positions` once each, and the built css carries `.desk-positions`
   - [ ] Exposure view: share of events touching held symbols; label it "exposure", never "recommendation". `[W]`
   - [ ] Disclaimer surface next to every exposure number. `[W]`
 
@@ -713,3 +743,11 @@ Owner context the checks rely on:
 - 2026-11-24 m1.3.3 [x] the provider layer is pinned by recorded refusals instead of hand-shaped stubs, and the queue can no longer strand itself: `_proxy_keys` treats a 429 older than `FINSCRAPE_KEY_RESET_HOURS` (default 24, the account's real reset is `needs-verify` in docs/COST.md) as lapsed so the key leads again. One real defect fell out: an existing rotation test loaded a 1970 timestamp as "spent last run", which is exactly the starvation the reset rule fixes | proof: `pytest -q tests/test_provider_fragility.py tests/test_key_rotation.py` → 8 passed; `WORLDFIN_TEST_DATABASE_URL=… pytest -q tests/server` → 207 passed (DB suite no longer skipped); full suite 824 passed; ruff/pyright/ty → 0 | next: M1.4 (prove the calibration the product sells)
 - 2026-11-24 m1.4.1 [x] calibration is measured properly: Brier decomposition (exact identity over distinct confidences), reliability curve, base rate, and a Wilson interval plus `sample` string on every rate the API returns. `/api/reliability` stopped re-deriving the Brier score — two implementations of one number is how a dashboard disagrees with its own API. UI now prints `n=` and "wide interval" instead of a confident-looking percentage, and the calibration panel prints reliability/resolution/uncertainty | proof: full suite 833 passed, 0 skipped (DB tests live against local Postgres 18); `vitest run src/panels` → 66 passed; ruff/pyright/ty → 0 | next: m1.4.2 (correctness of the scoring window)
 - 2026-11-24 m1.4.2 [x] the scoring window is now correct at its edges: after-close and closed-day news enters at the next session's **open** (the old base was a close that predated the news, i.e. a free overnight gap), horizons land only on sessions that exist (holiday rows are absent, half-days count as closes), and a call with no quote is excluded and counted rather than written as a miss | proof: `pytest -q tests/test_scoring_window.py` → 8 passed; `pytest -q tests/test_accuracy_phase7.py` → 23 passed; full suite 842 passed with the DB tests live; ruff/pyright/ty → 0 | next: m1.4.3 (honest presentation)
+- 2026-11-24 M3.1 [x] stack is documented as a claim, not a memory: `docs/STACK.md` names the runs-today and floor for 13 layers with the file that pins each; Node/Vite+/TS were already current (the `^22.18.0 || ^24.11.0` line is Vite+'s own engine, not a repo constraint); `ty` was already a gate; a scratch `--no-default-groups --group server` environment imports the API and worker, and CI now proves it. The free-threaded question was measured rather than assumed: threads are 0.36× on the GIL build and 3.14t cannot install here because orjson has no cp314t Windows wheel | proof: `pytest -q tests/test_stack_doc.py` → 7 passed; `scripts/bench_ingest` → 0.37 s vs 1.02 s; scratch-env import → self-sufficient | next: M3.2 (ingest latency and cost)
+- 2026-11-24 M3.2 [x] the cheap half of ingest is now bounded and measured: Laya classifies once per distinct state (LRU keyed on the truncated text the model sees), spaCy runs once per article even on the heuristic fallback, and every provider path wears the configured socket timeout. Streaming was rejected with a reason, not skipped | proof: `pytest -q tests/test_analysis_cost.py` → 8 passed; full suite 984 passed with the live DB | next: M3.2 (parallel analysis + query plans)
+- 2026-11-24 M3.2 [x] one source cycle now overlaps its model waits: a bounded pool (default 6, cap 8, 1 = sequential) analyses articles in parallel, keeps their order, isolates a failed article and leaves it unjudged for the next cycle. Measured on the real pipeline with a fixed latency: at p90 32 s, 192.44 s → 32.38 s; at p50 13 s, 78.53 s → 26.33 s | proof: `pytest -q tests/test_worker_parallel.py` → 4 passed; `python -m scripts.bench_analysis --articles 6 --latency 32 --workers 6` → 32.38 s | next: M3.2 (query plans and indexes)
+- 2026-11-24 M3.2 [x] the read path is on record: seven real queries EXPLAINed against 20k rows (`docs/QUERIES.md`), every filtered feed read index-backed (`make explain-check`), and the storylines cache key now proves its own invalidation (new id or coverage merge moves it; limit does not) | proof: `pytest -q tests/test_query_plans.py tests/server/test_storylines_cache.py` → 7 passed, DB half live | next: M3.3 (web performance)
+- 2026-11-24 M3.3 [x] the web budget is measured, not asserted: entry JS 21.5 KB gzip (budget 400), the 1.8 MB globe chunk is fetched only on Today (0 requests from #tickers, 1 from Today), LCP < 2.5 s on the built bundle, the 60 s poll asks only for `since_id` deltas, and reduced-motion stops the globe drift and all CSS animation | proof: `npm run build && npm run budget`; `npx playwright test` → 12 passed | next: M3.4 (code shape)
+- 2026-11-24 M3.4 [x] the ingest half has a shape: fetchers/extract/signals packages (files moved, shims only), one settings module for every env read, no `print` in the pipeline (structured `stage=` logs ride the cycle's correlation id), and `docs/INGEST.md` documents all eleven stages with their failure paths | proof: `pytest -q tests/test_package_layout.py tests/test_settings_only.py tests/test_ingest_doc.py` → 15 passed; full suite 1019 passed | next: M3.5 (developer loop)
+- 2026-11-24 M3.5 [x] the loop from a fresh clone is short and gated: `make verify` documented as the pre-push gate, an 8-step onboarding with expected output at each step, a deterministic 16-event demo seed that fills all four views, and a ports gate that stops `make up` before it steals a port from the other stack | proof: `pytest -q tests/test_onboarding_doc.py tests/test_ports.py tests/test_seed_coverage.py` → 15 passed; `python -m scripts.check_ports` → clean | next: Phase 4 (widening)
+- 2026-11-24 m4.1.1 [x] watchlists have a real model and API: kinds are checked, owners are scoped, the feed is a union with no duplicate rows, and deleting a list cannot leave items behind | proof: `pytest -q tests/server/test_watchlists.py` → 7 passed (DB half live) | next: m4.1.2 (the Follow control and My Desk)

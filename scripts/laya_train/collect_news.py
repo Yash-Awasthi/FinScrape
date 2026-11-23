@@ -4,7 +4,7 @@ plus Firecrawl news search, deduplicated against all existing Laya data.
     .venv/Scripts/python scripts/laya_train/collect_news.py OUT.json [--days 30] [--no-firecrawl]
 
 Sources: production events in Postgres, the worker's world RSS and event ingestors, the
-market scrapers in finscrape.scrapers, and `firecrawl search --sources news` per theme.
+market scrapers in finscrape.fetchers, and `firecrawl search --sources news` per theme.
 """
 
 from __future__ import annotations
@@ -77,7 +77,7 @@ def market_scrapers() -> list[tuple[str, str]]:
     import importlib
 
     def run(mod: str) -> list[tuple[str, str]]:
-        m = importlib.import_module(f"finscrape.scrapers.{mod}")
+        m = importlib.import_module(f"finscrape.fetchers.{mod}")
         cls = next(
             v
             for k, v in vars(m).items()

@@ -19,6 +19,7 @@ import {
   verdictColor,
 } from "../api";
 import { escapeHtml, fmtPct, sourceLabel, timeAgo } from "../util";
+import { follow } from "../watchlist";
 import { VIZ_COLORS, barChart, calibration, columns, signColor, sparkline } from "./viz";
 import { Panel } from "./panel";
 
@@ -87,19 +88,42 @@ export class SectorPanel extends Panel {
         const tickers = s.top_tickers.length ? s.top_tickers.join(", ") : "—";
         const ratio = s.bull_bear_ratio == null ? "—" : `${s.bull_bear_ratio.toFixed(1)}:1`;
         return (
+          `<span class="sector-wrap">` +
           `<button class="sector-chip" data-sector="${escapeHtml(s.sector)}" style="font-size:${em}em;--sector-color:${color}" ` +
           `title="${escapeHtml(s.sector)} · ${s.event_count} events · avg ${score >= 0 ? "+" : ""}${score} · bull:bear ${ratio}\nTop: ${escapeHtml(tickers)}">` +
           `<span class="sector-name">${escapeHtml(s.sector)}</span>` +
           `<span class="sector-n">${s.event_count}</span>` +
           `<span class="sector-score" style="color:${color}">${score >= 0 ? "+" : ""}${score}</span>` +
-          `</button>`
+          `</button>` +
+          `<button class="follow" data-kind="sector" data-value="${escapeHtml(s.sector)}" ` +
+          `aria-label="follow ${escapeHtml(s.sector)} on My Desk" title="follow ${escapeHtml(s.sector)} on My Desk">+</button>` +
+          `</span>`
         );
       })
       .join("");
     wrap.addEventListener("click", (e) => {
-      const sector = (e.target as HTMLElement).closest<HTMLElement>(".sector-chip")?.dataset.sector;
-      if (sector)
+      const target = e.target as HTMLElement;
+      const sector = target.closest<HTMLElement>(".sector-chip")?.dataset.sector;
+      if (sector) {
         window.dispatchEvent(new CustomEvent("worldfin:select-sector", { detail: sector }));
+        return;
+      }
+      const chip = target.closest<HTMLButtonElement>("button.follow");
+      if (!chip) return;
+      e.stopPropagation(); // a follow is not a sector filter
+      const value = chip.dataset.value ?? "";
+      chip.disabled = true;
+      void follow("sector", value)
+        .then(() => {
+          chip.classList.add("followed");
+          chip.title = `following ${value}`;
+        })
+        .catch((err: unknown) => {
+          chip.title = err instanceof Error ? err.message : "could not follow";
+        })
+        .finally(() => {
+          chip.disabled = false;
+        });
     });
     const chart = document.createElement("div");
     chart.innerHTML = barChart(

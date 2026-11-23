@@ -10,8 +10,8 @@ AI, KEY, GO, ONE).
 from finscrape.analysis.constants import TICKER_STOPWORDS
 from finscrape.analysis.ticker_map import COMPANY_TO_TICKER, resolve_company_tickers
 from finscrape.analysis.validator import clean_tickers
-from finscrape.entity_map import _matches
-from finscrape.scrapers import BaseScraper
+from finscrape.extract.entity_map import _matches
+from finscrape.fetchers import BaseScraper
 
 # Same boundary-match rule nlp.py's analyst detection runs on ANALYST_ENTITIES —
 # "citi" must only fire on the word "citi", never on the "citi" inside "Citizens".

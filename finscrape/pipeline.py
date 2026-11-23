@@ -8,7 +8,6 @@ caller's EventStore. The worker supplies the articles and owns storage.
 from __future__ import annotations
 
 import logging
-import os
 import re
 import threading
 from difflib import SequenceMatcher
@@ -31,9 +30,10 @@ from finscrape.analysis.validator import (
     grounded_tickers,
     is_market_relevant,
 )
-from finscrape.entity_map import lede_tickers, resolve_company_tickers
+from finscrape.extract.entity_map import lede_tickers, resolve_company_tickers
 from finscrape.market_data import get_indicators, get_market_reaction
 from finscrape.models import FinEvent, ScrapedArticle, Verdict
+from finscrape.settings import env, env_bool
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ class FinScrapePipeline:
         self._tls = threading.local()
         self.nlp = FinancialNLP()
         self.use_council = use_council
-        if use_council and os.getenv("WORLDFIN_ENV", "").lower() == "production":
+        if use_council and (env("WORLDFIN_ENV", "") or "").lower() == "production":
             raise RuntimeError(
                 "the agent council is an offline/experimental mode: production is one "
                 "LLM call per article (plan M1.7)"
@@ -81,7 +81,11 @@ class FinScrapePipeline:
         # Pre-LLM relevance gate: junk lifestyle pieces and transient event
         # briefs (minor quakes, forming storms) never reach the AI or the DB.
         if not is_market_relevant(article.title, article.text):
-            print("    [SKIP] Not market-relevant (off-topic or transient brief)")
+            logger.debug(
+                "stage=relevance skip: off-topic or transient brief (source=%s title=%r)",
+                source_name,
+                article.title[:70],
+            )
             return None
 
         # NLP runs for every judged article; the fallback reuses this result so an
@@ -98,15 +102,24 @@ class FinScrapePipeline:
             # Zero-cost mode: LLM unavailable / budget-capped → heuristic + entity-map
             # tickers so ingestion never stalls (opt-in: FINSCRAPE_HEURISTIC_FALLBACK).
             # The event lands with a heuristic verdict, enrichable on demand (/api/ai/analyze).
-            if os.getenv("FINSCRAPE_HEURISTIC_FALLBACK", "").lower() in ("1", "true", "yes"):
+            if env_bool("FINSCRAPE_HEURISTIC_FALLBACK"):
                 result = self._heuristic_only(article, nlp_result)
             if not result:
                 self._tls.ai_failed = True
-                print("    [ERROR] AI analysis failed")
+                logger.warning(
+                    "stage=analysis failed: no model and no heuristic fallback "
+                    "(source=%s title=%r)",
+                    source_name,
+                    article.title[:70],
+                )
                 return None
 
         if not result.get("relevant", False):
-            print("    [SKIP] Not market-relevant")
+            logger.debug(
+                "stage=analysis skip: model marked it not relevant (source=%s title=%r)",
+                source_name,
+                article.title[:70],
+            )
             return None
 
         full_text = article.title + " " + article.text
@@ -146,7 +159,11 @@ class FinScrapePipeline:
         ], text=full_text)
 
         if not valid_tickers:
-            print("    [SKIP] No valid tickers found")
+            logger.debug(
+                "stage=tickers skip: no grounded symbol (source=%s title=%r)",
+                source_name,
+                article.title[:70],
+            )
             return None
 
         laya_view = laya.classify(article.title, article.text)
@@ -256,7 +273,12 @@ class FinScrapePipeline:
         # Deduplication
         matched = self._find_duplicate(event)
         if matched:
-            print(f"    [MERGE] Merging with: {matched.get('subject', '')[:50]}")
+            logger.info(
+                "stage=dedup merge: into #%s %r (source=%s)",
+                matched.get("id"),
+                str(matched.get("subject", ""))[:60],
+                source_name,
+            )
             articles_list = matched.get("articles", [])
             sources_list = matched.get("sources", [])
             updated = {}
@@ -271,9 +293,15 @@ class FinScrapePipeline:
             self._tls.merged_into = matched
             return None
         else:
-            print(f"    [{event.verdict:8s}] {event.subject}")
+            logger.info(
+                "stage=score %-8s %s (source=%s score=%s)",
+                event.verdict,
+                event.subject,
+                source_name,
+                event.signal_score,
+            )
             if event.reasoning:
-                print(f"           Reasoning: {event.reasoning[:80]}...")
+                logger.debug("stage=score reasoning: %s", event.reasoning[:120])
             self.event_store.add_event(event.to_dict())
             return event
 

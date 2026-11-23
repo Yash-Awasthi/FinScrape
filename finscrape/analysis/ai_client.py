@@ -18,7 +18,6 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-import os
 import re
 import threading
 import time
@@ -39,27 +38,28 @@ from finscrape.analysis.reply_schema import (
     repair_prompt,
     reply_errors,
 )
+from finscrape.settings import env, env_float, env_int
 
 logger = logging.getLogger(__name__)
 
 # Load .env from project root
 load_dotenv()
 
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
-OPENAI_BASE_URL    = os.getenv("OPENAI_BASE_URL", "")
-OPENAI_API_KEY     = os.getenv("OPENAI_API_KEY", "proxy")
-DEFAULT_MODEL      = os.getenv("FINSCRAPE_MODEL", "deepseek/deepseek-chat")
+OPENROUTER_API_KEY = env("OPENROUTER_API_KEY", "")
+OPENAI_BASE_URL    = env("OPENAI_BASE_URL", "")
+OPENAI_API_KEY     = env("OPENAI_API_KEY", "proxy")
+DEFAULT_MODEL      = env("FINSCRAPE_MODEL", "deepseek/deepseek-chat") or "deepseek/deepseek-chat"
 # Wire format for the OPENAI_BASE_URL backend: "chat" (chat/completions, default) or
 # "responses" (OpenAI Responses API — e.g. freemodel.dev's free GPT-5.x).
-LLM_WIRE_API       = os.getenv("FINSCRAPE_WIRE_API", "chat").lower()
+LLM_WIRE_API       = (env("FINSCRAPE_WIRE_API", "chat") or "chat").lower()
 
 # Retry configuration
 MAX_RETRIES      = 1
 RETRY_BASE_DELAY = 2.0  # seconds
 
 # Cache configuration
-CACHE_TTL      = int(os.getenv("FINSCRAPE_CACHE_TTL",      "3600"))
-CACHE_MAX_SIZE = int(os.getenv("FINSCRAPE_CACHE_MAX_SIZE", "500"))
+CACHE_TTL      = env_int("FINSCRAPE_CACHE_TTL", 3600)
+CACHE_MAX_SIZE = env_int("FINSCRAPE_CACHE_MAX_SIZE", 500)
 
 # ---------------------------------------------------------------------------
 # Response Cache
@@ -160,12 +160,12 @@ def call_ai(prompt: str, system_prompt: str, model: str | None = None) -> dict |
     # Read env at call time, not import time — main.py --ollama sets
     # OPENAI_BASE_URL after this module is imported, so frozen constants
     # would never see it.
-    primary = model or os.getenv("FINSCRAPE_MODEL", DEFAULT_MODEL)
+    primary = model or env("FINSCRAPE_MODEL", DEFAULT_MODEL) or DEFAULT_MODEL
     result = _call_model(prompt, system_prompt, primary)
     # A pinned model means that model; otherwise a flaky free-tier primary hands
     # over to the next model in FINSCRAPE_MODEL_FALLBACK (comma-separated).
     if result is None and model is None:
-        for fallback in filter(None, os.getenv("FINSCRAPE_MODEL_FALLBACK", "").split(",")):
+        for fallback in filter(None, (env("FINSCRAPE_MODEL_FALLBACK", "") or "").split(",")):
             logger.info("Primary model %s failed; trying %s", primary, fallback.strip())
             result = _call_model(prompt, system_prompt, fallback.strip())
             if result is not None:
@@ -232,10 +232,10 @@ def _call_model(prompt: str, system_prompt: str, effective_model: str) -> dict |
 
 def _dispatch(prompt: str, system_prompt: str, effective_model: str) -> dict | None:
     """One attempt at one model, across whichever backends are configured."""
-    base_url = os.getenv("OPENAI_BASE_URL", "")
-    openrouter_key = os.getenv("OPENROUTER_API_KEY", "")
+    base_url = env("OPENAI_BASE_URL", "") or ""
+    openrouter_key = env("OPENROUTER_API_KEY", "")
 
-    if base_url and os.getenv("FINSCRAPE_WIRE_API", "chat").lower() == "responses":
+    if base_url and (env("FINSCRAPE_WIRE_API", "chat") or "chat").lower() == "responses":
         return _call_with_retry(_call_responses_api, prompt, system_prompt, effective_model)
     if base_url:
         raw = _call_with_retry(_call_openai_proxy, prompt, system_prompt, effective_model)
@@ -248,7 +248,7 @@ def _dispatch(prompt: str, system_prompt: str, effective_model: str) -> dict | N
                 _call_openrouter,
                 prompt,
                 system_prompt,
-                os.getenv("FINSCRAPE_OPENROUTER_MODEL", DEFAULT_MODEL),
+                env("FINSCRAPE_OPENROUTER_MODEL", DEFAULT_MODEL),
             )
         return raw
     if openrouter_key:
@@ -413,11 +413,14 @@ def _proxy_keys() -> list[str]:
     reset — so that key rejoins the front. Without this a queue where every key spent its
     allowance once stays spent-looking forever, even after the provider reset it.
     """
-    keys = [os.getenv("OPENAI_API_KEY", "proxy"), *os.getenv("OPENAI_API_KEYS", "").split(",")]
+    keys = [
+        env("OPENAI_API_KEY", "proxy") or "proxy",
+        *(env("OPENAI_API_KEYS", "") or "").split(","),
+    ]
     keys = [k for k in dict.fromkeys(k.strip() for k in keys) if k]
     # TokenHarbor's own reset is not published (docs/COST.md); 24 h is the conservative
     # assumption, and FINSCRAPE_KEY_RESET_HOURS overrides it once the account says more.
-    reset_after = float(os.getenv("FINSCRAPE_KEY_RESET_HOURS", "24")) * 3600
+    reset_after = env_float("FINSCRAPE_KEY_RESET_HOURS", 24.0) * 3600
     now = time.time()
 
     def rank(key: str) -> float:
@@ -439,24 +442,24 @@ def _call_openai_proxy(prompt: str, system_prompt: str, model: str | None = None
     try:
         for key in _proxy_keys():
             response = requests.post(
-                f"{os.getenv('OPENAI_BASE_URL', '')}/chat/completions",
+                f"{env('OPENAI_BASE_URL', '')}/chat/completions",
                 headers={
                     "Authorization": f"Bearer {key}",
                     "Content-Type":  "application/json",
                 },
                 json={
-                    "model":    model or os.getenv("FINSCRAPE_MODEL", DEFAULT_MODEL),
+                    "model":    model or env("FINSCRAPE_MODEL", DEFAULT_MODEL),
                     "messages": [
                         {"role": "system", "content": system_prompt},
                         {"role": "user",   "content": prompt},
                     ],
-                    "temperature":     float(os.getenv("FINSCRAPE_AI_TEMP", "0.1")),
+                    "temperature":     env_float("FINSCRAPE_AI_TEMP", 0.1),
                     # Reasoning models (mimo) spend 800 tokens thinking and return no JSON.
-                    "max_tokens":      int(os.getenv("FINSCRAPE_AI_MAX_TOKENS", "3000")),
+                    "max_tokens":      env_int("FINSCRAPE_AI_MAX_TOKENS", 3000),
                     "response_format": {"type": "json_object"},
                     "format":          "json",  # Ollama-native; ignored by other providers
                 },
-                timeout=int(os.getenv("FINSCRAPE_AI_TIMEOUT", "60")),
+                timeout=env_int("FINSCRAPE_AI_TIMEOUT", 60),
             )
             if response.status_code != 429:
                 break
@@ -490,11 +493,11 @@ def _call_openrouter(prompt: str, system_prompt: str, model: str | None = None) 
                     {"role": "system", "content": system_prompt},
                     {"role": "user",   "content": prompt},
                 ],
-                "temperature":     float(os.getenv("FINSCRAPE_AI_TEMP", "0.1")),
+                "temperature":     env_float("FINSCRAPE_AI_TEMP", 0.1),
                 "max_tokens":      800,
                 "response_format": {"type": "json_object"},
             },
-            timeout=int(os.getenv("FINSCRAPE_AI_TIMEOUT", "45")),
+            timeout=env_int("FINSCRAPE_AI_TIMEOUT", 45),
         )
 
         if response.status_code != 200:
@@ -543,7 +546,7 @@ def _call_responses_api(prompt: str, system_prompt: str, model: str | None = Non
     user→input. Reasoning models need output-token headroom."""
     try:
         response = requests.post(
-            f"{OPENAI_BASE_URL.rstrip('/')}/responses",
+            f"{(OPENAI_BASE_URL or '').rstrip('/')}/responses",
             headers={
                 "Authorization": f"Bearer {OPENAI_API_KEY}",
                 "Content-Type": "application/json",
@@ -553,10 +556,10 @@ def _call_responses_api(prompt: str, system_prompt: str, model: str | None = Non
                 "instructions": system_prompt,
                 "input": prompt,
                 "store": False,
-                "max_output_tokens": int(os.getenv("FINSCRAPE_AI_MAX_TOKENS", "3000")),
-                "reasoning": {"effort": os.getenv("FINSCRAPE_AI_EFFORT", "low")},
+                "max_output_tokens": env_int("FINSCRAPE_AI_MAX_TOKENS", 3000),
+                "reasoning": {"effort": env("FINSCRAPE_AI_EFFORT", "low")},
             },
-            timeout=int(os.getenv("FINSCRAPE_AI_TIMEOUT", "90")),
+            timeout=env_int("FINSCRAPE_AI_TIMEOUT", 90),
         )
         if response.status_code != 200:
             logger.error("AI responses HTTP %d: %s", response.status_code, response.text[:200])

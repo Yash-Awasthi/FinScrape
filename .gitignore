@@ -56,3 +56,6 @@ data/*.db-shm
 backups/
 .wrangler/
 data/backfill/
+
+# scratch environment used by `make server-group-check`
+.venv-server-group/

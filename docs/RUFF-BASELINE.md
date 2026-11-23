@@ -5,23 +5,24 @@ hand. This file is a ratchet: the totals below may only shrink, and each pull re
 burns down one rule group (plan m1.2.1). `tests/test_docs.py` fails when this file and
 the tree disagree, so a change to lint debt has to regenerate it.
 
-**136 errors in 56 files of 267 tracked Python files.** 24 rule codes; 2 of them have an autofix.
+**154 errors in 61 files of 299 tracked Python files.** 24 rule codes; 2 of them have an autofix.
 
 ## By rule
 
 | Count | Code | Rule | Autofix |
 |---|---|---|---|
 | 79 | `BLE001` | blind-except | no |
+| 21 | `I001` | unsorted-imports | yes |
 | 12 | `RUF012` | mutable-class-default | no |
 | 8 | `UP035` | deprecated-import | unsafe only |
 | 5 | `S110` | try-except-pass | no |
-| 5 | `I001` | unsorted-imports | yes |
 | 3 | `SIM102` | collapsible-if | no |
 | 3 | `UP007` | non-pep604-annotation-union | no |
+| 3 | `RUF100` | unused-noqa | yes |
 | 2 | `C419` | unnecessary-comprehension-in-call | no |
 | 2 | `B023` | function-uses-loop-variable | no |
-| 2 | `S112` | try-except-continue | no |
 | 2 | `F841` | unused-variable | no |
+| 2 | `S112` | try-except-continue | no |
 | 1 | `PLC0206` | dict-index-missing-items | no |
 | 1 | `RUF046` | unnecessary-cast-to-int | no |
 | 1 | `T100` | debugger | no |
@@ -34,15 +35,14 @@ the tree disagree, so a change to lint debt has to regenerate it.
 | 1 | `FURB162` | fromisoformat-replace-z | no |
 | 1 | `RUF059` | unused-unpacked-variable | no |
 | 1 | `PLW1510` | subprocess-run-without-check | no |
-| 1 | `RUF100` | unused-noqa | yes |
 
 ## By directory
 
 | Count | Path |
 |---|---|
 | 55 | `finscrape/engine` |
-| 23 | `finscrape/scrapers` |
-| 11 | `finscrape/analysis` |
+| 35 | `finscrape/fetchers` |
+| 12 | `finscrape/analysis` |
 | 11 | `finscrape/market_data.py` |
 | 4 | `finscrape/agents` |
 | 4 | `scripts/repo_facts.py` |
@@ -52,12 +52,16 @@ the tree disagree, so a change to lint debt has to regenerate it.
 | 2 | `finscrape/alerts.py` |
 | 2 | `scripts/warm.py` |
 | 2 | `worker/main.py` |
+| 1 | `finscrape/ingestors` |
+| 1 | `finscrape/scrapers` |
 | 1 | `scripts/dead_files.py` |
 | 1 | `scripts/reanalyse.py` |
 | 1 | `scripts/smoke_test_ollama.py` |
 | 1 | `server/obs.py` |
 | 1 | `server/routes` |
 | 1 | `server/ws.py` |
+| 1 | `tests/server` |
+| 1 | `tests/test_full_text_enrich.py` |
 | 1 | `tests/test_lessons.py` |
 | 1 | `tests/test_market_personas.py` |
 | 1 | `tests/test_pipeline.py` |
@@ -65,6 +69,7 @@ the tree disagree, so a change to lint debt has to regenerate it.
 | 1 | `tests/test_scout_reviewer.py` |
 | 1 | `tests/test_temporal.py` |
 | 1 | `worker/runner.py` |
+| 1 | `worker/sources.py` |
 
 ## Known false positives
 

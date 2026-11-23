@@ -4,10 +4,11 @@ Data models for FinScrape events and signals.
 
 from __future__ import annotations
 
-import os
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
+
+from finscrape.settings import env_float
 
 
 class Verdict(str, Enum):
@@ -100,7 +101,7 @@ class ScrapedArticle:
         """Article is within the configured max age window (FINSCRAPE_MAX_AGE_HOURS, default 2)."""
         if self.age_hours is None:
             return True  # assume fresh if unknown
-        max_age = float(os.getenv("FINSCRAPE_MAX_AGE_HOURS", "2.0"))
+        max_age = env_float("FINSCRAPE_MAX_AGE_HOURS", 2.0)
         return self.age_hours <= max_age
 
     @property

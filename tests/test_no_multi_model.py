@@ -11,7 +11,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 def scan_references(root: Path) -> list[str]:
     """Scan first-party Python, failing closed on traversal or decoding errors."""
-    excluded = {".venv", ".git", "reference", "absorbed", "node_modules"}
+    # Any scratch environment (`.venv`, `.venv-server-group`, ...) is not first-party
+    # source: the dependency-group check creates one, and its site-packages are vendored.
+    excluded = {".git", "reference", "absorbed", "node_modules"}
     pattern = re.compile(r"multi_model|analyze_batch|BATCH_ANALYSIS")
     hits = []
 
@@ -19,7 +21,11 @@ def scan_references(root: Path) -> list[str]:
         raise error
 
     for directory, directories, files in os.walk(root, onerror=fail):
-        directories[:] = sorted(name for name in directories if name not in excluded)
+        directories[:] = sorted(
+            name
+            for name in directories
+            if name not in excluded and not name.startswith(".venv")
+        )
         for name in sorted(files):
             if not name.endswith(".py") or name == "test_no_multi_model.py":
                 continue
@@ -34,7 +40,14 @@ def scan_references(root: Path) -> list[str]:
 
 def test_reference_scan_reports_matches_and_retains_exclusions(tmp_path):
     (tmp_path / "source.py").write_text("# clean\nanalyze_batch()\n", encoding="utf-8")
-    for name in (".venv", ".git", "reference", "absorbed", "node_modules"):
+    for name in (
+        ".venv",
+        ".venv-server-group",
+        ".git",
+        "reference",
+        "absorbed",
+        "node_modules",
+    ):
         directory = tmp_path / "nested" / name
         directory.mkdir(parents=True)
         (directory / "excluded.py").write_text("multi_model", encoding="utf-8")

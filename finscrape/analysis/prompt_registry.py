@@ -14,9 +14,9 @@ prompt text, so v1/v2 responses never collide.
 from __future__ import annotations
 
 import hashlib
-import os
 
 from finscrape.analysis.prompts import ANALYSIS_PROMPT, SYSTEM_PROMPT
+from finscrape.settings import env_bool
 
 # v2 — a more conservative calibration variant. Same schema + few-shot, one extra rule.
 _V2_SYSTEM = SYSTEM_PROMPT + (
@@ -32,7 +32,7 @@ VARIANT_IDS: tuple[str, ...] = tuple(PROMPT_VARIANTS)
 
 
 def ab_enabled() -> bool:
-    return os.getenv("WORLDFIN_PROMPT_AB", "").lower() in ("1", "true", "yes")
+    return env_bool("WORLDFIN_PROMPT_AB")
 
 
 def pick_variant(seed: str) -> str:

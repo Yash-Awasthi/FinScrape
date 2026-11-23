@@ -29,6 +29,7 @@ from server.routes import health as health_routes
 from server.routes import insight as insight_routes
 from server.routes import market as market_routes
 from server.routes import telegram as telegram_routes
+from server.routes import watchlists as watchlist_routes
 from server.schemas import HealthResponse
 from server.settings import get_settings
 from server.ws import hub
@@ -150,6 +151,7 @@ def create_app() -> FastAPI:
     app.include_router(accuracy_routes.router)
     app.include_router(alerts_routes.router)
     app.include_router(telegram_routes.router)
+    app.include_router(watchlist_routes.router)
 
     @app.websocket("/api/ws")
     async def ws(websocket: WebSocket) -> None:

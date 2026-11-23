@@ -295,16 +295,16 @@ implemented in `finscrape/analysis/nlp.py` despite earlier documentation claimin
 <!-- facts:start -->
 | Fact | Measured |
 |---|---|
-| Python files (tracked) | 267 |
-| Test functions (`def test_`) | 916 |
-| pytest tests collected | 977 |
+| Python files (tracked) | 299 |
+| Test functions (`def test_`) | 981 |
+| pytest tests collected | 1044 |
 | Vitest tests | 83 |
-| Playwright tests | 8 |
+| Playwright tests | 12 |
 | Web source files | 37 |
 | World RSS feeds in the registry | 37 |
 | Tickers the entity index and topic keywords share | 25 |
-| Ruff errors / files with errors | 156 / 59 |
-| Ruff-clean tracked files | 208 of 267 |
+| Ruff errors / files with errors | 174 / 64 |
+| Ruff-clean tracked files | 235 of 299 |
 | Configured models | deepseek-v4.1-flash:free, mimo-v2.6-flash:free |
 | `deepseek-v4.1-flash:free` | 77% valid JSON, 67.4% sector, 13 s (p90 32 s) p50 |
 | `mimo-v2.6-flash:free` | 96% valid JSON, 66.7% sector, 14 s (p90 21 s) p50 |

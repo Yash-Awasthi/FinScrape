@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Mapping
 from typing import cast
 
 from fastapi import APIRouter, Query
 
-from finscrape.scrapers.world.feeds import FEEDS
+from finscrape.fetchers.world.feeds import FEEDS
 from server import cache, db
 
 router = APIRouter()
@@ -264,6 +265,21 @@ async def sectors() -> dict:
     return {"sectors": out}
 
 
+def storylines_cache_key(head: Mapping[str, object]) -> str:
+    """The cache key is the window's identity: newest id, how many rows, and how much
+    source/ticker text they carry.
+
+    A new event changes `newest`, so the next request after an ingest rebuilds; a
+    coverage merge into an existing row changes the text sum without a new id, which is
+    the other way this window moves. `limit` is deliberately absent: the stored value is
+    the full cluster list and the route slices it.
+    """
+    return (
+        f"storylines:{head.get('newest') or 0}:{head.get('considered') or 0}:"
+        f"{head.get('coverage') or 0}"
+    )
+
+
 @router.get("/api/storylines")
 async def storylines(limit: int = Query(10, ge=1, le=50)) -> dict:
     """Storylines (production parity): greedy embedding clusters of recent events.
@@ -280,10 +296,7 @@ async def storylines(limit: int = Query(10, ge=1, le=50)) -> dict:
         FROM (SELECT id, sources, tickers FROM events ORDER BY id DESC LIMIT 200) w
         """
     )
-    key = (
-        f"storylines:{head['newest'] or 0}:{head['considered'] or 0}:"
-        f"{head['coverage'] or 0}"
-    )
+    key = storylines_cache_key(head)
     hit = cache.peek(key)
     if hit is not cache.MISSING:
         return {"storylines": cast("list[dict]", hit)[:limit]}

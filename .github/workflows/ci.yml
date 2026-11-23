@@ -62,10 +62,27 @@ jobs:
         run: uv run -p 3.14 python -m tests.server.selfcheck
       # plan M2.2: the contract clients read is pinned. A removed path, a dropped response
       # field or a tightened bound fails here, before a panel goes quietly empty.
+      - name: Stack doc against the pins
+        run: make stack-check
       - name: API contract
         run: make openapi-check
       - name: Test
         run: uv run -p 3.14 pytest -q
+
+  server-group:
+    # plan M3.1: one dependency source. The `server` group must be enough to import the
+    # API and the worker on its own — otherwise a missing runtime dependency hides behind
+    # the dev group that every other job installs.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-python
+        with:
+          # --no-default-groups matters: otherwise uv also installs the `dev` group and
+          # the check would pass on pytest/uvicorn while a runtime import is missing.
+          groups: --no-default-groups --group server
+      - name: Server group alone imports the app
+        run: python -c "import server.app, worker.main, finscrape.scrapers; print('server group self-sufficient')"
 
   eval-gate:
     # plan M2.1: any model or prompt change must hold its score on the frozen gold set
@@ -143,6 +160,7 @@ jobs:
       - run: npm run test
       - run: node --test ../ops/ingest-cron/index.test.mjs
       - run: npm run build
+      - run: npm run budget
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test
       - uses: actions/upload-artifact@v7

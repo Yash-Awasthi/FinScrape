@@ -7,6 +7,7 @@
 
 import { type EventOut, type Storyline, verdictColor } from "../api";
 import { escapeHtml, timeAgo } from "../util";
+import { follow } from "../watchlist";
 import { Panel } from "./panel";
 
 /** The chip that says who judged this row. Model rows stay clean: the badge exists so a
@@ -36,6 +37,19 @@ const topicRank = (topic: string): number => {
   const at = TOPIC_ORDER.indexOf(topic);
   return at === -1 ? TOPIC_ORDER.length : at;
 };
+
+/** Tickers as one-tap follows; the label is the ticker, the title says what the tap does. */
+function followable(tickers: string[]): string {
+  if (!tickers.length) return "—";
+  return tickers
+    .slice(0, 4)
+    .map(
+      (t) =>
+        `<button class="follow" data-kind="ticker" data-value="${escapeHtml(t)}" ` +
+        `title="follow ${escapeHtml(t)} on My Desk">${escapeHtml(t)}</button>`,
+    )
+    .join(" · ");
+}
 
 export class SignalFeedPanel extends Panel {
   private verdictFilter = "ALL";
@@ -265,9 +279,27 @@ export class SignalFeedPanel extends Panel {
     tr.innerHTML =
       `<td><span class="dot" style="background:${verdictColor(e.verdict)}"></span>` +
       `${e.verdict} <b>${e.signal_score >= 0 ? "+" : ""}${e.signal_score}</b>` +
-      `<span class="row-meta">${badge}${chainBadge}${sourceBadge(e.analysis_source)}${Math.round(e.confidence * 100)}% · ${escapeHtml(e.tickers.slice(0, 4).join(", ")) || "—"}` +
+      `<span class="row-meta">${badge}${chainBadge}${sourceBadge(e.analysis_source)}${Math.round(e.confidence * 100)}% · ${followable(e.tickers)}` +
       ` · ${timeAgo(e.timestamp)} · ${e.sources.length} src${e.divergence_flag ? ' · <span class="warn" title="the model and the text disagree on direction">divergent</span>' : ""}</span>` +
       `<div class="subj">${subject}</div>${reasoning}</td>`;
+    for (const chip of tr.querySelectorAll<HTMLButtonElement>(".follow")) {
+      chip.addEventListener("click", (ev) => {
+        ev.stopPropagation(); // a follow is not a row selection
+        const value = chip.dataset.value ?? "";
+        chip.disabled = true;
+        void follow("ticker", value)
+          .then(() => {
+            chip.classList.add("followed");
+            chip.title = `following ${value}`;
+          })
+          .catch((err: unknown) => {
+            chip.title = err instanceof Error ? err.message : "could not follow";
+          })
+          .finally(() => {
+            chip.disabled = false;
+          });
+      });
+    }
     tr.addEventListener("click", () => {
       // Text selection means the user is copying, not clicking. Otherwise the whole
       // row selects — including the headline link, which still opens the article in

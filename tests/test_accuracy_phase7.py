@@ -7,7 +7,7 @@ import asyncio
 
 import pytest
 
-from finscrape.accuracy import calibration
+from finscrape.signals.accuracy import calibration
 from server.accuracy import aggregate, verdict_outcome
 
 

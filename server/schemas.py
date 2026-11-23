@@ -93,3 +93,30 @@ class HealthResponse(BaseModel):
     heuristic_share_24h: float | None = None
     # True when that share is above the point where the feed is mostly not model-judged.
     heuristic_alert: bool = False
+
+
+class WatchlistItemIn(BaseModel):
+    kind: str = Field(pattern="^(ticker|sector|topic|region)$")
+    value: str = Field(min_length=1, max_length=80)
+
+
+class WatchlistIn(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    items: list[WatchlistItemIn] = Field(default_factory=list, max_length=100)
+
+
+class WatchlistItemOut(BaseModel):
+    id: int
+    kind: str
+    value: str
+
+
+class WatchlistOut(BaseModel):
+    id: int
+    name: str
+    created_at: datetime
+    items: list[WatchlistItemOut] = Field(default_factory=list)
+
+
+class WatchlistsResponse(BaseModel):
+    watchlists: list[WatchlistOut] = Field(default_factory=list)

@@ -2,7 +2,7 @@
 
 import time
 
-from finscrape.prediction import (
+from finscrape.signals.prediction import (
     _bucket,
     brier_summary,
     predict,

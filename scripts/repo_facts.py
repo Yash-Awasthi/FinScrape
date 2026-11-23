@@ -193,7 +193,7 @@ def world_feeds() -> int:
     """Feed registry entries the scrapers ship with (`finscrape/scrapers/world/feeds.py`)."""
     sys.path.insert(0, str(ROOT))
     try:
-        from finscrape.scrapers.world.feeds import FEEDS
+        from finscrape.fetchers.world.feeds import FEEDS
 
         return len(FEEDS)
     except Exception:
