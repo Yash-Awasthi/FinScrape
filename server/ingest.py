@@ -49,6 +49,8 @@ _INSERT_COLS = [
     "key_metrics",
     "analysis_source",
     "model_name",
+    "excerpt",
+    "source_seen",
     "lat",
     "lon",
     "timestamp",
@@ -141,6 +143,8 @@ def _row_values(ev: dict) -> list:
         ev.get("key_metrics", {}),
         ev.get("analysis_source", "unknown"),
         ev.get("model_name", ""),
+        ev.get("excerpt", ""),
+        ev.get("source_seen") or {s: ts.isoformat() for s in ev.get("sources", [])},
         ev.get("lat"),
         ev.get("lon"),
         ts,
@@ -159,7 +163,9 @@ def _insert_sql() -> str:
         "sources = (SELECT COALESCE(jsonb_agg(DISTINCT s ORDER BY s), '[]'::jsonb) "
         "           FROM jsonb_array_elements_text(events.sources || EXCLUDED.sources) AS s), "
         "articles = (SELECT COALESCE(jsonb_agg(DISTINCT a ORDER BY a), '[]'::jsonb) "
-        "            FROM jsonb_array_elements_text(events.articles || EXCLUDED.articles) AS a) "
+        "            FROM jsonb_array_elements_text(events.articles || EXCLUDED.articles) AS a), "
+        # A source keeps its FIRST sighting, so the timeline is arrival order.
+        "source_seen = EXCLUDED.source_seen || events.source_seen "
         "RETURNING id, (xmax = 0) AS inserted"
     )
 

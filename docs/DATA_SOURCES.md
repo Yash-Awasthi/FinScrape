@@ -2,7 +2,7 @@
 
 Every external source FinScrape pulls, its access terms, and key status. All sources are
 **keyless** (ReliefWeb needs a free approved app name, not a key). Source of truth in code:
-`finscrape/scrapers/world/feeds.py` and `finscrape/ingestors/`.
+`finscrape/fetchers/world/feeds.py` and `finscrape/ingestors/`.
 
 ## License & compliance
 
@@ -61,15 +61,46 @@ against fixtures). All no-auth.
 | `coingecko` | crypto movers | api.coingecko.com/api/v3/coins/markets | **not registered**: crypto was dropped from the event mix; the class stays for reuse |
 | `opensky` | live flights (data layer) | opensky-network.org/api/states/all | NOT an event source; `parse_states` only |
 
-### Terms notes
-- **USGS** — US Government public domain.
-- **GDELT** — free and open. The DOC API answered 429 to most requests at any interval, so
-  the ingestor reads the static 15-minute export files instead, which have no rate limit.
-- **ReliefWeb** — v1 is decommissioned (410); v2 needs an approved `appname`
+## Licensing review
+
+Reviewed 2026-11-26 against each provider's published terms. This is an engineering record,
+not legal advice; a commercial launch re-checks every row with counsel. The rule for all
+sources is the same: FinScrape stores the **headline, canonical URL, source, timestamp and a
+short analysis excerpt**, never a full-text archive, and shows the source on every event.
+
+| Source family | Published terms | Allowed use here | Commercial use | Terms link |
+|---|---|---|---|---|
+| RSS/Atom outlets in the registry (37 feeds) | each publisher's own feed terms; a feed is a distribution format, not a licence to the article | fetch the feed, store headline/link/short excerpt, attribute the outlet and link back; do not republish the article body | per publisher; some allow with attribution, others (FT, Reuters direct) require a licence | the outlet's own `/terms` page; registry entry names the outlet |
+| Reuters / AP via Google News RSS | Google News feed terms: personal, non-commercial use only; do not redistribute the feed; attribute Google News and the provider, link to the item | read for non-commercial monitoring only | **not permitted**; replace with Reuters Connect, AP Content Services or GDELT before monetising | https://www.google.com/intl/en_us/news_feed_terms.html |
+| GDELT 2.0 events export | free and open for academic, commercial and government use; no fee; redistribution allowed with citation | read the 15-minute export, keep derived event rows | yes, with the required citation and link | https://www.gdeltproject.org/about.html#termsofuse |
+| ReliefWeb v2 disasters | site terms: personal, non-commercial, no resale/redistribution/compilation/derivatives; partner content may be copyrighted; 1,000 calls/day per appname | read disaster records, keep derived facts (name, type, country, date), attribute ReliefWeb; do not republish report text | **requires permission**; keep the source off for a commercial product until OCHA agrees | https://reliefweb.int/terms-conditions |
+| USGS earthquake feed | US Government work, public domain | read, store and display with courtesy attribution | yes | https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits |
+| OpenSky states | non-profit research/education only; operational or commercial use needs a written licence; attribution required | data layer only, not an event source | **licence required**; disable or license before commercial launch | https://opensky-network.org/about/terms-of-use |
+| CoinGecko markets | public/demo tier, rate-limited, attribution | not in the event mix | check the current plan before use | https://www.coingecko.com/en/api |
+| Reddit RSS (sentiment) | Reddit terms and user content; no commercial reuse without permission | headline/link for sentiment counts | permission required | https://www.redditinc.com/policies/user-agreement |
+
+**Allowed-use policy**
+
+- Store only what the event needs: headline, URL, source key, timestamp, and the short excerpt
+  the analyser reads. The event row caps that excerpt at 600 characters; it is not a copy of
+  the article and must not become one.
+- Always show the source and link out. A row without a source is a bug, not an anonymous fact.
+- Honour a removal request by deleting the row and its excerpt; the URL is the identifier.
+- A new feed is not added until its row here says what may be stored and whether commercial
+  use is allowed.
+- **Owner decision before any paid tier:** replace the Google News RSS rows (Reuters/AP) with a
+  licensed feed and either obtain ReliefWeb permission or drop it. Both are non-commercial
+  today; neither blocks the free demo.
+
+### Operational notes
+- **USGS** - US Government public domain; the ingestor filters M4.5+ and caps at 8 per cycle.
+- **GDELT** - the DOC API answered 429 to most requests at any interval, so the ingestor reads
+  the static 15-minute export files instead, which have no rate limit.
+- **ReliefWeb** - v1 is decommissioned (410); v2 needs an approved `appname`
   (https://apidoc.reliefweb.int/parameters#appname). Production reads it from the repo
   variable `RELIEFWEB_APPNAME`; without it the source stays off.
-- **CoinGecko** — public/demo tier; rate-limited. Not in the event mix.
-- **OpenSky** — anonymous access is rate-limited and time-resolution-limited; a flights layer,
+- **CoinGecko** - public/demo tier; rate-limited. Not in the event mix.
+- **OpenSky** - anonymous access is rate-limited and time-resolution-limited; a flights layer,
   not a market signal.
 
 ## Key status
@@ -84,7 +115,7 @@ Social: Reddit posts for the sentiment panel come from one Reddit RSS fetch per 
 
 ## Adding a source
 
-**An RSS/Atom feed** — one entry in `finscrape/scrapers/world/feeds.py`:
+**An RSS/Atom feed** — one entry in `finscrape/fetchers/world/feeds.py`:
 
 ```python
 Feed(

@@ -5,10 +5,12 @@
 // every tile is clickable through to the chart, so the tape is a starting point for
 // a ticker, not a dead end.
 
+import { chart } from "../components/chart";
 import { api, type Quote } from "../api";
+import { formatMetric, type Metric } from "../format";
 import { escapeHtml } from "../util";
 import { Panel } from "./panel";
-import { signColor, sparkline } from "./viz";
+import { signColor } from "./viz";
 
 const LABELS: Record<string, string> = {
   "^GSPC": "S&P 500",
@@ -23,12 +25,20 @@ const LABELS: Record<string, string> = {
   "EURUSD=X": "EUR/USD",
 };
 
-const price = (value: number): string => {
-  const digits = Math.abs(value) < 10 ? 3 : 2;
-  return value.toLocaleString(undefined, {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  });
+const metricFor = (symbol: string): Metric => {
+  if (symbol.endsWith("=X")) return "fx";
+  if (symbol === "^TNX") return "percent";
+  if (symbol.startsWith("^")) return "points";
+  return "price";
+};
+
+// The unit word a reader sees in the tile's tooltip, named in full.
+const unitFor = (symbol: string, label: string): string => {
+  const metric = metricFor(symbol);
+  if (metric === "fx") return label;
+  if (metric === "percent") return "%";
+  if (metric === "points") return "points";
+  return "USD";
 };
 
 export class MarketPanel extends Panel {
@@ -67,16 +77,25 @@ export class MarketPanel extends Panel {
     const tiles = quotes
       .map((q) => {
         const color = signColor(q.change_percent);
-        const sign = q.change_percent >= 0 ? "+" : "";
         const arrow = q.change_percent > 0 ? "▲" : q.change_percent < 0 ? "▼" : "•";
         const label = LABELS[q.symbol] ?? q.symbol;
+        const unit = unitFor(q.symbol, label);
         return (
           `<button class="mkt-tile" data-symbol="${escapeHtml(q.symbol)}" ` +
           `title="${escapeHtml(label)} — open chart">` +
           `<span class="mkt-label">${escapeHtml(label)}</span>` +
-          `<span class="mkt-price">${price(q.price)}</span>` +
-          `<span class="mkt-change" style="color:${color}">${arrow} ${sign}${q.change_percent.toFixed(2)}%</span>` +
-          sparkline(q.spark, `${label} intraday`, color, false) +
+          `<span class="mkt-price num" title="${escapeHtml(label)} in ${escapeHtml(unit)}">` +
+          `${formatMetric(metricFor(q.symbol), q.price)}</span>` +
+          `<span class="mkt-change num" style="color:${color}">${arrow} ${formatMetric("change", q.change_percent)}</span>` +
+          chart({
+            values: q.spark,
+            label: `${label} intraday price`,
+            decimals: 2,
+            fromZero: false,
+            stroke: color,
+            width: 150,
+            height: 56,
+          }) +
           `</button>`
         );
       })

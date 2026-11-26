@@ -39,6 +39,11 @@ class Settings(BaseSettings):
 
     # --- Ingest auth (every mutating route: POST /api/events and the alert routes) ---
     api_key: str = Field(default=DEFAULT_API_KEY, validation_alias="FINSCRAPE_API_KEY")
+    # The old key is accepted only during a rotation window, so callers can switch
+    # without a 401 gap. Clear it after the last caller has moved (docs/KEY-ROTATION.md).
+    api_key_previous: str = Field(
+        default="", validation_alias="FINSCRAPE_API_KEY_PREVIOUS"
+    )
 
     # --- LLM (shared with finscrape: BYOK or local Ollama) ---
     openai_base_url: str = Field(default="", validation_alias="OPENAI_BASE_URL")
@@ -76,6 +81,10 @@ class Settings(BaseSettings):
     # on when this is set and matches — register it with setWebhook(secret_token=...).
     telegram_webhook_secret: str = Field(
         default="", validation_alias="TELEGRAM_WEBHOOK_SECRET"
+    )
+    # Old webhook secret accepted only while Telegram rolls setWebhook over.
+    telegram_webhook_secret_previous: str = Field(
+        default="", validation_alias="TELEGRAM_WEBHOOK_SECRET_PREVIOUS"
     )
 
     # --- Feature flags (default off; flip on as phases land) ---

@@ -19,9 +19,13 @@ import {
   verdictColor,
 } from "../api";
 import { escapeHtml, fmtPct, sourceLabel, timeAgo } from "../util";
+import { cssVar } from "../tokens";
+import { verdictChip } from "../verdict-chip";
 import { follow } from "../watchlist";
+import { scenarioHref } from "../components/citation";
 import { VIZ_COLORS, barChart, calibration, columns, signColor, sparkline } from "./viz";
 import { Panel } from "./panel";
+import { hasSample, rateText } from "./rate";
 
 // What each detector in server/correlate.py means, for a reader who never saw it.
 const SIGNAL_MEANING: Record<string, string> = {
@@ -84,7 +88,13 @@ export class SectorPanel extends Panel {
         const em = (0.95 + (s.event_count / maxCount) * 0.6).toFixed(2);
         const score = s.avg_score;
         const color =
-          score <= -2 ? "#ea3943" : score < 0 ? "#f58d3f" : score <= 2 ? "#3b82f6" : "#16c784";
+          score <= -2
+            ? VIZ_COLORS.down
+            : score < 0
+              ? cssVar("--warn")
+              : score <= 2
+                ? cssVar("--accent")
+                : VIZ_COLORS.up;
         const tickers = s.top_tickers.length ? s.top_tickers.join(", ") : "—";
         const ratio = s.bull_bear_ratio == null ? "—" : `${s.bull_bear_ratio.toFixed(1)}:1`;
         return (
@@ -344,7 +354,7 @@ export class CandlesPanel extends Panel {
       .map((c, i) => {
         const x = pad + i * step + step / 2;
         const up = c.c >= c.o;
-        const color = up ? "#16c784" : "#ea3943";
+        const color = up ? VIZ_COLORS.up : VIZ_COLORS.down;
         const yH = y(c.h);
         const yL = y(c.l);
         const yO = y(c.o);
@@ -362,7 +372,7 @@ export class CandlesPanel extends Panel {
 
     const smaLine =
       sma.length > 1
-        ? `<path d="${smaPath}" fill="none" stroke="#f5a623" stroke-width="1.4"/>`
+        ? `<path d="${smaPath}" fill="none" stroke="${cssVar("--warn")}" stroke-width="1.4"/>`
         : "";
 
     const last = candles[candles.length - 1];
@@ -372,7 +382,7 @@ export class CandlesPanel extends Panel {
     return (
       `<div class="candles-head"><b>${escapeHtml(String(last.c))}</b>` +
       `<span class="${cls}"> ${Number(chg) >= 0 ? "+" : ""}${chg}% over period</span>` +
-      `<span class="muted"> · SMA20 <span style="color:#f5a623">─</span> · volume ▄</span></div>` +
+      `<span class="muted"> · SMA20 <span style="color:${cssVar("--warn")}">─</span> · volume ▄</span></div>` +
       `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" class="candles-svg">${bars}${smaLine}</svg>` +
       `<div class="muted candles-foot">${candles.length} candles</div>`
     );
@@ -421,9 +431,7 @@ export class PredictionPanel extends Panel {
       const dec = rel.brier.decomposition;
       const decomposition = dec
         ? ` · reliability ${dec.reliability.toFixed(2)}, resolution ${dec.resolution.toFixed(2)}, uncertainty ${dec.uncertainty.toFixed(2)}` +
-          (rel.brier.base_rate == null
-            ? ""
-            : ` · base rate ${Math.round(rel.brier.base_rate * 100)}%`)
+          (rel.brier.base_rate == null ? "" : ` · base rate ${rateText(n, rel.brier.base_rate)}`)
         : "";
 
       const verds = barChart(
@@ -432,9 +440,9 @@ export class PredictionPanel extends Panel {
           .sort((a, b) => (b[1].hit_rate ?? 0) - (a[1].hit_rate ?? 0))
           .map(([v, s]) => ({
             label: v,
-            value: Math.round((s.hit_rate ?? 0) * 100),
+            value: hasSample(s.weight) ? Math.round((s.hit_rate ?? 0) * 100) : 0,
             color: verdictColor(v),
-            note: `${Math.round((s.hit_rate ?? 0) * 100)}% · w ${s.weight}`,
+            note: `${rateText(s.weight, s.hit_rate)} · n ${s.weight}`,
           })),
         "hit rate by verdict",
       );
@@ -461,7 +469,7 @@ export class PredictionPanel extends Panel {
             `<div class="pred-top"><b>${escapeHtml(pr.event.verdict)}${pr.event.ticker ? ` · ${escapeHtml(pr.event.ticker)}` : ""}</b>` +
             `<span class="pred-p">${pct}%</span></div>` +
             `<div class="pred-subj">${escapeHtml(pr.event.subject)}</div>` +
-            `<div class="pred-bar"><i style="width:${pct}%;background:${pct >= 55 ? "#16c784" : pct <= 45 ? "#ea3943" : "#f5a623"}"></i></div>` +
+            `<div class="pred-bar"><i style="width:${pct}%;background:${pct >= 55 ? VIZ_COLORS.up : pct <= 45 ? VIZ_COLORS.down : cssVar("--warn")}"></i></div>` +
             `<div class="muted pred-note">${pct}% is how often this verdict's past calls came right, not a forecast of this one · ${TIER_NOTE[pr.data_tier] ?? pr.data_tier}</div>` +
             `</div>`
           );
@@ -470,7 +478,7 @@ export class PredictionPanel extends Panel {
 
       this.setContent(
         `<div class="pred-summary">` +
-          `<span>Global base rate: <b>${relTable.global_hit_rate == null ? "—" : Math.round(relTable.global_hit_rate * 100)}%</b></span>` +
+          `<span>Global base rate: <b>${relTable.global_hit_rate == null ? "—" : rateText(n, relTable.global_hit_rate)}</b></span>` +
           `<span class="muted"> · ${n} outcomes · Brier ${brier}${decomposition} · recency-decayed</span></div>` +
           `<div class="pred-grid">${cards || '<p class="empty">No directional signals yet.</p>'}</div>` +
           `<div class="pred-charts">` +
@@ -555,7 +563,7 @@ export class AccuracyPanel extends Panel {
         // (plan m1.4.1): a rate on a dozen calls must not look like a rate on a hundred.
         return (
           `<div class="kpi" title="${escapeHtml(rule)}"><span class="kpi-label">${label}</span>` +
-          `<b>${pct(h.hit_rate)}</b><span class="muted">${h.hits}/${h.scored} · 95% ${pct(lo)}–${pct(hi)}` +
+          `<b>${rateText(h.scored, h.hit_rate)}</b><span class="muted">${h.hits}/${h.scored} · 95% ${pct(lo)}–${pct(hi)}` +
           `${h.sample?.includes("wide interval") ? ' · <span class="warn">wide interval</span>' : ""}</span></div>`
         );
       })
@@ -566,7 +574,7 @@ export class AccuracyPanel extends Panel {
       if (!b) return "<td>—</td>";
       const thin = b.sample?.includes("wide interval") ? " wide" : "";
       return (
-        `<td title="${escapeHtml(b.sample ?? `${b.hits}/${b.total}`)}">${pct(b.hit_rate)}` +
+        `<td title="${escapeHtml(b.sample ?? `${b.hits}/${b.total}`)}">${rateText(b.total, b.hit_rate)}` +
         ` <span class="muted${thin}">n=${b.total}</span></td>`
       );
     };
@@ -575,7 +583,7 @@ export class AccuracyPanel extends Panel {
       verdicts
         .map(
           (v) =>
-            `<tr><td><span class="dot" style="background:${verdictColor(v)}"></span>${escapeHtml(v)}</td>` +
+            `<tr><td>${verdictChip(v)}</td>` +
             horizons.map(([, h]) => cell(h, v)).join("") +
             `</tr>`,
         )
@@ -615,7 +623,7 @@ export class OutcomesPanel extends Panel {
       .map(
         (o) =>
           `<tr><td class="muted">${escapeHtml(o.timestamp.slice(0, 10))}</td>` +
-          `<td><span class="dot" style="background:${verdictColor(o.verdict)}"></span>${escapeHtml(o.verdict)}</td>` +
+          `<td>${verdictChip(o.verdict)}</td>` +
           `<td class="subj-cell">${escapeHtml(o.subject)}</td>` +
           `<td>${escapeHtml(o.tickers.slice(0, 4).join(", "))}</td>` +
           `<td>${result(o.price_move_pct, o.correct)}</td>` +
@@ -752,7 +760,7 @@ export class SourceHealthPanel extends Panel {
 const STANCE_COLOR: Record<string, string> = {
   "risk-on": VIZ_COLORS.up,
   "risk-off": VIZ_COLORS.down,
-  mixed: "#f5a623",
+  mixed: cssVar("--warn"),
 };
 
 function plural(n: number, noun: string): string {
@@ -824,7 +832,10 @@ export class ScenarioPanel extends Panel {
       `<h4 class="sc-title">${escapeHtml(scenario.title)}</h4>` +
       `<span class="sc-prob" style="color:${color}" title="how often this scenario's past calls landed (its record, not a forecast) · ${escapeHtml(scenario.data_tier)}">${pct}%</span></header>` +
       `<div class="sc-bar"><i style="width:${pct}%;background:${color}"></i></div>` +
-      `<p class="sc-advice">${escapeHtml(scenario.advice)}</p>` +
+      `<p class="sc-advice">${escapeHtml(scenario.advice)} ` +
+      `<a class="cite" href="${escapeHtml(scenarioHref(scenario.id))}" ` +
+      `title="the scenario page lists every member and its sources">` +
+      `evidence: ${plural(scenario.reports ?? scenario.size, "report")}</a></p>` +
       (scenario.sectors.length ? legBars(scenario.sectors, "sector tilt") : "") +
       (chips ? `<div class="sc-chips">${chips}</div>` : "") +
       (chain ? `<ul class="sc-chain">${chain}</ul>` : "") +

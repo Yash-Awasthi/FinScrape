@@ -13,7 +13,7 @@
 "finscrape/analysis/ai_client.py" = ["BLE001"]
 "finscrape/analysis/clusters.py" = ["BLE001", "UP035"]
 "finscrape/analysis/laya.py" = ["BLE001", "I001"]
-"finscrape/analysis/validator.py" = ["BLE001", "PLC0206", "RUF046", "SIM102"]
+"finscrape/analysis/validator.py" = ["BLE001", "PLC0206", "SIM102"]
 "finscrape/engine/scrapling/core/_types.py" = ["UP007", "UP035"]
 "finscrape/engine/scrapling/core/custom_types.py" = ["F811"]
 "finscrape/engine/scrapling/core/shell.py" = ["BLE001", "RUF012", "T100"]

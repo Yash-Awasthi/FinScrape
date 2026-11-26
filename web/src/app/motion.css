@@ -1,0 +1,18 @@
+@keyframes row-in {
+  from {
+    background: var(--accent-soft);
+  }
+  to {
+    background: transparent;
+  }
+}
+
+.row-new {
+  animation: row-in 180ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row-new {
+    animation: none;
+  }
+}

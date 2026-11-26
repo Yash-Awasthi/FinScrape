@@ -13,6 +13,7 @@ from __future__ import annotations
 import threading
 import time
 from collections.abc import Callable
+from typing import cast
 
 # Tier TTLs in seconds — pick by how fast the upstream truth moves.
 FAST = 30  # volatile (crypto/markets quotes)
@@ -22,6 +23,7 @@ SLOW = 600  # rarely-changing (registries, rollups)
 # Ceiling on live entries: some keys carry a caller-supplied ticker, so the key space
 # is open-ended and the store is dropped wholesale at the limit instead of growing.
 _MAX_ENTRIES = 4096
+
 
 _store: dict[str, tuple[float, object]] = {}
 
@@ -46,7 +48,7 @@ def peek(key: str) -> object:
     return hit[1] if hit and hit[0] > time.monotonic() else MISSING
 
 
-def get_or_set(key: str, ttl: float, produce: Callable[[], object]) -> object:
+def get_or_set[T](key: str, ttl: float, produce: Callable[[], T]) -> T:
     """Return cached value for `key`, or call `produce()` and cache it for `ttl`s.
 
     Concurrent misses on one key collapse to a single `produce()` call; the
@@ -54,12 +56,12 @@ def get_or_set(key: str, ttl: float, produce: Callable[[], object]) -> object:
     """
     cached = peek(key)
     if cached is not MISSING:
-        return cached
+        return cast(T, cached)
     try:
         with _lock_for(key):
             cached = peek(key)  # another caller may have produced it while we waited
             if cached is not MISSING:
-                return cached
+                return cast(T, cached)
             now = time.monotonic()
             if len(_store) >= _MAX_ENTRIES:
                 for stale in [k for k, (exp, _) in _store.items() if exp <= now]:

@@ -1,0 +1,4 @@
+# Cloudflare Pages: the dashboard is a client-rendered SPA, so a detail path such as
+# /app/event/12 must serve the dashboard shell (plan m4.2.1). Assets live at /assets/,
+# so this rule cannot shadow them.
+/app/*  /app/index.html  200

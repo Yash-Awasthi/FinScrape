@@ -8,6 +8,9 @@
           },
           "type": "object"
         },
+        "ingest_interval_minutes": {
+          "type": "integer"
+        },
         "last_update": {
           "anyOf": [
             {
@@ -78,6 +81,9 @@
         "event_type": {
           "type": "string"
         },
+        "excerpt": {
+          "type": "string"
+        },
         "heuristic_impact": {
           "type": "number"
         },
@@ -108,6 +114,12 @@
         },
         "signal_score": {
           "type": "integer"
+        },
+        "source_seen": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
         },
         "sources": {
           "items": {
@@ -345,6 +357,140 @@
         }
       }
     },
+    "/api/admin/keys": {
+      "get": {
+        "auth": false,
+        "parameters": {
+          "authorization": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "x-api-key": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      },
+      "post": {
+        "auth": false,
+        "parameters": {
+          "authorization": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "x-api-key": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      }
+    },
+    "/api/admin/keys/{key_id}": {
+      "delete": {
+        "auth": false,
+        "parameters": {
+          "authorization": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "key_id": {
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "x-api-key": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      }
+    },
     "/api/ai/analyze": {
       "get": {
         "auth": false,
@@ -376,6 +522,79 @@
             "required": true,
             "schema": {
               "type": "integer"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      }
+    },
+    "/api/alerts/notifications": {
+      "get": {
+        "auth": false,
+        "parameters": {
+          "limit": {
+            "in": "query",
+            "required": false,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      }
+    },
+    "/api/alerts/notifications/{notification_id}": {
+      "patch": {
+        "auth": false,
+        "parameters": {
+          "authorization": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "notification_id": {
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          "x-api-key": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
           }
         },
@@ -798,6 +1017,28 @@
         }
       }
     },
+    "/api/events/{event_id}": {
+      "get": {
+        "auth": false,
+        "parameters": {
+          "event_id": {
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      }
+    },
     "/api/feeds": {
       "get": {
         "auth": false,
@@ -932,6 +1173,51 @@
               "maximum": 20,
               "minimum": 1,
               "type": "integer"
+            }
+          },
+          "window": {
+            "in": "query",
+            "required": false,
+            "schema": {
+              "maximum": 500,
+              "minimum": 20,
+              "type": "integer"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      }
+    },
+    "/api/scenarios/{scenario_id}": {
+      "get": {
+        "auth": false,
+        "parameters": {
+          "exclude": {
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "scenario_id": {
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
             }
           },
           "window": {
@@ -1233,6 +1519,141 @@
             "required": true,
             "schema": {
               "type": "integer"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      }
+    },
+    "/api/watchlists/{watchlist_id}/items": {
+      "post": {
+        "auth": false,
+        "parameters": {
+          "X-Watchlist-Owner": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "authorization": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "watchlist_id": {
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          "x-api-key": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "type": "object"
+          },
+          "422": {
+            "$ref": "HTTPValidationError"
+          }
+        }
+      }
+    },
+    "/api/watchlists/{watchlist_id}/items/{item_id}": {
+      "delete": {
+        "auth": false,
+        "parameters": {
+          "X-Watchlist-Owner": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "authorization": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "item_id": {
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          "watchlist_id": {
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          "x-api-key": {
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
           }
         },

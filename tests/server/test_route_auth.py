@@ -26,7 +26,12 @@ API_KEY_ROUTES = {
     ("POST", "/api/alerts/rules"),
     ("PATCH", "/api/alerts/rules/{rule_id}"),
     ("DELETE", "/api/alerts/rules/{rule_id}"),
+    ("PATCH", "/api/alerts/notifications/{notification_id}"),
+    ("POST", "/api/admin/keys"),
+    ("DELETE", "/api/admin/keys/{key_id}"),
     ("POST", "/api/watchlists"),
+    ("POST", "/api/watchlists/{watchlist_id}/items"),
+    ("DELETE", "/api/watchlists/{watchlist_id}/items/{item_id}"),
     ("DELETE", "/api/watchlists/{watchlist_id}"),
 }
 # …and the Telegram webhook authenticates with its own secret header on every call
@@ -102,7 +107,11 @@ def test_no_mutating_route_answers_200_without_the_key(monkeypatch):
     client = TestClient(create_app())
     try:
         for method, path in sorted(API_KEY_ROUTES):
-            url = path.replace("{rule_id}", "1")
+            url = (
+                path.replace("{rule_id}", "1")
+                .replace("{notification_id}", "1")
+                .replace("{key_id}", "1")
+            )
             resp = client.request(method, url, json={})
             assert resp.status_code == 401, (method, url, resp.status_code)
         # The webhook cannot 401 by design; a bad secret must still do nothing.

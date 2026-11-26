@@ -19,6 +19,19 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  commits:
+    # Every subject in the pull request has to render, otherwise the generated
+    # CHANGELOG.md would silently lose the commit at release time.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Check the pull request's commit subjects
+        # No setup-python here: the runner's own python3 is enough for a stdlib script.
+        run: python3 ops/release/changelog.py --check-range "origin/${{ github.base_ref }}..HEAD"
+
   backend:
     runs-on: ubuntu-24.04
     services:
@@ -66,6 +79,11 @@ jobs:
         run: make stack-check
       - name: API contract
         run: make openapi-check
+      # plan M6.4: one review per quarter, enforced by age rather than by a repository
+      # schedule (GitHub disables those after 60 quiet days; the cron Worker is the only
+      # scheduler). A stale block or a review older than 100 days fails every CI run.
+      - name: Quarterly review freshness
+        run: python ops/review/review.py --check --max-age-days 100
       - name: Test
         run: uv run -p 3.14 pytest -q
 

@@ -1,0 +1,82 @@
+/* Mobile chrome: bottom nav bar, floating refresh, no sideways table scroll. */
+
+@media (max-width: 700px) {
+  /* backdrop-filter would trap the fixed bar and button inside the header box. */
+  .app-head {
+    background: var(--panel-head);
+    backdrop-filter: none;
+  }
+
+  .app {
+    padding-bottom: calc(56px + env(safe-area-inset-bottom));
+  }
+
+  .head-left .tabs {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 40;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    overflow: visible;
+    background: var(--panel-head);
+    border-top: 1px solid var(--border);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .head-left .tabs a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 4px 2px;
+    font-size: 11px;
+    line-height: 1.15;
+    white-space: normal;
+    text-align: center;
+    border-bottom: 0;
+    border-top: 2px solid transparent;
+  }
+
+  .head-left .tabs a[aria-current="page"] {
+    border-top-color: var(--accent);
+  }
+
+  .refresh {
+    position: fixed;
+    right: 12px;
+    bottom: calc(64px + env(safe-area-inset-bottom));
+    z-index: 35;
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border-radius: 50%;
+    background: var(--panel);
+    font-size: 18px;
+  }
+
+  .grid-table,
+  .ev-chain {
+    table-layout: fixed;
+    width: 100%;
+  }
+
+  .grid-table th,
+  .grid-table td,
+  .ev-chain th,
+  .ev-chain td {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .grid-table .subj-cell {
+    min-width: 0;
+  }
+
+  .feed th,
+  .feed td {
+    white-space: normal;
+  }
+}

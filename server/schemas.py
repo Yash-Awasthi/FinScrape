@@ -40,6 +40,10 @@ class EventIn(BaseModel):
     # 'unknown' only appears on rows written before the column existed.
     analysis_source: str = "unknown"
     model_name: str = ""
+    # Event-page detail (plan m4.2.1): the text the call came from and when each
+    # source first carried the story. Old rows carry "" / {} rather than a guess.
+    excerpt: str = ""
+    source_seen: dict[str, str] = Field(default_factory=dict)
     timestamp: str | None = None  # ISO; UTC-normalized at ingest
 
 
@@ -65,6 +69,7 @@ class DashboardStats(BaseModel):
     total_events: int
     by_verdict: dict[str, int] = Field(default_factory=dict)
     last_update: datetime | None = None
+    ingest_interval_minutes: int = 15
 
 
 class DateCount(BaseModel):

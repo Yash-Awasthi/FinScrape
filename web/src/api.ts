@@ -1,5 +1,7 @@
 // Typed REST client. Shapes mirror the FastAPI contract in server/schemas.py.
 
+import { cssVar } from "./tokens";
+
 export type Verdict = "INVEST" | "OBSERVE" | "CAUTIOUS" | "PULL_OUT";
 
 export interface AffectedEntity {
@@ -38,6 +40,10 @@ export interface EventOut {
   analysis_source?: string;
   /** The model behind the verdict; empty for rows no model produced. */
   model_name?: string;
+  /** The article text the call was made from (event page, plan m4.2.1). */
+  excerpt?: string;
+  /** source tag -> first UTC time that source carried the story. */
+  source_seen?: Record<string, string>;
   lat: number | null;
   lon: number | null;
   timestamp: string | null;
@@ -63,6 +69,8 @@ export interface DashboardStats {
   total_events: number;
   by_verdict: Record<string, number>;
   last_update: string | null;
+  /** Worker cadence; absent on older servers and WS stats payloads. */
+  ingest_interval_minutes?: number;
 }
 
 export interface DateCount {
@@ -107,6 +115,10 @@ export interface Scenario {
   /** How often this scenario's calls have landed (its record) — never below 0.5.
    *  A past hit rate, not a forecast of the next move (plan m1.4.3). */
   probability: number;
+  /** 95% interval from the spread of the member calls; null for one member. */
+  ci95?: [number, number] | null;
+  /** Member events behind the probability (not the outcome sample). */
+  n_members?: number;
   direction: "up" | "down" | "flat";
   stance: "risk-on" | "risk-off" | "mixed";
   tilt: number;
@@ -353,6 +365,7 @@ function qs(params: Record<string, Param>): string {
 export const api = {
   events: (q: EventQuery = {}) =>
     getJSON<{ events: EventOut[] }>(`/api/events${qs({ ...q })}`).then((r) => r.events),
+  event: (id: number) => getJSON<EventOut>(`/api/events/${id}`),
   stats: () => getJSON<DashboardStats>("/api/stats"),
   dates: () => getJSON<{ dates: DateCount[] }>("/api/dates").then((r) => r.dates),
   sectors: () => getJSON<{ sectors: Sector[] }>("/api/sectors").then((r) => r.sectors),
@@ -366,6 +379,7 @@ export const api = {
     getJSON<{ storylines: Storyline[] }>("/api/storylines").then((r) => r.storylines),
   scenarios: (limit = 6) =>
     getJSON<{ scenarios: Scenario[] }>(`/api/scenarios${qs({ limit })}`).then((r) => r.scenarios),
+  scenario: (id: string) => getJSON<unknown>(`/api/scenarios/${encodeURIComponent(id)}`),
   correlations: (date?: string) =>
     getJSON<{ correlations: Correlation[] }>(`/api/correlations${qs({ date })}`).then(
       (r) => r.correlations,
@@ -393,12 +407,12 @@ export const api = {
 };
 
 export const VERDICT_COLOR: Record<string, string> = {
-  INVEST: "#16c784",
-  OBSERVE: "#3b82f6",
-  CAUTIOUS: "#f5a623",
-  PULL_OUT: "#ea3943",
+  INVEST: cssVar("--up"),
+  OBSERVE: cssVar("--accent"),
+  CAUTIOUS: cssVar("--warn"),
+  PULL_OUT: cssVar("--down"),
 };
 
 export function verdictColor(verdict: string): string {
-  return VERDICT_COLOR[verdict] ?? "#8a8f98";
+  return VERDICT_COLOR[verdict] ?? cssVar("--muted");
 }

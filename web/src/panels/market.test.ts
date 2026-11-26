@@ -40,6 +40,9 @@ describe("MarketPanel", () => {
     expect(panel.body.textContent).toContain("▲ +0.46%");
     expect(panel.body.textContent).toContain("▼ -1.25%");
     expect(panel.body.textContent).toContain("Crude");
+    // Prices name their unit: index points for ^GSPC, dollars for a future.
+    expect(panel.body.textContent).toContain("pts");
+    expect(panel.body.textContent).toContain("USD");
   });
 
   it("clicking a tile opens that symbol's chart", async () => {

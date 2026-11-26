@@ -73,6 +73,7 @@ def test_scheduler_covers_every_source_plus_correlate_and_backtest():
         "correlations",
         "backtest",
         "retention",
+        "quality",
     }
 
 

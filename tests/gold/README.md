@@ -26,6 +26,17 @@ scored against. One JSON object per line:
 * Sector labels were written from the headline alone and reviewed against the house rules
   in `scripts/laya_train/daily.py` (the same rules Laya's training data is built with).
 
+## Dated public sample (walk-forward)
+
+`public_sample_2026_09_10.jsonl` is the dated set `--walk-forward` runs on. It is 80 form 8-K
+filings from SEC EDGAR full-text search (US government work, public domain), 40 in 2026-09
+and 40 in 2026-10, built by `scripts/gold_public_sample.py --write`. `sector` comes from the
+company's SIC division through the table in that script, `verdict` is `null` because a filing
+is not a direction call, and `published_at` is the filing date. The sibling manifest stores
+the two query URLs, the retrieval time and the sha256 of the file;
+`tests/test_gold_public_sample.py` checks the hash, the months and the labels. This is a
+public sample for the mechanism, never production data.
+
 ## Verdict rubric
 
 The label is the direction the story implies for the sector/tickers it names, over the

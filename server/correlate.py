@@ -394,6 +394,10 @@ def detect_prediction_leads_news(
             pred.symbol,
             min(0.9, 0.5 + shift / 20),
             value=shift,
+            payload={
+                "coverage": "partial",
+                "coverage_reason": "computed over analysed events only",
+            },
         )
     return None
 

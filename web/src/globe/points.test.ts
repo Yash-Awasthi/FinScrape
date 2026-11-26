@@ -38,7 +38,7 @@ describe("toPoints", () => {
 
   it("colors by verdict and carries the source event", () => {
     const [p] = toPoints([ev(1, 0, 0, "PULL_OUT")]);
-    expect(p.color).toBe("#ea3943");
+    expect(p.color).toBe("var(--down)");
     expect(p.event.id).toBe(1);
   });
 });

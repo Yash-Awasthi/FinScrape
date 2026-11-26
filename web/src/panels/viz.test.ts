@@ -16,7 +16,7 @@ describe("viz primitives", () => {
     expect(sparkline([1])).toBe(""); // a single point is not a trend
     expect(barChart([])).toBe("");
     expect(columns([])).toBe("");
-    expect(stackedBar([{ value: 0, color: "#000", label: "none" }])).toBe("");
+    expect(stackedBar([{ value: 0, color: "black", label: "none" }])).toBe("");
   });
 
   it("scales a sparkline to its own range and includes the origin", () => {
@@ -28,7 +28,7 @@ describe("viz primitives", () => {
   it("fills the band with its own range when the origin is excluded", () => {
     // A price series near 200 is a flat line against a zero baseline.
     const zeroed = sparkline([200, 202], "p");
-    const ranged = sparkline([200, 202], "p", "#fff", false);
+    const ranged = sparkline([200, 202], "p", "white", false);
     expect(zeroed).toContain("240.0,0.0");
     expect(zeroed).toContain("0.0,0.5"); // both points pinned near the top
     expect(ranged).toContain("0.0,48.0"); // low anchored to the floor
@@ -37,7 +37,7 @@ describe("viz primitives", () => {
 
   it("survives an all-zero series without dividing by zero", () => {
     const svg = sparkline([0, 0, 0]);
-    expect(svg).toContain("<polyline");
+    expect(svg).toContain('data-state="no-data"');
     expect(svg).not.toContain("NaN");
   });
 
@@ -60,9 +60,9 @@ describe("viz primitives", () => {
 
   it("splits a stacked bar proportionally and drops empty segments", () => {
     const html = stackedBar([
-      { value: 3, color: "#0f0", label: "bull" },
-      { value: 1, color: "#f00", label: "bear" },
-      { value: 0, color: "#888", label: "flat" },
+      { value: 3, color: "lime", label: "bull" },
+      { value: 1, color: "red", label: "bear" },
+      { value: 0, color: "gray", label: "flat" },
     ]);
     expect(html).toContain("width:75%");
     expect(html).toContain("width:25%");

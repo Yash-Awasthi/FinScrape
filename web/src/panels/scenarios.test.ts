@@ -45,7 +45,7 @@ describe("ScenarioPanel", () => {
   it("leads with the instruction, not the evidence", async () => {
     const panel = await mount([scenario()]);
     const advice = panel.el.querySelector(".sc-advice")!;
-    expect(advice.textContent).toBe("Risk-off: reduce transport; add energy.");
+    expect(advice.textContent).toBe("Risk-off: reduce transport; add energy. evidence: 5 reports");
     expect(panel.el.querySelector(".sc-prob")!.textContent).toBe("72%");
   });
 

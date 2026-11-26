@@ -12,17 +12,19 @@ NEW_DIRS := server worker finscrape/fetchers finscrape/settings.py finscrape/ext
 	tests/server tests/test_world_phase2.py tests/test_worker_phase3.py \
 	tests/test_correlate_phase4.py tests/test_scenarios.py tests/test_no_multi_model.py tests/live_e2e.py \
 	scripts/backfill scripts/repo_facts.py scripts/ruff_baseline.py scripts/pyright_baseline.py \
-	scripts/eval_model.py scripts/openapi_snapshot.py scripts/explain.py scripts/check_ports.py \
+	scripts/eval_model.py scripts/openapi_snapshot.py scripts/postman.py scripts/explain.py \
+	scripts/check_ports.py \
 	scripts/bench_analysis.py \
 	tests/test_backfill.py tests/test_call_tuning.py tests/test_bandit.py tests/test_weekly.py \
 	tests/test_full_text_enrich.py tests/test_check_prod.py tests/test_key_rotation.py \
 	tests/server/test_key_queue.py tests/test_repo_facts.py tests/test_docs.py \
 	tests/test_pyright_baseline.py tests/test_eval_harness.py tests/test_stack_doc.py \
 	tests/test_package_layout.py tests/test_settings_only.py tests/test_ingest_doc.py \
-	tests/test_onboarding_doc.py tests/test_ports.py tests/test_query_plans.py \
+	tests/test_onboarding_doc.py tests/test_postman.py tests/test_ports.py \
+	tests/test_query_plans.py \
 	tests/test_seed_coverage.py tests/test_analysis_cost.py tests/test_worker_parallel.py
 
-.PHONY: help explain explain-check ports-check bench-ingest bench-analysis stack-check server-group-check verify ingest-every llm up down logs seed backup restore demo test lint fmt fmt-check typecheck pyright-baseline pyright-baseline-check selfcheck openapi-check openapi-write audit sbom lock-upgrade restore-drill loadtest warm ci web-ci e2e e2e-live facts facts-check ruff-baseline ruff-baseline-check eval-gate eval-live
+.PHONY: help explain explain-check ports-check bench-ingest bench-analysis stack-check server-group-check verify ingest-every llm up down logs seed backup restore demo test lint fmt fmt-check typecheck pyright-baseline pyright-baseline-check selfcheck openapi-check openapi-write postman postman-check audit sbom lock-upgrade restore-drill loadtest warm ci web-ci e2e e2e-live facts facts-check ruff-baseline ruff-baseline-check eval-gate eval-live changelog review
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | sort | \
@@ -108,7 +110,7 @@ server-group-check: ## Prove the `server` dependency group alone runs the API an
 		$(PY) --no-sync python -c "import server.app, worker.main, finscrape.scrapers; print('server group self-sufficient')"
 	@rm -rf .venv-server-group
 
-verify: lint fmt-check typecheck pyright-baseline-check selfcheck openapi-check test web-ci facts-check ruff-baseline-check eval-gate ## Pre-push gate: `make ci` minus the browser E2E
+verify: lint fmt-check typecheck pyright-baseline-check selfcheck openapi-check postman-check test web-ci facts-check ruff-baseline-check eval-gate ## Pre-push gate: `make ci` minus the browser E2E
 	@echo "verify: all non-browser gates green"
 
 selfcheck: ## Docker-free Phase 0 checks (settings/schemas/migration SQL/schema drift)
@@ -120,6 +122,12 @@ openapi-check: ## Fail on a removed path, field, or tightened bound in the API c
 openapi-write: ## Accept an intended contract change into tests/snapshots/openapi.json
 	$(PY) python -m scripts.openapi_snapshot --write
 
+postman: ## Regenerate docs/postman.json from the live OpenAPI contract
+	$(PY) python -m scripts.postman --write docs/postman.json
+
+postman-check: ## Fail when docs/postman.json no longer matches the contract
+	$(PY) python -m scripts.postman --check docs/postman.json
+
 audit: ## Known vulnerabilities in the lock file + web deps (allowlist needs an expiry)
 	$(PY) python -m scripts.audit --strict
 
@@ -128,6 +136,14 @@ sbom: ## Write dist/sbom.cdx.json from uv.lock
 
 lock-upgrade: ## Bump every lock entry (Dependabot does this weekly; this is the local equivalent)
 	uv lock --upgrade && uv sync --locked -p 3.14 --group server --group dev
+
+changelog: ## Regenerate CHANGELOG.md from the tagged commit ranges
+	$(PY) python ops/release/changelog.py --write
+	$(PY) python ops/release/changelog.py --check
+
+review: ## Regenerate the quarterly review block and fail when it is overdue
+	$(PY) python ops/review/review.py --write
+	$(PY) python ops/review/review.py --check
 
 restore-drill: ## Dump the test DB, restore it, verify row counts + /api/stats, time it
 	$(PY) python -m scripts.restore_drill --record
@@ -160,7 +176,7 @@ ruff-baseline: ## Regenerate docs/RUFF-BASELINE.md + ruff-baseline.toml, then th
 ruff-baseline-check: ## Fail when docs/RUFF-BASELINE.md no longer matches the tree
 	$(PY) python -m scripts.ruff_baseline --check
 
-ci: lint fmt-check typecheck pyright-baseline-check selfcheck openapi-check test web-ci e2e facts-check ruff-baseline-check eval-gate ## Reproduce the CI pipeline locally
+ci: lint fmt-check typecheck pyright-baseline-check selfcheck openapi-check postman-check test web-ci e2e facts-check ruff-baseline-check eval-gate ## Reproduce the CI pipeline locally
 
 eval-gate: ## Score the frozen gold set offline and refuse a >5 point sector drop
 	$(PY) python -m scripts.eval_model --replay tests/gold/recordings/keyword-baseline.jsonl --gate

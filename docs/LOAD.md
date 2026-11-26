@@ -79,6 +79,8 @@ To go past it, in order of what the numbers actually justify:
    already cacheable and already emit ETags, so a 304 costs nothing.
 3. A connection-pool review only after the above: the pool (10) was never the limiter here.
 
+The trigger that earns each of those steps, and its rollback, is [docs/SCALING.md](SCALING.md).
+
 ## Reproducing
 
 `make loadtest` runs the 50 rps case against a server already listening on `--base-url`. The

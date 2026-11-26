@@ -1,6 +1,10 @@
 // App shell: header (brand, view tabs, live clock, connection dot, refresh) + banner slot.
 
+import "./mobile.css";
+import { animateViewChange } from "./motion";
 import { escapeHtml } from "../util";
+import { offlineNotice } from "../components/view-state";
+import { actionBar } from "../components/actions";
 import type { WSStatus } from "../ws";
 
 export class Shell {
@@ -12,6 +16,10 @@ export class Shell {
   private dot: HTMLElement;
   private clock: HTMLElement;
   private tabs: HTMLElement;
+  // Set by installPalette so the overflow menu can open the same search.
+  private openPalette: () => void = () => {};
+  // The socket dropping must not blank the view; the last data stays and this strip explains it.
+  private offline: HTMLElement | null = null;
 
   constructor(
     onRefresh: () => void,
@@ -37,12 +45,27 @@ export class Shell {
     this.dot.setAttribute("aria-label", "realtime connecting");
     this.dot.title = "realtime connection";
 
-    const refresh = document.createElement("button");
-    refresh.className = "refresh";
-    refresh.textContent = "↻";
-    refresh.title = "refresh";
-    refresh.setAttribute("aria-label", "Refresh feed and panels");
-    refresh.addEventListener("click", onRefresh);
+    // One primary action for the view; search and link-copy live in the overflow.
+    const actions = actionBar({
+      primary: {
+        label: "\u21bb",
+        title: "Refresh feed and panels",
+        className: "refresh",
+        run: onRefresh,
+      },
+      secondary: [
+        {
+          label: "Search events",
+          title: "Search or chart a symbol (Ctrl+K)",
+          run: () => this.openPalette(),
+        },
+        {
+          label: "Copy view link",
+          title: "Copy this view's address",
+          run: () => void navigator.clipboard?.writeText(window.location.href),
+        },
+      ],
+    });
 
     this.tabs = document.createElement("nav");
     this.tabs.className = "tabs";
@@ -65,7 +88,7 @@ export class Shell {
 
     const right = document.createElement("div");
     right.className = "head-right";
-    right.append(this.clock, this.dot, refresh);
+    right.append(this.clock, this.dot, actions);
     header.append(left, right);
 
     this.bannerSlot = document.createElement("div");
@@ -86,7 +109,9 @@ export class Shell {
   }
 
   setView(id: string): void {
+    const previous = this.content.dataset.view ?? null;
     this.content.dataset.view = id;
+    animateViewChange(this.content, previous, id);
     for (const a of this.tabs.querySelectorAll<HTMLElement>("a")) {
       if (a.dataset.view === id) a.setAttribute("aria-current", "page");
       else a.removeAttribute("aria-current");
@@ -96,6 +121,15 @@ export class Shell {
   setConnection(status: WSStatus): void {
     this.dot.dataset.status = status;
     this.dot.setAttribute("aria-label", `realtime ${status}`);
+    const down = status === "closed";
+    if (down && !this.offline) {
+      this.offline = offlineNotice();
+      // Prepend: the freshness banner already owns the slot's later children.
+      this.bannerSlot.prepend(this.offline);
+    } else if (!down && this.offline) {
+      this.offline.remove();
+      this.offline = null;
+    }
   }
 
   private startClock(): void {
@@ -152,15 +186,16 @@ export class Shell {
     });
 
     this.root.append(overlay);
+    this.openPalette = () => {
+      overlay.classList.remove("hidden");
+      input.focus();
+      input.select();
+      suggest();
+    };
     window.addEventListener("keydown", (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        overlay.classList.toggle("hidden");
-        if (!overlay.classList.contains("hidden")) {
-          input.focus();
-          input.select();
-          suggest();
-        }
+        this.openPalette();
       } else if (e.key === "Escape") {
         overlay.classList.add("hidden");
       }

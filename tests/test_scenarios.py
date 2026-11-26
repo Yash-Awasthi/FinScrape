@@ -13,6 +13,26 @@ import pytest
 from finscrape.signals.scenarios import build_scenarios, event_weight, score_scenario
 
 
+def test_the_probability_carries_its_member_spread_and_one_member_gets_no_interval():
+    cluster = {
+        "top_subject": "Tankers stop",
+        "members": [event(id=1), event(id=2, subject="Second tanker stops")],
+        "reports": 2,
+        "sources": ["reuters/world"],
+    }
+    widened = score_scenario(
+        cluster, [], by_subject({"Tankers stop": 0.55, "Second": 0.95})
+    )
+    assert widened["n_members"] == 2
+    lo, hi = widened["ci95"]
+    assert lo <= widened["probability"] <= hi
+    assert lo >= 0.5 and hi <= 1.0
+    single = score_scenario(
+        {**cluster, "members": [event(id=1)], "reports": 1}, [], fake_predict(0.8)
+    )
+    assert single["ci95"] is None and single["n_members"] == 1
+
+
 def fake_predict(p_positive: float, tier: str = "empirical"):
     """A predict_fn that always returns the same probability."""
 

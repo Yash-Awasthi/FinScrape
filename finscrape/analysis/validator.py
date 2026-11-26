@@ -549,12 +549,35 @@ def calibrate_signal_score(
     Sign is never changed, and 0 stays 0 (no call).
     """
     try:
-        base = int(round(float(score)))
+        base = round(float(score))
     except (TypeError, ValueError):
         return 0
     base = max(-5, min(5, base))
     if base == 0:
         return 0
+
+    return int(score_trace(base, magnitude, actionability, novelty)["final"])
+
+
+def score_trace(
+    score: float,
+    magnitude: str,
+    actionability: str,
+    novelty: str,
+) -> dict:
+    """The same rules as calibrate_signal_score, returned as an ordered trace.
+
+    The event page needs to say WHY the number is what it is; two implementations
+    of the rule would drift, so calibrate_signal_score delegates here.
+    """
+    try:
+        base = round(float(score))
+    except (TypeError, ValueError):
+        base = 0
+    base = max(-5, min(5, base))
+    if base == 0:
+        return {"input": base, "final": 0, "steps": ["no call: score 0"]}
+    steps = [f"model score {base:+d}"]
 
     mag = magnitude if magnitude in _MAGNITUDE_CAP else "medium"
     act = actionability if actionability in ("low", "medium", "high") else "medium"
@@ -567,20 +590,29 @@ def calibrate_signal_score(
     sign = 1 if base > 0 else -1
     strength = abs(base)
     cap = _MAGNITUDE_CAP[mag]
+    steps.append(f"{mag} magnitude caps magnitude at {cap}")
     if nov == "rehash":
         cap = min(cap, 2)
+        steps.append("rehash caps it at 2")
     if strength >= 3 and nov != "rehash" and (act == "high" or nov == "breaking"):
         cap = min(5, cap + 1)
+        steps.append(f"{act} actionability or breaking news lifts the cap to {cap}")
     if act == "low" and strength > 4:
         cap = min(cap, 4)
+        steps.append("low actionability caps it at 4")
+    if strength > cap:
+        steps.append(f"strength {strength} held to {cap}")
     strength = min(strength, cap)
 
     if strength <= 2 and mag == "high" and act == "high" and nov != "rehash":
         strength = 3
+        steps.append("high magnitude and actionability raise it to 3")
     if strength >= 3 and mag == "high" and act == "high" and nov == "breaking":
         strength = min(5, strength + 1)
+        steps.append("high magnitude, high actionability and breaking news lift it by 1")
 
-    return sign * max(1, strength)
+    final = sign * max(1, strength)
+    return {"input": base, "final": final, "steps": steps}
 
 
 # ---------------------------------------------------------------------------

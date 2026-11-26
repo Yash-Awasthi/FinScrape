@@ -22,6 +22,10 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
+        with:
+          # The notes cover previous-tag..this-tag, so the older tags and their dates
+          # must be in the clone.
+          fetch-depth: 0
       - uses: ./.github/actions/setup-python
         with:
           groups: --group server --group dev
@@ -29,10 +33,15 @@ jobs:
         run: python -m scripts.sbom --check
       - name: Audit the same lock file
         run: python -m scripts.audit --pip-only --strict
+      - name: Generate the release notes
+        run: python ops/release/changelog.py --version "${{ inputs.tag || github.ref_name }}" --output dist/CHANGELOG.md
       - name: Publish the release with its SBOM
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.tag || github.ref_name }}
-          files: dist/sbom.cdx.json
+          body_path: dist/CHANGELOG.md
+          files: |
+            dist/sbom.cdx.json
+            dist/CHANGELOG.md
           fail_on_unmatched_files: true
-          generate_release_notes: true
+          generate_release_notes: false

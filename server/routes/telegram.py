@@ -29,13 +29,35 @@ _HELP = (
     "/subscribe — get INVEST/PULL\\_OUT alerts\n"
     "/unsubscribe — stop alerts\n"
     "/status — subscription + alert status\n"
-    "/latest — most recent signals"
+    "/latest — most recent signals\n"
+    "/today — newest signals since UTC midnight\n"
+    "/ticker AAPL — recent signals for one ticker\n"
+    "/scenario 12 — geopolitical scenario by id"
+)
+
+_TODAY_SQL = (
+    "SELECT verdict, subject FROM events WHERE timestamp >= "
+    "date_trunc('day', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC' "
+    "ORDER BY timestamp DESC LIMIT 5"
+)
+_TICKER_SQL = (
+    "SELECT verdict, subject FROM events WHERE EXISTS ("
+    "SELECT 1 FROM jsonb_array_elements_text(tickers) AS t(value) "
+    "WHERE lower(t.value) = lower($1)) ORDER BY timestamp DESC LIMIT 5"
 )
 
 
 async def _load_subs() -> set[str]:
     rows = await db.pool().fetch("SELECT chat_id FROM telegram_subscribers")
     return {r["chat_id"] for r in rows}
+
+
+async def _load_scenarios() -> list[dict]:
+    """Scenarios for /scenario; a module-level helper so tests can patch it."""
+    from server.routes import insight
+
+    payload = await insight.scenarios(limit=20)
+    return payload.get("scenarios") or []
 
 
 def send_message(chat_id: str | int, text: str) -> bool:
@@ -100,6 +122,8 @@ async def _handle_command(chat_id: str, text: str) -> None:
         if text.strip()
         else ""
     )
+    parts = text.strip().split(None, 1)
+    arg = parts[1].strip() if len(parts) > 1 else ""
     if cmd in ("start", "help"):
         send_message(chat_id, _HELP)
     elif cmd == "subscribe":
@@ -122,6 +146,43 @@ async def _handle_command(chat_id: str, text: str) -> None:
             "No signals yet."
         ]
         send_message(chat_id, "Latest signals:\n" + "\n".join(lines))
+    elif cmd == "today":
+        rows = await db.pool().fetch(_TODAY_SQL)
+        lines = ["• " + escape_md(f"{r['verdict']} {r['subject']}") for r in rows] or [
+            "No signals today."
+        ]
+        send_message(chat_id, "Today (UTC):\n" + "\n".join(lines))
+    elif cmd == "ticker":
+        if not arg:
+            send_message(chat_id, "Usage: /ticker AAPL")
+            return
+        rows = await db.pool().fetch(_TICKER_SQL, arg)
+        lines = ["• " + escape_md(f"{r['verdict']} {r['subject']}") for r in rows] or [
+            "No signals for that ticker."
+        ]
+        header = escape_md(f"Ticker {arg.upper()}:")
+        send_message(chat_id, header + "\n" + "\n".join(lines))
+    elif cmd == "scenario":
+        if not arg:
+            send_message(chat_id, "Usage: /scenario 12")
+            return
+        wanted = arg.lower()
+        if not wanted.startswith("s"):
+            wanted = f"s{wanted}"
+        found = None
+        for scenario in await _load_scenarios():
+            if str(scenario.get("id")) == wanted:
+                found = scenario
+                break
+        if found is None:
+            send_message(chat_id, escape_md(f"Scenario {wanted} not found."))
+            return
+        pct = round(float(found.get("probability") or 0) * 100)
+        send_message(
+            chat_id,
+            f"Scenario {found.get('id')} - {escape_md(found.get('title') or '')}\n"
+            f"Stance: {found.get('stance')}, probability {pct}%",
+        )
 
 
 def _webhook_authentic(supplied: str | None) -> bool:
@@ -131,16 +192,26 @@ def _webhook_authentic(supplied: str | None) -> bool:
     chat id the body names, so an unauthenticated webhook is a spam relay. No secret
     configured means no request can be authenticated — the endpoint stays inert.
     """
-    expected = get_settings().telegram_webhook_secret
+    settings = get_settings()
+    expected = tuple(
+        secret
+        for secret in (
+            settings.telegram_webhook_secret,
+            settings.telegram_webhook_secret_previous,
+        )
+        if secret
+    )
     if not expected:
         log.warning(
             "TELEGRAM_WEBHOOK_SECRET is unset — /api/telegram/webhook ignores every "
             "update. Set it and pass the same value to setWebhook(secret_token=...)."
         )
         return False
-    return bool(supplied) and hmac.compare_digest(
-        supplied.encode("utf-8"), expected.encode("utf-8")
-    )
+    supplied_bytes = supplied.encode("utf-8") if supplied else b""
+    matched = False
+    for secret in expected:
+        matched |= hmac.compare_digest(supplied_bytes, secret.encode("utf-8"))
+    return bool(supplied) and matched
 
 
 @router.post("/api/telegram/webhook")

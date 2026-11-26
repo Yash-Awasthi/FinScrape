@@ -9,6 +9,7 @@ The analysis uses a multi-step reasoning process:
 """
 
 import logging
+import re
 
 from finscrape.analysis.constants import VALID_EVENT_TYPES
 
@@ -174,17 +175,28 @@ ARTICLE: {{article_text}}
 ANALYSIS_PROMPT = ANALYSIS_PROMPT.replace("%%EVENT_TYPES%%", EVENT_TYPES_PIPE)
 
 
+def _strip_fence_markers(value: str) -> str:
+    """Remove the fence tokens so untrusted text cannot close the data block early."""
+    return re.sub(
+        re.escape(ARTICLE_FENCE_START) + "|" + re.escape(ARTICLE_FENCE_END),
+        "",
+        value,
+        flags=re.IGNORECASE,
+    )
+
+
 def render_prompt(template: str, title: str, text: str) -> str:
     """Fill an analysis prompt template's {{title}}/{{article_text}} slots.
 
-    The article body is fenced between ARTICLE_FENCE_START/END and stripped of
-    literal "{{"/"}}" so it cannot forge a new placeholder token. The body is
-    substituted before the title, so a title carrying a literal "{{article_text}}"
-    cannot hijack that substitution (its only chance to match is against the
-    template, and by then the slot is already filled).
+    The article body is fenced between ARTICLE_FENCE_START/END, stripped of
+    literal "{{"/"}}" so it cannot forge a new placeholder token, and stripped
+    of the fence tokens themselves so it cannot close the data block early. The
+    body is substituted before the title, so a title carrying a literal
+    "{{article_text}}" cannot hijack that substitution (its only chance to match
+    is against the template, and by then the slot is already filled).
     """
-    safe_text = text.replace("{{", "").replace("}}", "")
+    safe_text = _strip_fence_markers(text.replace("{{", "").replace("}}", ""))
     fenced_text = f"{ARTICLE_FENCE_START}\n{safe_text}\n{ARTICLE_FENCE_END}"
     rendered = template.replace("{{article_text}}", fenced_text)
-    rendered = rendered.replace("{{title}}", title)
+    rendered = rendered.replace("{{title}}", _strip_fence_markers(title))
     return rendered

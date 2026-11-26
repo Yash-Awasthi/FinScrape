@@ -87,3 +87,33 @@ A model can lower its Brier score by never being confident; `resolution` is repo
 4. A directional claim ("there is a 72% chance this rises") is never made from a hit rate;
    the calibration panel shows whether stated confidence has historically matched outcomes,
    which is the only claim the data supports.
+
+## Source weighting: a small prior (M5.1)
+
+A source's 90-day hit rate is evidence about the source, not about the event in front of
+you, so it enters `score_scenario` as one bounded multiplier per member:
+`weight = event_weight(member) * prior(source)`. It can tilt a scenario; it cannot veto one.
+
+`hit_rates(outcomes, now=None, days=90)` returns per source `{n, hits, rate}`. Only rows
+whose `checked_at` parses and falls inside the window count. A row with no (or an
+unparseable) `checked_at` is excluded: the window cannot place it on the timeline, and
+assuming it is fresh would let an undated row vote. `outcome == "correct"` is a hit; any
+other value counts in `n` only, the same convention `reliability_tables` uses.
+
+`prior(stats, min_n=10)` shrinks the rate toward a coin flip and maps it onto a weight:
+
+    rate_shrunk = (hits + 5 * 0.5) / (n + 5)
+    prior       = clamp(1 + 0.3 * (2 * rate_shrunk - 1), 0.85, 1.15)
+
+Below 10 outcomes the answer is exactly 1.0: thin data moves nothing. The rails are hard,
+so the worst and best recorded source differ by at most 1.35x (0.85 vs 1.15). A 60%-hit
+source at n=100 earns 1.057, about +6%: the record nudges its members and never overrides
+them. Every scenario carries the applied map as `source_priors`, so the tilt can be
+audited after the fact.
+
+Measured in `tests/test_source_weights.py`: at n=50 a 10%-hit source gets 0.85 and a
+90%-hit source gets 1.15; at n=100 a 60%-hit source gets 1.057. One bad-source member
+saying up (p=0.9) against one good-source member saying down (p=0.1) scores tilt -0.120,
+probability 0.56, direction down. The prior cannot stop better evidence from being
+outnumbered: five bad-source members against one good-source member still score up
+(tilt 0.459, probability 0.73), which is the documented limit.

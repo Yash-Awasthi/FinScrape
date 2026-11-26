@@ -7,6 +7,12 @@ without a named cause is a number nobody acts on. `/api/market/quotes` and `/api
 are included on purpose: one talks to yfinance through a threadpool, the other hits the
 storyline builder and its cache.
 
+One Python process cannot drive several hundred requests a second: the open-loop loop
+itself saturates before the server does, and the result measures the client. `--clients N`
+runs N independent event loops in threads, each pacing its share of the rate, so the driver
+keeps up with the target. `--paths` limits the run to named endpoints, which is how a mixed
+rate is separated from an upstream that is refusing connections.
+
 No dependencies beyond httpx (already in the server group) and the standard library.
 """
 
@@ -74,7 +80,13 @@ def _pct(ordered: list[float], fraction: float) -> float:
     return ordered[index]
 
 
-async def drive(base_url: str, rps: float, seconds: float, timeout: float) -> Report:
+async def drive(
+    base_url: str,
+    rps: float,
+    seconds: float,
+    timeout: float,
+    paths: tuple[str, ...] = ENDPOINTS,
+) -> Report:
     import httpx
 
     report = Report()
@@ -98,7 +110,7 @@ async def drive(base_url: str, rps: float, seconds: float, timeout: float) -> Re
         started_all = time.perf_counter()
         tasks = []
         for i in range(budget):
-            path = ENDPOINTS[i % len(ENDPOINTS)]
+            path = paths[i % len(paths)]
             tasks.append(asyncio.create_task(one(path)))
             # Open-loop pacing: request i is scheduled at i/rps from the start, so a slow
             # endpoint shows up as a growing queue instead of being hidden by back-pressure.
@@ -109,6 +121,32 @@ async def drive(base_url: str, rps: float, seconds: float, timeout: float) -> Re
         await asyncio.gather(*tasks)
         report.elapsed = time.perf_counter() - started_all
     return report
+
+
+def run_load(
+    base_url: str,
+    rps: float,
+    seconds: float,
+    timeout: float,
+    paths: tuple[str, ...],
+    clients: int,
+) -> Report:
+    """One event loop, or `clients` of them sharing the rate so the driver can keep up."""
+    if clients <= 1:
+        return asyncio.run(drive(base_url, rps, seconds, timeout, paths))
+
+    from concurrent.futures import ThreadPoolExecutor
+
+    merged = Report()
+    share = rps / clients
+    with ThreadPoolExecutor(max_workers=clients) as pool:
+        for part in pool.map(
+            lambda _: asyncio.run(drive(base_url, share, seconds, timeout, paths)),
+            range(clients),
+        ):
+            merged.samples.extend(part.samples)
+            merged.elapsed = max(merged.elapsed, part.elapsed)
+    return merged
 
 
 def print_report(report: Report) -> None:
@@ -135,14 +173,32 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--rps", type=float, default=50.0)
     parser.add_argument("--seconds", type=float, default=10.0)
     parser.add_argument("--timeout", type=float, default=30.0)
+    parser.add_argument(
+        "--clients",
+        type=int,
+        default=1,
+        help="independent event loops sharing the rate (raise it above ~100 rps)",
+    )
+    parser.add_argument(
+        "--paths",
+        default=",".join(ENDPOINTS),
+        help="comma-separated endpoints to hit instead of all three",
+    )
     parser.add_argument("--json", default="", help="write the summary here")
     args = parser.parse_args(argv)
 
     parsed = urlparse(args.base_url)
     if not parsed.scheme or not parsed.netloc:
         parser.error(f"--base-url must be absolute, got {args.base_url!r}")
+    paths = tuple(p.strip() for p in args.paths.split(",") if p.strip())
+    if not paths or any(not p.startswith("/") for p in paths):
+        parser.error(f"--paths must be absolute paths, got {args.paths!r}")
+    if args.clients < 1:
+        parser.error("--clients must be at least 1")
 
-    report = asyncio.run(drive(args.base_url, args.rps, args.seconds, args.timeout))
+    report = run_load(
+        args.base_url, args.rps, args.seconds, args.timeout, paths, args.clients
+    )
     print_report(report)
     summary = report.summary()
     if args.json:

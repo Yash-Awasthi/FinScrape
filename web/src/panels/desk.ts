@@ -4,11 +4,19 @@
 // broadcasts what it loaded; the exposure panel counts how many of those rows touch each
 // held symbol, labelled "exposure" on purpose — a tally of stories, never advice.
 
-import { api, type EventOut, type Outcome, type Watchlist, verdictColor } from "../api";
+import { api, type EventOut, type Outcome, type Watchlist } from "../api";
 import { escapeHtml, fmtPct, timeAgo } from "../util";
+import { verdictChip } from "../verdict-chip";
 import { Panel } from "./panel";
 import { apiKey, createStarter, desk, setApiKey, STARTERS, unfollow } from "../watchlist";
 import { addPosition, positions, removePosition } from "../positions";
+import { adviceNote, NOT_ADVICE } from "../components/advice";
+import { citeLink } from "../components/citation";
+
+// One caveat covers following and entering a position; each state shows it once.
+const ACT_DETAIL =
+  "Following a sector or ticker does not recommend it, and a position you enter is not " +
+  "a recommendation to hold it.";
 
 /** A call's day-one mark. A null move means unpriced, not a miss; a null verdict means
  *  the move was too small to call, and the row is named unscored rather than hidden. */
@@ -109,7 +117,8 @@ export class DeskPanel extends Panel {
       `<p class="muted">Start with one:</p><div class="starters">${buttons}</div>` +
       this.renderPositions() +
       this.renderKeyForm() +
-      `<p class="disclaimer">Following a sector or ticker does not recommend it.</p></div>`
+      adviceNote(ACT_DETAIL) +
+      `</div>`
     );
   }
 
@@ -126,7 +135,8 @@ export class DeskPanel extends Panel {
       `<span class="muted">${list.items.length} followed</span></div>` +
       `<div class="followed-chips">${chips || '<span class="muted">no items yet</span>'}</div>` +
       this.renderPositions() +
-      this.renderKeyForm()
+      this.renderKeyForm() +
+      adviceNote(ACT_DETAIL)
     );
   }
 
@@ -142,11 +152,11 @@ export class DeskPanel extends Panel {
       .map(
         (e) =>
           `<tr data-event-id="${e.id}"><td>` +
-          `<span class="dot" style="background:${verdictColor(e.verdict)}"></span>` +
-          `${e.verdict} <b>${e.signal_score >= 0 ? "+" : ""}${e.signal_score}</b>` +
+          `${verdictChip(e.verdict)}` +
+          ` <b>${e.signal_score >= 0 ? "+" : ""}${e.signal_score}</b>` +
           `<div class="subj">${escapeHtml(e.subject)}</div>` +
           `<span class="row-meta">${escapeHtml(e.tickers.slice(0, 4).join(", ")) || "—"} · ` +
-          `${escapeHtml(e.sector_impact || "")} · ${timeAgo(e.timestamp)}</span>` +
+          `${escapeHtml(e.sector_impact || "")} · ${timeAgo(e.timestamp)} · ${citeLink(e)}</span>` +
           `</td></tr>`,
       )
       .join("");
@@ -162,7 +172,7 @@ export class DeskPanel extends Panel {
         const o = this.outcomes.get(e.id);
         return (
           `<tr data-event-id="${e.id}"><td class="subj-cell">${escapeHtml(e.subject)}` +
-          `<span class="row-meta">${escapeHtml(e.tickers.slice(0, 3).join(", ")) || "—"}</span></td>` +
+          `<span class="row-meta">${escapeHtml(e.tickers.slice(0, 3).join(", ")) || "—"} · ${citeLink(e)}</span></td>` +
           `<td>${callResult(o)}</td></tr>`
         );
       })
@@ -318,7 +328,7 @@ export class ExposurePanel extends Panel {
       .join("");
     this.setContent(
       `<div class="exposure">${rows}</div>` +
-        `<p class="disclaimer">Exposure only: the share of followed stories whose tickers ` +
+        `<p class="disclaimer">${NOT_ADVICE} Exposure only: the share of followed stories whose tickers ` +
         `include each symbol you entered. This is not a recommendation and not a position size.</p>`,
     );
   }

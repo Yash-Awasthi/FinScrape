@@ -4,6 +4,7 @@ import { api } from "./api";
 import { VIEWS, allPanelIds, isView, type ViewId } from "./app/variants";
 import { Shell } from "./app/shell";
 import { BreakingNewsBanner } from "./components/banner";
+import { Freshness } from "./components/freshness";
 import { Inspector } from "./components/inspector";
 import type { GlobeView } from "./globe/globe";
 import type { EventOut } from "./api";
@@ -26,12 +27,19 @@ import {
 } from "./panels/panels";
 import { MarketPanel } from "./panels/market";
 import { SignalFeedPanel } from "./panels/signal-feed";
+import { parseRoute } from "./app/routes";
+import { EventPageView } from "./pages/event";
+import { ScenarioPageView } from "./pages/scenario";
+import { NotificationsPageView } from "./pages/notifications";
+import { AlertsPageView } from "./pages/alerts";
+import { installPermalinks } from "./pages/permalink";
 import { Store } from "./state";
 import { RealtimeClient, wsUrl, type WSMessage } from "./ws";
 
 const store = new Store();
 const inspector = new Inspector(() => store.select(null));
 const banner = new BreakingNewsBanner();
+const freshness = new Freshness();
 
 const views = Object.entries(VIEWS).map(([id, v]) => ({ id, label: v.label }));
 const shell = new Shell(
@@ -85,9 +93,14 @@ layout.checkViews(allPanelIds());
 
 const app = document.getElementById("app")!;
 shell.mount(app);
-shell.bannerSlot.append(banner.el);
+shell.bannerSlot.append(freshness.el, banner.el);
 layout.mount(shell.grid);
 shell.railSlot.append(inspector.el);
+const eventPage = new EventPageView();
+const scenarioPage = new ScenarioPageView();
+const alertsPage = new AlertsPageView();
+const notificationsPage = new NotificationsPageView();
+shell.content.append(eventPage.el, scenarioPage.el, alertsPage.el, notificationsPage.el);
 
 let currentView: ViewId = "today";
 
@@ -110,7 +123,55 @@ function showView(id: string): void {
     requestAnimationFrame(sizeGlobe);
   }
 }
-window.addEventListener("hashchange", () => showView(location.hash.slice(1)));
+// A detail route owns the main area; a tab click leaves it and returns to the grid.
+function route(): boolean {
+  const r = parseRoute(location.pathname, location.hash);
+  if (r?.kind === "event") {
+    shell.root.classList.add("routed");
+    scenarioPage.hide();
+    alertsPage.hide();
+    notificationsPage.hide();
+    void eventPage.load(r.id);
+    return true;
+  }
+  if (r?.kind === "scenario") {
+    shell.root.classList.add("routed");
+    eventPage.hide();
+    alertsPage.hide();
+    notificationsPage.hide();
+    void scenarioPage.load(r.id);
+    return true;
+  }
+  if (r?.kind === "alerts") {
+    shell.root.classList.add("routed");
+    eventPage.hide();
+    scenarioPage.hide();
+    void alertsPage.load();
+    return true;
+  }
+  // The notification centre has no route kind yet (app/routes.ts is another unit's file),
+  // so its path is matched here, the same shape as the alerts page.
+  if (!r && location.pathname.replace(/\/+$/, "") === "/app/notifications") {
+    shell.root.classList.add("routed");
+    eventPage.hide();
+    scenarioPage.hide();
+    alertsPage.hide();
+    void notificationsPage.load();
+    return true;
+  }
+  shell.root.classList.remove("routed");
+  eventPage.hide();
+  scenarioPage.hide();
+  alertsPage.hide();
+  notificationsPage.hide();
+  return false;
+}
+window.addEventListener("hashchange", () => {
+  if (!route()) showView(location.hash.slice(1));
+});
+window.addEventListener("popstate", () => {
+  if (!route()) showView(location.hash.slice(1));
+});
 
 // globe.gl (+three.js) is ~1.8MB — its own chunk, imported on the first Today view
 // rather than on module load, so the shell paints before it is even requested.
@@ -148,7 +209,10 @@ store.subscribe((s) => {
     feedPanel.update(s.events);
     globe?.setEvents(s.events);
   }
-  if (s.stats) statsPanel.update(s.stats);
+  if (s.stats) {
+    statsPanel.update(s.stats);
+    freshness.update(s.stats);
+  }
   correlationPanel.update(s.correlations);
   banner.update(s.correlations);
   if (s.selected && s.selected.id !== lastSelectedId) {
@@ -296,7 +360,9 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") void refresher.tick();
 });
 
-showView(location.hash.slice(1));
-void loadAll();
+if (!route()) {
+  showView(location.hash.slice(1) || installPermalinks().view);
+  void loadAll();
+}
 rt.connect();
 refresher.start();

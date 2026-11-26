@@ -334,3 +334,32 @@ def test_a_ticker_the_news_named_is_never_a_silent_move():
     )
     assert "silent_divergence" not in {s.type for s in sigs}
     assert "explained_market_move" in {s.type for s in sigs}
+
+
+def test_prediction_leads_news_labels_its_coverage_partial():
+    """The signal sees only analysed events; a reader must not mistake it for full coverage."""
+    sig = detect_prediction_leads_news(Prediction("CL=F", 10.0), related_activity=0)
+    assert sig is not None
+    assert sig.payload["coverage"] == "partial"
+    assert sig.payload["coverage_reason"] == "computed over analysed events only"
+
+
+def test_prediction_leads_news_label_survives_the_persist_merge():
+    """persist_correlations writes {**sig.payload}; the label must reach the correlations row."""
+    import asyncio
+
+    from worker.runner import persist_correlations
+
+    class FakePool:
+        def __init__(self):
+            self.calls = []
+
+        async def execute(self, sql, *args):
+            self.calls.append(args)
+
+    sig = detect_prediction_leads_news(Prediction("CL=F", 10.0), related_activity=0)
+    pool = FakePool()
+    asyncio.run(persist_correlations(pool, [sig]))
+    payload = pool.calls[0][-1]
+    assert payload["coverage"] == "partial"
+    assert payload["coverage_reason"] == "computed over analysed events only"

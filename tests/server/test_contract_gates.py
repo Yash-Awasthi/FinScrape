@@ -122,7 +122,7 @@ def test_a_tighter_bound_or_a_newly_required_parameter_is_a_breaking_change():
     tighter["paths"]["/api/events"]["get"]["parameters"]["limit"]["required"] = True
     problems = openapi_snapshot.compare(old, tighter)
     assert "GET /api/events: parameter limit became required" in problems
-    assert any("max narrowed 500 → 200" in p for p in problems)
+    assert any("max narrowed 500 \u2192 200" in p for p in problems)
 
 
 def test_adding_a_path_or_a_param_is_not_a_breaking_change():
@@ -205,7 +205,7 @@ def test_every_documented_bound_is_enforced_with_422(path, method, name, schema)
         pytest.skip(f"{path} ?{name} has no boundary to violate")
     response = client.request(method.upper(), url, params={name: bad})
     assert response.status_code == 422, (
-        f"{method.upper()} {url} ?{name}={bad} → {response.status_code}"
+        f"{method.upper()} {url} ?{name}={bad} \u2192 {response.status_code}"
     )
 
 
@@ -230,7 +230,8 @@ def _ts_interface_fields() -> dict[str, str]:
         if not line or ":" not in line:
             continue
         name, kind = line.split(":", 1)
-        fields[name.strip()] = kind.strip()
+        # `field?: type` is the optional marker, not part of the name.
+        fields[name.strip().rstrip("?")] = kind.strip()
     return fields
 
 
@@ -264,9 +265,16 @@ def test_the_stats_route_answers_the_documented_fields(monkeypatch):
     response = client.get("/api/stats")
     assert response.status_code == 200
     body = response.json()
-    assert set(body) == {"total_events", "by_verdict", "last_update"}
+    assert set(body) == {
+        "total_events",
+        "by_verdict",
+        "last_update",
+        "ingest_interval_minutes",
+    }
     assert isinstance(body["total_events"], int)
     assert isinstance(body["by_verdict"], dict)
+    # The worker cadence drives the "next ingest" line on the dashboard.
+    assert isinstance(body["ingest_interval_minutes"], int)
     assert body["last_update"].startswith("2026-11-24T12:00:00")
 
 

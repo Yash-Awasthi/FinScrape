@@ -23,6 +23,7 @@ from finscrape.logging_config import setup_logging
 from server import db
 from server.settings import Settings, get_settings
 from worker import key_queue
+from worker.quality import run as run_quality
 from worker.runner import Worker, evict_to_size, prune_old_rows
 
 log = logging.getLogger("worldfin.worker.main")
@@ -63,6 +64,17 @@ async def _prune(
     # The sweep reruns tomorrow.
     except Exception as exc:  # pragma: no cover
         log.warning("retention skipped: %s", exc)
+
+
+async def _quality(worker: Worker) -> int:
+    """Daily report; a failed query is logged so the report can never stop the worker."""
+    try:
+        report = await run_quality(worker.pool, days=1)
+        return report.defects
+    # The next cycle reports again.
+    except Exception as exc:  # pragma: no cover
+        log.warning("quality report skipped: %s", exc)
+        return 0
 
 
 def _schedule(worker: Worker, s: Settings) -> AsyncIOScheduler:
@@ -112,6 +124,16 @@ def _schedule(worker: Worker, s: Settings) -> AsyncIOScheduler:
         max_instances=1,
         coalesce=True,
     )
+    scheduler.add_job(
+        _quality,
+        "interval",
+        hours=24,
+        args=[worker],
+        id="quality",
+        jitter=300,
+        max_instances=1,
+        coalesce=True,
+    )
     return scheduler
 
 
@@ -149,6 +171,7 @@ async def run_once() -> None:
         await key_queue.save(worker.pool)
     await _score_outcomes(worker)
     await _prune(worker, s.retention_days, s.event_retention_days, s.db_max_mb)
+    await _quality(worker)
     await db.disconnect()
 
 

@@ -3,6 +3,7 @@
 
 import Globe, { type GlobeInstance } from "globe.gl";
 import type { EventOut } from "../api";
+import { cssVar, resolveColor } from "../tokens";
 import { type GlobePoint, toPoints } from "./points";
 
 export class GlobeView {
@@ -11,7 +12,7 @@ export class GlobeView {
   constructor(container: HTMLElement, onSelect: (e: EventOut) => void) {
     this.globe = new Globe(container)
       .globeImageUrl("https://unpkg.com/three-globe/example/img/earth-dark.jpg")
-      .backgroundColor("#0b0e14")
+      .backgroundColor(resolveColor(cssVar("--bg")))
       .pointLat("lat")
       .pointLng("lng")
       .pointColor("color")
@@ -37,7 +38,7 @@ export class GlobeView {
   }
 
   setEvents(events: EventOut[]): void {
-    this.globe.pointsData(toPoints(events));
+    this.globe.pointsData(toPoints(events).map((p) => ({ ...p, color: resolveColor(p.color) })));
   }
 
   resize(w: number, h: number): void {

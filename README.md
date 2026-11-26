@@ -139,7 +139,7 @@ make e2e-live    # the built SPA against the real API and a seeded, empty *_test
 ```
 
 <!-- facts:start -->
-1044 pytest cases, 83 Vitest tests and 12 Playwright specs; CI runs all of them. Counted by `python -m scripts.repo_facts`.
+2130 pytest cases, 239 Vitest tests and 15 Playwright specs; CI runs all of them. Counted by `python -m scripts.repo_facts`.
 <!-- facts:end -->
 
 ---

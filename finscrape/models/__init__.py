@@ -76,6 +76,10 @@ class FinEvent:
     analysis_source: str = "unknown"
     # The model the verdict came from, empty for model-free rows.
     model_name: str = ""
+    # The article text the call was made from (event page, plan m4.2.1).
+    excerpt: str = ""
+    # source -> first UTC timestamp that source carried the story (corroboration).
+    source_seen: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return asdict(self)

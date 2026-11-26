@@ -143,6 +143,39 @@ def test_creating_a_list_and_matching_its_items() -> None:
 
 
 @db_gated
+def test_items_can_be_added_and_removed_after_creation() -> None:
+    async def body():
+        await db.disconnect()
+        pool = await db.connect(DSN)
+        await db.run_migrations(pool)
+        await pool.execute("TRUNCATE watchlists RESTART IDENTITY CASCADE")
+        watchlist = await queries.create_watchlist(pool, "default", "Live", [])
+        added = await queries.add_watchlist_item(
+            pool, watchlist["id"], "default", "sector", "energy"
+        )
+        again = await queries.add_watchlist_item(
+            pool, watchlist["id"], "default", "sector", "energy"
+        )
+        foreign = await queries.add_watchlist_item(
+            pool, watchlist["id"], "someone", "ticker", "XOM"
+        )
+        removed = await queries.remove_watchlist_item(
+            pool, watchlist["id"], "default", added["id"]
+        )
+        gone = await queries.remove_watchlist_item(
+            pool, watchlist["id"], "default", added["id"]
+        )
+        await db.disconnect()
+        assert added == {"id": added["id"], "kind": "sector", "value": "energy"}
+        # Following twice is not an error and does not duplicate the row.
+        assert again == added
+        assert foreign is None, "another owner cannot write this list"
+        assert removed is True and gone is False
+
+    asyncio.run(body())
+
+
+@db_gated
 def test_deleting_a_list_leaves_no_orphan_items() -> None:
     async def body():
         await db.disconnect()

@@ -1,0 +1,1316 @@
+{
+  "info": {
+    "_postman_id": "8718f5ce-f2e5-538d-959c-7cb951fa961b",
+    "description": "One request per endpoint, generated from the OpenAPI schema. Set the baseUrl and apiKey collection variables; the apiKey default is the published development key. Every request marked with an X-API-Key header needs it.",
+    "name": "FinScrape API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "id": "ebcdb1fa-106a-5a79-a697-86634ec34c32",
+      "item": [
+        {
+          "id": "08f790ee-5730-5452-9128-3cdc8b3abb79",
+          "name": "GET /api/accuracy",
+          "request": {
+            "description": "Accuracy",
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "accuracy"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/api/accuracy"
+            }
+          },
+          "response": []
+        },
+        {
+          "id": "6e94b0fb-30f7-5f38-ba60-2f14e0ec0874",
+          "name": "GET /api/accuracy/by-variant",
+          "request": {
+            "description": "Accuracy By Variant",
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "accuracy",
+                "by-variant"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/api/accuracy/by-variant"
+            }
+          },
+          "response": []
+        }
+      ],
+      "name": "accuracy"
+    },
+    {
+      "id": "5d14d53b-dad0-551b-b9e5-cec5727da09e",
+      "item": [
+        {
+          "id": "95542f46-017d-5077-a8e5-482d40d1dd67",
+          "name": "DELETE /api/admin/keys/{key_id}",
+          "request": {
+            "description": "Revoke Consumer Key",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "type": "text",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "method": "DELETE",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "keys",
+                "string"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/api/admin/keys/string"
+            }
+          },
+          "response": []
+        },
+        {
+          "id": "fa1b1ea3-82a7-5e54-bde3-d2710eeb2a05",
+          "name": "GET /api/admin/keys",
+          "request": {
+            "description": "List Consumer Keys",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "type": "text",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "keys"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/api/admin/keys"
+            }
+          },
+          "response": []
+        },
+        {
+          "id": "8cd19830-e84c-52ce-a7f2-944aef41656d",
+          "name": "POST /api/admin/keys",
+          "request": {
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{}"
+            },
+            "description": "Create Consumer Key",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "type": "text",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "method": "POST",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "keys"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/api/admin/keys"
+            }
+          },
+          "response": []
+        }
+      ],
+      "name": "admin"
+    },
+    {
+      "id": "d88fc4a4-1455-5864-a76a-779c70889d87",
+      "item": [
+        {
+          "id": "451758e8-a567-5650-8571-7c4ced383624",
+          "name": "GET /api/ai/analyze",
+          "request": {
+            "description": "Analyze",
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "analyze"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ],
+              "raw": "{{baseUrl}}/api/ai/analyze?id=1"
+            }
+          },
+          "response": []
+        },
+        {
+          "id": "32b698be-06d3-5fdc-a645-9927e2c15523",
+          "name": "GET /api/ai/council",
+          "request": {
+            "description": "Council",
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "council"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ],
+              "raw": "{{baseUrl}}/api/ai/council?id=1"
+            }
+          },
+          "response": []
+        }
+      ],
+      "name": "ai"
+    },
+    {
+      "id": "dfdec0b1-f1cb-5563-9c38-01dc879fe2e6",
+      "item": [
+        {
+          "id": "a4c4743b-e561-5475-8ad0-a8690b339fbb",
+          "name": "DELETE /api/alerts/rules/{rule_id}",
+          "request": {
+            "description": "Delete Rule",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "type": "text",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "method": "DELETE",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "alerts",
+                "rules",
+                "string"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/api/alerts/rules/string"
+            }
+          },
+          "response": []
+        },
+        {
+          "id": "3faccd0f-229c-5d4c-86d6-b88273b72dad",
+          "name": "GET /api/alerts/notifications",
+          "request": {
+            "description": "Notifications",
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "alerts",
+                "notifications"
+              ],
+              "query": [
+                {
+                  "disabled": true,
+                  "key": "limit",
+                  "value": "50"
+                }
+              ],
+              "raw": "{{baseUrl}}/api/alerts/notifications"
+            }
+          },
+          "response": []
+        },
+        {
+          "id": "a735b5fa-3d48-59ae-906e-4967d2d60e19",
+          "name": "GET /api/alerts/rules",
+          "request": {
+            "description": "List Rules",
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "alerts",
+                "rules"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/api/alerts/rules"
+            }
+          },
+          "response": []
+        },
+        {
+          "id": "efa07985-e03c-5b5b-8172-d57d311d45d1",
+          "name": "PATCH /api/alerts/notifications/{notification_id}",
+          "request": {
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{}"
+            },
+            "description": "Set Notification Read",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "type": "text",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "method": "PATCH",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "alerts",
+                "notifications",
+                "1"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/api/alerts/notifications/1"
+            }
+          },
+          "response": []
+        },
+        {
+          "id": "52780e87-6acf-5a09-bbb4-7c9340f597e3",
+          "name": "PATCH /api/alerts/rules/{rule_id}",
+          "request": {
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{}"
+            },
+            "description": "Set Enabled",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "type": "text",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "method": "PATCH",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "alerts",
+                "rules",
+                "string"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/api/alerts/rules/string"
+            }
+          },
+          "response": []
+        },
+        {
+          "id": "20c965bb-dce8-53fc-a43d-23f87969bff6",
+          "name": "POST /api/alerts/rules",
+          "request": {
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{}"
+            },
+            "description": "Add Rule",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "type": "text",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "method": "POST",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "alerts",
+                "rules"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/api/alerts/rules"
+            }
+          },
+          "response": []
+        }
+      ],
+      "name": "alerts"
+    },
+    {
+      "id": "cc5ebc97-f7ba-5862-9f13-5d1c66faa958",
+      "item": [
+        {
+          "id": "55506567-0092-5fc7-95bf-e902423a7854",
+          "name": "GET /api/candles",
+          "request": {
+            "description": "Candles",
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "candles"
+              ],
+              "query": [
+                {
+                  "disabled": true,
+                  "key": "interval",
+                  "value": "1d"
+                },
+                {
+                  "disabled": true,
+                  "key": "period",
+                  "value": "1mo"
+                },
+                {
+                  "key": "symbol",
+                  "value": "AAPL"
+                }
+              ],
+              "raw": "{{baseUrl}}/api/candles?symbol=AAPL"
+            }
+          },
+          "response": []
+        }
+      ],
+      "name": "candles"
+    },
+    {
+      "id": "54f78f7d-7f41-5abc-b940-6250db903a53",
+      "item": [
+        {
+          "id": "234b30a9-9fe9-5f4b-b259-27bdc5732755",
+          "name": "GET /api/correlations",
+          "request": {
+            "description": "List Correlations",
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "correlations"
+              ],
+              "query": [
+                {
+                  "disabled": true,
+                  "key": "date",
+                  "value": "2026-01-01"
+                },
+                {
+                  "disabled": true,
+                  "key": "limit",
+                  "value": "200"
+                }
+              ],
+              "raw": "{{baseUrl}}/api/correlations"
+            }
+          },
+          "response": []
+        }
+      ],
+      "name": "correlations"
+    },
+    {
+      "id": "171c0d82-d20e-50e5-b123-71f1415fd0fc",
+      "item": [
+        {
+          "id": "5d40f8b2-d8a4-5f92-a579-388a3352f053",
+          "name": "GET /api/dates",
+          "request": {
+            "description": "Dates",
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dates"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/api/dates"
+            }
+          },
+          "response": []
+        }
+      ],
+      "name": "dates"
+    },
+    {
+      "id": "eea119c8-bf6d-5de5-a24e-aa438154cec8",
+      "item": [
+        {
+          "id": "118987e7-bee5-54c6-be31-5c7400602a94",
+          "name": "GET /api/events",
+          "request": {
+            "description": "List Events",
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "events"
+              ],
+              "query": [
+                {
+                  "disabled": true,
+                  "key": "date",
+                  "value": "2026-01-01"
+                },
+                {
+                  "disabled": true,
+                  "key": "dir",
+                  "value": "desc"
+                },
+                {
+                  "disabled": true,
+                  "key": "event_type",
+                  "value": "earnings"
+                },
+                {
+                  "disabled": true,
+                  "key": "limit",
+                  "value": "100"
+                },
+                {
+                  "disabled": true,
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "description": "Only events newer than this id; the dashboard's poll uses it.",
+                  "disabled": true,
+                  "key": "since_id",
+                  "value": "0"
+                },
+                {
+                  "disabled": true,
+                  "key": "sort",
+                  "value": "id"
+                },
+                {
+                  "disabled": true,
+                  "key": "source",
+                  "value": "string"
+                },
+                {
+                  "disabled": true,
+                  "key": "ticker",
+                  "value": "string"
+                },
+                {
+                  "disabled": true,
+                  "key": "verdict",
+                  "value": "INVEST"
+                }
+              ],
+              "raw": "{{baseUrl}}/api/events"
+            }
+          },
+          "response": []
+        },
+        {
+          "id": "a151e02b-c4b1-500c-9292-f4cc9e318f43",
+          "name": "GET /api/events/{event_id}",
+          "request": {
+            "description": "Get Event",
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "1"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/api/events/1"
+            }
+          },
+          "response": []
+        },
+        {
+          "id": "f89a96d1-3eb1-5052-aa81-17b0ae1e8fe3",
+          "name": "POST /api/events",
+          "request": {
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\n  \"events\": [\n    {\n      \"event_type\": \"earnings\",\n      \"subject\": \"Demo Corp beats estimates\",\n      \"verdict\": \"INVEST\"\n    }\n  ]\n}"
+            },
+            "description": "Ingest",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "type": "text",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "method": "POST",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "events"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/api/events"
+            }
+          },
+          "response": []
+        }
+      ],
+      "name": "events"
+    },
+    {
+      "id": "4147eac7-5d5e-5f24-a42a-f44c91819e77",
+      "item": [
+        {
+          "id": "521dde57-20cd-5424-8f62-27700f227262",
+          "name": "GET /api/feeds",
+          "request": {
+            "description": "Feeds",
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "feeds"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/api/feeds"
+            }
+          },
+          "response": []
+        }
+      ],
+      "name": "feeds"
+    },
+    {
+      "id": "e9aad6a1-b2d3-51a9-b454-e0c4c1a10f16",
+      "item": [
+        {
+          "id": "a1a424ba-255a-54c7-89e3-42d8236b0107",
+          "name": "GET /api/health",
+          "request": {
+            "description": "Api Health",
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/api/health"
+            }
+          },
+          "response": []
+        },
+        {
+          "id": "54b91e88-08e4-5ea3-8bb0-49515ec97fb6",
+          "name": "GET /health",
+          "request": {
+            "description": "Health",
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/health"
+            }
+          },
+          "response": []
+        }
+      ],
+      "name": "health"
+    },
+    {
+      "id": "f48d635e-fa6e-55b9-bae3-e3fd89f105f6",
+      "item": [
+        {
+          "id": "5319d2ef-0c82-5aff-aa49-6698ed1ca9aa",
+          "name": "GET /api/market/quotes",
+          "request": {
+            "description": "Quotes",
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "market",
+                "quotes"
+              ],
+              "query": [
+                {
+                  "disabled": true,
+                  "key": "symbols",
+                  "value": "string"
+                }
+              ],
+              "raw": "{{baseUrl}}/api/market/quotes"
+            }
+          },
+          "response": []
+        }
+      ],
+      "name": "market"
+    },
+    {
+      "id": "eeb79a13-78df-575f-b26c-a5eddd3e8351",
+      "item": [
+        {
+          "id": "8f56f0a5-bb23-5374-8b5f-9a128172794f",
+          "name": "GET /api/outcomes",
+          "request": {
+            "description": "Outcomes",
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "outcomes"
+              ],
+              "query": [
+                {
+                  "disabled": true,
+                  "key": "event_id",
+                  "value": "1"
+                },
+                {
+                  "disabled": true,
+                  "key": "limit",
+                  "value": "50"
+                }
+              ],
+              "raw": "{{baseUrl}}/api/outcomes"
+            }
+          },
+          "response": []
+        }
+      ],
+      "name": "outcomes"
+    },
+    {
+      "id": "b7413248-53d1-5f25-bd08-1dcc2c36e553",
+      "item": [
+        {
+          "id": "846c2d0e-2f0a-5254-8004-b52106957e32",
+          "name": "GET /api/predict/{event_id}",
+          "request": {
+            "description": "Predict Event",
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "predict",
+                "1"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/api/predict/1"
+            }
+          },
+          "response": []
+        }
+      ],
+      "name": "predict"
+    },
+    {
+      "id": "bdfcdada-8398-5398-9a2d-f18cc6427f00",
+      "item": [
+        {
+          "id": "185659ea-3481-5ea6-904d-aefd71658254",
+          "name": "GET /ready",
+          "request": {
+            "description": "Ready",
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ready"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/ready"
+            }
+          },
+          "response": []
+        }
+      ],
+      "name": "ready"
+    },
+    {
+      "id": "fae88767-e31b-56e9-8fd2-757dd5f41a7a",
+      "item": [
+        {
+          "id": "4f4c5739-6098-59ac-aa48-53c9402b49a9",
+          "name": "GET /api/reliability",
+          "request": {
+            "description": "Reliability",
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reliability"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/api/reliability"
+            }
+          },
+          "response": []
+        }
+      ],
+      "name": "reliability"
+    },
+    {
+      "id": "78a8479a-85db-5734-8ffb-5081fbdb9e20",
+      "item": [
+        {
+          "id": "0bac577c-52c8-5132-9f3d-769fbe8545e6",
+          "name": "GET /api/scenarios",
+          "request": {
+            "description": "Scenarios",
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "scenarios"
+              ],
+              "query": [
+                {
+                  "disabled": true,
+                  "key": "limit",
+                  "value": "6"
+                },
+                {
+                  "disabled": true,
+                  "key": "window",
+                  "value": "200"
+                }
+              ],
+              "raw": "{{baseUrl}}/api/scenarios"
+            }
+          },
+          "response": []
+        },
+        {
+          "id": "c5e5fae9-55d2-5051-bc83-22882ef8134c",
+          "name": "GET /api/scenarios/{scenario_id}",
+          "request": {
+            "description": "Scenario Detail",
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "scenarios",
+                "string"
+              ],
+              "query": [
+                {
+                  "disabled": true,
+                  "key": "exclude",
+                  "value": "1"
+                },
+                {
+                  "disabled": true,
+                  "key": "window",
+                  "value": "200"
+                }
+              ],
+              "raw": "{{baseUrl}}/api/scenarios/string"
+            }
+          },
+          "response": []
+        }
+      ],
+      "name": "scenarios"
+    },
+    {
+      "id": "75943d8b-c42f-572a-b4e3-e7ac43decae7",
+      "item": [
+        {
+          "id": "eff25e06-1081-5b3c-8c78-4edc75352a2a",
+          "name": "GET /api/sectors",
+          "request": {
+            "description": "Sectors",
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sectors"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/api/sectors"
+            }
+          },
+          "response": []
+        }
+      ],
+      "name": "sectors"
+    },
+    {
+      "id": "02ddbdfd-c655-52a3-bcc8-40c696882612",
+      "item": [
+        {
+          "id": "0a067508-9c33-5506-95f7-557908192e5f",
+          "name": "GET /api/stats",
+          "request": {
+            "description": "Stats",
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "stats"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/api/stats"
+            }
+          },
+          "response": []
+        }
+      ],
+      "name": "stats"
+    },
+    {
+      "id": "7bb1cee9-3045-5177-a16d-72da90f14261",
+      "item": [
+        {
+          "id": "f6c75210-38ac-5de7-8f20-4e763b1c7f80",
+          "name": "GET /api/storylines",
+          "request": {
+            "description": "Storylines",
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "storylines"
+              ],
+              "query": [
+                {
+                  "disabled": true,
+                  "key": "limit",
+                  "value": "10"
+                }
+              ],
+              "raw": "{{baseUrl}}/api/storylines"
+            }
+          },
+          "response": []
+        }
+      ],
+      "name": "storylines"
+    },
+    {
+      "id": "983c49be-fc6b-529e-aefb-b8fbac6ac9e6",
+      "item": [
+        {
+          "id": "19ddb02b-421e-50cc-b810-96b89ebb221b",
+          "name": "GET /api/suggestions",
+          "request": {
+            "description": "Suggestions",
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "suggestions"
+              ],
+              "query": [
+                {
+                  "disabled": true,
+                  "key": "limit",
+                  "value": "10"
+                }
+              ],
+              "raw": "{{baseUrl}}/api/suggestions"
+            }
+          },
+          "response": []
+        }
+      ],
+      "name": "suggestions"
+    },
+    {
+      "id": "cec2ae70-29c7-5c4d-8fbf-b707e3a27738",
+      "item": [
+        {
+          "id": "3c5955cb-63f6-539f-a5cd-98bc0687f208",
+          "name": "POST /api/telegram/webhook",
+          "request": {
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{}"
+            },
+            "description": "Webhook",
+            "header": [],
+            "method": "POST",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "telegram",
+                "webhook"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/api/telegram/webhook"
+            }
+          },
+          "response": []
+        }
+      ],
+      "name": "telegram"
+    },
+    {
+      "id": "8f67e697-ca7d-5cd0-b56d-bdac161767cd",
+      "item": [
+        {
+          "id": "ffb3bf16-13d6-5fd1-b3bc-d255691d184b",
+          "name": "DELETE /api/watchlists/{watchlist_id}",
+          "request": {
+            "description": "Delete Watchlist",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "type": "text",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "method": "DELETE",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watchlists",
+                "1"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/api/watchlists/1"
+            }
+          },
+          "response": []
+        },
+        {
+          "id": "209e463d-45a9-5e1f-9ced-8c7dcd9d7e8a",
+          "name": "DELETE /api/watchlists/{watchlist_id}/items/{item_id}",
+          "request": {
+            "description": "Remove Item",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "type": "text",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "method": "DELETE",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watchlists",
+                "1",
+                "items",
+                "1"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/api/watchlists/1/items/1"
+            }
+          },
+          "response": []
+        },
+        {
+          "id": "11672204-8601-5765-83c1-b96702a0712d",
+          "name": "GET /api/watchlists",
+          "request": {
+            "description": "List Watchlists",
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watchlists"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/api/watchlists"
+            }
+          },
+          "response": []
+        },
+        {
+          "id": "3d4233c0-4b56-53c5-b517-1f252d1162bb",
+          "name": "GET /api/watchlists/{watchlist_id}/feed",
+          "request": {
+            "description": "Watchlist Feed",
+            "header": [],
+            "method": "GET",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watchlists",
+                "1",
+                "feed"
+              ],
+              "query": [
+                {
+                  "disabled": true,
+                  "key": "limit",
+                  "value": "100"
+                }
+              ],
+              "raw": "{{baseUrl}}/api/watchlists/1/feed"
+            }
+          },
+          "response": []
+        },
+        {
+          "id": "05050709-9026-5649-a356-196cf6a396ca",
+          "name": "POST /api/watchlists",
+          "request": {
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\n  \"name\": \"string\"\n}"
+            },
+            "description": "Create Watchlist",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "type": "text",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "method": "POST",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watchlists"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/api/watchlists"
+            }
+          },
+          "response": []
+        },
+        {
+          "id": "cba8bb96-455e-5177-9c49-fb8f0d38345f",
+          "name": "POST /api/watchlists/{watchlist_id}/items",
+          "request": {
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\n  \"kind\": \"ticker\",\n  \"value\": \"string\"\n}"
+            },
+            "description": "Add Item",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "type": "text",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "method": "POST",
+            "url": {
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watchlists",
+                "1",
+                "items"
+              ],
+              "query": [],
+              "raw": "{{baseUrl}}/api/watchlists/1/items"
+            }
+          },
+          "response": []
+        }
+      ],
+      "name": "watchlists"
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "type": "string",
+      "value": "http://localhost:8010"
+    },
+    {
+      "key": "apiKey",
+      "type": "string",
+      "value": "local-dev-key"
+    }
+  ]
+}

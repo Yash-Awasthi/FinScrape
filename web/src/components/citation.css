@@ -1,0 +1,12 @@
+.cite {
+  font-size: 11px;
+  color: var(--muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.cite:hover,
+.cite:focus-visible {
+  color: var(--accent);
+  text-decoration: underline;
+}

@@ -25,6 +25,7 @@ re-recording fails the run instead of quietly measuring the old text.
 from __future__ import annotations
 
 import argparse
+import calendar
 import hashlib
 import json
 import os
@@ -33,6 +34,7 @@ import statistics
 import sys
 import time
 from dataclasses import dataclass, field
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -112,6 +114,7 @@ class Case:
     verdict: str | None
     reason: str
     provenance: str
+    published_at: str = ""
 
 
 @dataclass
@@ -191,6 +194,7 @@ def load_gold(path: Path = GOLD) -> list[Case]:
                 verdict=row.get("verdict"),
                 reason=row.get("reason", ""),
                 provenance=row.get("provenance", ""),
+                published_at=row.get("published_at") or row.get("date") or "",
             )
         )
     return cases
@@ -371,6 +375,152 @@ def run_replay(cases: list[Case], path: Path, variant: str) -> tuple[list[Result
     return results, header.get("model", "recorded")
 
 
+# ---------------------------------------------------------------------------
+# Walk-forward evaluation (plan M5.2)
+#
+# A single score over the whole gold set hides drift and leaks the future: a case that
+# happened in November was never available in September, so scoring September with it is
+# look-ahead. Walk-forward fixes the shape: cases are bucketed by the month they happened,
+# each month is scored on its own, and the prompt fingerprint is pinned per period so a
+# prompt edit cannot silently re-score an old month with new text.
+# ---------------------------------------------------------------------------
+
+
+class LookAheadError(RuntimeError):
+    """A case dated outside the period it is being scored in."""
+
+
+class PromptDrift(RuntimeError):
+    """The prompt changed inside a period that already has a frozen fingerprint."""
+
+
+def case_date(case: Case) -> date:
+    """The case's own date; a bare month or missing date is refused, never guessed."""
+    text = (case.published_at or "").strip()[:10]
+    if not text:
+        raise LookAheadError(f"case #{case.id} carries no date")
+    try:
+        return datetime.fromisoformat(text).date()
+    except ValueError as exc:
+        raise LookAheadError(
+            f"case #{case.id} has unparsable date {case.published_at!r}"
+        ) from exc
+
+
+def month_label(day: date) -> str:
+    return f"{day.year:04d}-{day.month:02d}"
+
+
+def month_bounds(label: str) -> tuple[date, date]:
+    year, month = (int(part) for part in label.split("-"))
+    return date(year, month, 1), date(year, month, calendar.monthrange(year, month)[1])
+
+
+def assert_within_period(label: str, case: Case) -> None:
+    """Refuse a case that a period is not allowed to see: no look-ahead, no guessing."""
+    first, last = month_bounds(label)
+    day = case_date(case)
+    if not first <= day <= last:
+        raise LookAheadError(
+            f"case #{case.id} dated {day} cannot be scored in period {label}"
+        )
+
+
+def walk_forward_split(cases: list[Case]) -> dict[str, list[Case]]:
+    """Bucket cases by month, refusing any case that falls outside its bucket.
+
+    The guard is not decorative: a caller that merges a later month into an earlier one
+    (the look-ahead this feature exists to stop) lands here and fails instead of quietly
+    inflating the older period.
+    """
+    buckets: dict[str, list[Case]] = {}
+    for case in cases:
+        buckets.setdefault(month_label(case_date(case)), []).append(case)
+    for label, rows in buckets.items():
+        for case in rows:
+            assert_within_period(label, case)
+    return buckets
+
+
+def prompt_fingerprint_for(variant: str) -> str:
+    return prompt_fingerprint(*_prompt_pair(variant))
+
+
+def load_ledger(path: Path) -> dict[str, Any]:
+    if not path.is_file():
+        return {}
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise PromptDrift(f"{path}: not a prompt ledger")
+    return payload
+
+
+def walk_forward_report(
+    results: list[Result],
+    variant: str,
+    ledger_path: Path | None = None,
+) -> list[dict[str, Any]]:
+    """Score each month separately, freezing one prompt fingerprint per period.
+
+    The ledger is the cross-run guard: the first run records the fingerprint that scored a
+    month, and a later run with different prompt text for that same month raises instead of
+    mixing prompt versions inside one series.
+    """
+    fingerprint = prompt_fingerprint_for(variant)
+    ledger = load_ledger(ledger_path) if ledger_path else {"periods": {}}
+    periods = ledger.setdefault("periods", {})
+    by_id = {r.case.id: r for r in results}
+    buckets = walk_forward_split([r.case for r in results])
+    rows = []
+    for label in sorted(buckets):
+        frozen = periods.get(label)
+        if frozen and frozen != fingerprint:
+            raise PromptDrift(
+                f"period {label} was scored with prompt {frozen} but this run uses "
+                f"{fingerprint}; a prompt change starts a new series, not a silent rescore"
+            )
+        periods[label] = fingerprint
+        bucket = [by_id[case.id] for case in buckets[label]]
+        m = measure(bucket, "", variant)
+        rows.append(
+            {
+                "period": label,
+                "cases": m.cases,
+                "sector_accuracy": m.sector_accuracy,
+                "json_validity": m.json_validity,
+                "verdict_agreement": m.verdict_agreement,
+                "verdict_cases": m.verdict_scored,
+                "p50": m.p50,
+                "p90": m.p90,
+                "prompt_fingerprint": fingerprint,
+            }
+        )
+    if ledger_path:
+        ledger_path.parent.mkdir(parents=True, exist_ok=True)
+        ledger_path.write_text(json.dumps(ledger, indent=2) + "\n", encoding="utf-8")
+    return rows
+
+
+def print_walk_forward(rows: list[dict[str, Any]]) -> None:
+    print("walk-forward, one row per month (no case from a later month is scored)")
+    print("period    cases  sector  JSON    verdict        p50/p90 ms  prompt")
+    for r in rows:
+        verdict = (
+            f"{r['verdict_agreement']:.1%} ({r['verdict_cases']})"
+            if r["verdict_cases"]
+            else "n/a"
+        )
+        print(
+            f"{r['period']:<9} {r['cases']:>5}  {r['sector_accuracy']:>6.1%}  "
+            f"{r['json_validity']:>5.1%}  {verdict:<13}  "
+            f"{r['p50']:>.0f}/{r['p90']:.0f} ms  {r['prompt_fingerprint']}"
+        )
+    if len(rows) < 2:
+        print(
+            "one period only: a per-month series needs two or more months of dated cases"
+        )
+
+
 def baseline_for(model: str, variant: str, doc: Path | None = None) -> float | None:
     """Sector accuracy of the newest stored run for this model + prompt, if any."""
     doc = doc or EVAL_DOC
@@ -421,6 +571,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--limit", type=int, default=0, help="only the first N cases")
     parser.add_argument(
+        "--gold",
+        default=str(GOLD),
+        help="gold set to evaluate; --walk-forward needs one that carries dates",
+    )
+    parser.add_argument(
         "--replay", default="", help="recorded run to score instead of calling a model"
     )
     parser.add_argument("--record", default="", help="write a replay file for this run")
@@ -434,12 +589,22 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--from-json", default="", help="gate a stored --json result instead of running"
     )
+    parser.add_argument(
+        "--walk-forward",
+        action="store_true",
+        help="score each month separately; refuses undated cases",
+    )
+    parser.add_argument(
+        "--frozen-prompts",
+        default="",
+        help="JSON ledger pinning the prompt fingerprint of every scored period",
+    )
     args = parser.parse_args(argv)
 
     if args.from_json:
         return _gate_stored(Path(args.from_json))
 
-    cases = load_gold()
+    cases = load_gold(Path(args.gold))
     if args.limit:
         cases = cases[: args.limit]
 
@@ -463,6 +628,21 @@ def main(argv: list[str] | None = None) -> int:
     print(f"latency         p50 {m.p50:.0f} ms · p90 {m.p90:.0f} ms")
     for failure in m.failures[:10]:
         print(f"  ! {failure}")
+
+    if args.walk_forward:
+        undated = sum(1 for c in cases if not c.published_at)
+        if undated:
+            print(
+                f"walk-forward needs dated cases: {undated} of {len(cases)} carry no date"
+            )
+            return 2
+        ledger = Path(args.frozen_prompts) if args.frozen_prompts else None
+        try:
+            walk_forward = walk_forward_report(results, m.prompt_variant, ledger)
+        except (LookAheadError, PromptDrift) as exc:
+            print(f"walk-forward: {exc}")
+            return 1
+        print_walk_forward(walk_forward)
 
     if args.json:
         Path(args.json).write_text(

@@ -9,12 +9,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 
 from server import cache, db
 
+log = logging.getLogger("worldfin.routes.insight")
 router = APIRouter()
 
 # Scenarios advise only from recent LLM-analysed news: keyword-fallback verdicts,
@@ -166,6 +168,196 @@ async def predict_event(event_id: int) -> dict:
     return result
 
 
+# A scenario is rebuilt on a cache miss, so "history" means "what it said the last
+# time it was computed". A row is kept when the number moved by at least 0.5 point or
+# the last stored point is over an hour old; a page reload must not add a point.
+_HISTORY_EPSILON = 0.005
+_HISTORY_MAX_AGE_SECONDS = 3600
+
+
+def should_record(
+    previous: float | None, current: float, age_seconds: float | None
+) -> bool:
+    """Whether this recompute deserves a history row (pure, so it can be tested)."""
+    if previous is None or age_seconds is None:
+        return True
+    return (
+        abs(current - previous) >= _HISTORY_EPSILON
+        or age_seconds >= _HISTORY_MAX_AGE_SECONDS
+    )
+
+
+async def _record_history(items: list[dict]) -> None:
+    """Store the probability of each scenario that is new or has moved.
+
+    Failing to write history must never fail the advice that was just computed.
+    """
+    try:
+        for item in items:
+            sid = item.get("id")
+            if not sid:
+                continue
+            last = await db.pool().fetchrow(
+                "SELECT probability, extract(epoch FROM now() - computed_at) AS age "
+                "FROM scenario_history WHERE scenario_id = $1 "
+                "ORDER BY computed_at DESC LIMIT 1",
+                sid,
+            )
+            previous = float(last["probability"]) if last else None
+            age = float(last["age"]) if last and last["age"] is not None else None
+            current = float(item.get("probability") or 0.5)
+            if not should_record(previous, current, age):
+                continue
+            await db.pool().execute(
+                "INSERT INTO scenario_history (scenario_id, probability, n_members) "
+                "VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+                sid,
+                current,
+                int(item.get("n_members") or item.get("size") or 0),
+            )
+    except Exception:
+        log.warning("scenario history write failed", exc_info=True)
+
+
+def _event_from_row(r: Any) -> dict[str, Any]:
+    """One `_SCENARIO_COLUMNS` row as the dict the scenario engine grades."""
+    return {
+        "id": r["id"],
+        "subject": r["subject"],
+        "reasoning": r["reasoning"] or "",
+        "verdict": r["verdict"],
+        "signal_score": r["signal_score"],
+        "confidence": r["confidence"],
+        "event_type": r["event_type"],
+        "magnitude": r["magnitude"],
+        "actionability": r["actionability"],
+        "sector_impact": r["sector_impact"] or "",
+        "divergence_flag": bool(r["divergence_flag"]),
+        "tickers": _jsonish(r["tickers"], []),
+        "sources": _jsonish(r["sources"], []),
+        "articles": _jsonish(r["articles"], []),
+        "affected_entities": _jsonish(r["affected_entities"], []),
+        "second_order_effects": _jsonish(r["second_order_effects"], []),
+        "created_at": r["created_at"].isoformat() if r["created_at"] else None,
+    }
+
+
+def _member_row(r: Any) -> dict:
+    return {
+        "id": r["id"],
+        "subject": r["subject"],
+        "verdict": r["verdict"],
+        "signal_score": r["signal_score"],
+        "confidence": float(r["confidence"] or 0.5),
+        "sector_impact": r["sector_impact"] or "",
+        "timestamp": r["timestamp"].isoformat() if r["timestamp"] else None,
+        "sources": _jsonish(r["sources"], []),
+    }
+
+
+async def _what_if(
+    item: dict[str, Any], ids: list[int], exclude: int, window: int
+) -> dict[str, Any]:
+    """Rebuild the scenario with one member dropped, for the what-if strip.
+
+    Hypothetical only: nothing is stored and no history row is written, so the
+    stored scenario keeps its probability.
+    """
+    if exclude not in ids:
+        raise HTTPException(
+            status_code=400,
+            detail=f"exclude {exclude} is not a member of this scenario",
+        )
+    if len(ids) < 2:
+        raise HTTPException(
+            status_code=400,
+            detail="a scenario with one member cannot lose a member",
+        )
+
+    from finscrape.signals.scenarios import build_scenarios
+
+    rows = await db.pool().fetch(_SCENARIO_COLUMNS, window)
+    keep = set(ids) - {exclude}
+    cluster = {
+        "members": [_event_from_row(r) for r in rows if r["id"] in keep],
+        "top_subject": item["title"],
+        "reports": item.get("reports") or 0,
+        "sources": item.get("sources") or [],
+        "first_seen": item.get("first_seen"),
+    }
+    outcomes = await _outcomes_from_pool()
+    built = await asyncio.to_thread(
+        lambda: build_scenarios([cluster], outcomes, limit=1)
+    )
+    if not built:
+        raise HTTPException(
+            status_code=400, detail="the remaining members do not form a scenario"
+        )
+    rebuilt = built[0]
+    return {
+        "excluded_id": exclude,
+        "probability": float(rebuilt["probability"]),
+        "n_members": int(rebuilt["n_members"]),
+        "ci95": rebuilt["ci95"],
+        "label": "hypothetical: this member removed",
+    }
+
+
+@router.get("/api/scenarios/{scenario_id}")
+async def scenario_detail(
+    scenario_id: str,
+    window: int = Query(200, ge=20, le=500),
+    exclude: int | None = Query(None),
+) -> dict:
+    """One scenario with its member events and the window it was built from.
+
+    The id is `s<min member id>`, so it is stable while those members stay in the
+    window; a caller that lands on a stale id gets a 404 rather than a guess.
+    `exclude` drops one member and recomputes, which the page shows as a what-if.
+    """
+    payload = await scenarios(limit=20, window=window)
+    item = next((s for s in payload["scenarios"] if s["id"] == scenario_id), None)
+    if item is None:
+        raise HTTPException(status_code=404, detail="scenario not found")
+    ids = [int(i) for i in item.get("member_ids") or [] if isinstance(i, int)]
+    what_if = (
+        await _what_if(item, ids, exclude, window) if exclude is not None else None
+    )
+    rows = (
+        await db.pool().fetch(
+            "SELECT id, subject, verdict, signal_score, confidence, sector_impact, "
+            "timestamp, sources FROM events WHERE id = ANY($1::bigint[]) "
+            "ORDER BY timestamp DESC",
+            ids,
+        )
+        if ids
+        else []
+    )
+    history = await db.pool().fetch(
+        "SELECT probability, n_members, computed_at FROM scenario_history "
+        "WHERE scenario_id = $1 ORDER BY computed_at DESC LIMIT 60",
+        scenario_id,
+    )
+    return {
+        "scenario": item,
+        "members": [_member_row(r) for r in rows],
+        "history": [
+            {
+                "probability": float(h["probability"]),
+                "n_members": h["n_members"],
+                "at": h["computed_at"].isoformat() if h["computed_at"] else None,
+            }
+            for h in reversed(history)
+        ],
+        "window": {
+            "events_considered": payload.get("events_considered", 0),
+            "event_cap": window,
+            "lookback_days": 14,
+        },
+        "what_if": what_if,
+    }
+
+
 @router.get("/api/scenarios")
 async def scenarios(
     limit: int = Query(6, ge=1, le=20),
@@ -191,28 +383,7 @@ async def scenarios(
         return {"scenarios": hit, "events_considered": considered}
 
     rows = await db.pool().fetch(_SCENARIO_COLUMNS, window)
-    events = [
-        {
-            "id": r["id"],
-            "subject": r["subject"],
-            "reasoning": r["reasoning"] or "",
-            "verdict": r["verdict"],
-            "signal_score": r["signal_score"],
-            "confidence": r["confidence"],
-            "event_type": r["event_type"],
-            "magnitude": r["magnitude"],
-            "actionability": r["actionability"],
-            "sector_impact": r["sector_impact"] or "",
-            "divergence_flag": bool(r["divergence_flag"]),
-            "tickers": _jsonish(r["tickers"], []),
-            "sources": _jsonish(r["sources"], []),
-            "articles": _jsonish(r["articles"], []),
-            "affected_entities": _jsonish(r["affected_entities"], []),
-            "second_order_effects": _jsonish(r["second_order_effects"], []),
-            "created_at": r["created_at"].isoformat() if r["created_at"] else None,
-        }
-        for r in rows
-    ]
+    events = [_event_from_row(r) for r in rows]
     outcomes = await _outcomes_from_pool()
 
     built = await asyncio.to_thread(
@@ -222,4 +393,5 @@ async def scenarios(
             lambda: build_scenarios(build_storylines(events), outcomes, limit=limit),
         )
     )
+    await _record_history(built)
     return {"scenarios": built, "events_considered": len(events)}

@@ -41,7 +41,7 @@ The API reads `$PORT` (Render injects it; `settings.port` aliases `WORLDFIN_PORT
 - `backup.yml` dumps production nightly, encrypted with `BACKUP_KEY` (GitHub secret and local `.env`), as a 14-day artifact. Restore: `gh run download <run> -n worldfin-<run>`, then `openssl enc -d -aes-256-cbc -pbkdf2 -pass env:BACKUP_KEY -in worldfin.dump.enc -out worldfin.dump` and `pg_restore -d <url> --no-owner worldfin.dump`.
 
 ## Known free-tier limits
-- Worker updates the dashboard on **refresh**, not live WS push (cross-process WS needs Redis — deferred).
+- Worker-ingested rows reach the dashboard through the refresh loop's `/api/stats` poll; WebSocket fan-out across API processes is Redis pub/sub, wired but off until `WORLDFIN_REDIS_URL` is set ([ADR 0006](adr/0006-ws-fanout.md), [ADR 0001](adr/0001-no-redis-yet.md)).
 - GitHub skips schedules under load and turns them off after 60 days without commits, so no workflow has a GitHub schedule; the cron Worker dispatches them all.
 - Supabase free: 500 MB database, paused after a week without activity (the ingest cron keeps it active); TokenHarbor free models have usage caps — the heuristic fallback absorbs LLM exhaustion.
 

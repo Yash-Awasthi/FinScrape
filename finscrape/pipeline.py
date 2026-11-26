@@ -10,12 +10,13 @@ from __future__ import annotations
 import logging
 import re
 import threading
+from datetime import UTC, datetime
 from difflib import SequenceMatcher
 from typing import Any, Protocol
 
 from finscrape.agents import DEFAULT_AGENTS, AgentCouncil
 from finscrape.analysis import laya, sp500
-from finscrape.analysis.ai_client import call_ai
+from finscrape.analysis.ai_client import begin_analysis, budget_blocked, call_ai
 from finscrape.analysis.embeddings import most_similar
 from finscrape.analysis.fallback import analyze_without_llm
 from finscrape.analysis.market_reaction import apply_market_confirmation
@@ -77,6 +78,7 @@ class FinScrapePipeline:
         """Run AI analysis + heuristic validation on a single article."""
         self._tls.merged_into = None
         self._tls.ai_failed = False
+        begin_analysis()
 
         # Pre-LLM relevance gate: junk lifestyle pieces and transient event
         # briefs (minor quakes, forming storms) never reach the AI or the DB.
@@ -99,11 +101,23 @@ class FinScrapePipeline:
             result = self._analyze_with_single_ai(article)
 
         if not result:
-            # Zero-cost mode: LLM unavailable / budget-capped → heuristic + entity-map
+            # Zero-cost mode: LLM unavailable / budget-capped -> heuristic + entity-map
             # tickers so ingestion never stalls (opt-in: FINSCRAPE_HEURISTIC_FALLBACK).
-            # The event lands with a heuristic verdict, enrichable on demand (/api/ai/analyze).
-            if env_bool("FINSCRAPE_HEURISTIC_FALLBACK"):
+            # A budget block forces the downgrade even when the opt-in is off, and the
+            # row records the reason so it can be re-analysed later.
+            budget_downgrade = budget_blocked()
+            if env_bool("FINSCRAPE_HEURISTIC_FALLBACK") or budget_downgrade:
                 result = self._heuristic_only(article, nlp_result)
+                if result is not None and budget_downgrade:
+                    result.setdefault("key_metrics", {})[
+                        "fallback_reason"
+                    ] = "daily_token_ceiling"
+                    logger.warning(
+                        "stage=analysis budget downgrade: daily token ceiling reached "
+                        "(source=%s title=%r)",
+                        source_name,
+                        article.title[:70],
+                    )
             if not result:
                 self._tls.ai_failed = True
                 logger.warning(
@@ -232,6 +246,14 @@ class FinScrapePipeline:
                 reverse=True,
             )[:3]
             key_metrics["market_reaction"] = top
+        # Which layer picked the sector, kept on the row so the UI can show the chain
+        # rather than only the winner (plan m4.2.1, m5.1).
+        key_metrics["sector_chain"] = {
+            "laya": getattr(laya_view, "sector", "") or "",
+            "model": str(result.get("sector_impact") or ""),
+            "keyword": str(getattr(nlp_result, "sector", "") or ""),
+            "chosen": sector,
+        }
         if confirmation.evidence:
             key_metrics["market_confirmation"] = confirmation.evidence
         for k, v in nlp_metrics.items():
@@ -268,6 +290,8 @@ class FinScrapePipeline:
             # verdict is model output by construction.
             analysis_source=result.get("analysis_source") or ("heuristic" if heuristic else "model"),
             model_name=result.get("model_name", ""),
+            excerpt=" ".join(article.text.split())[:600],
+            source_seen={source_name: datetime.now(UTC).isoformat()},
         )
 
         # Deduplication

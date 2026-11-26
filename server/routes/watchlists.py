@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from server import db, queries
 from server.auth import require_api_key
 from server.correlate import annotate_topics
-from server.schemas import WatchlistIn
+from server.schemas import WatchlistIn, WatchlistItemIn
 
 router = APIRouter()
 
@@ -59,6 +59,37 @@ async def create_watchlist(
             raise HTTPException(status_code=400, detail="invalid watchlist value")
         raise
     return {"ok": True, "watchlist": watchlist}
+
+
+@router.post(
+    "/api/watchlists/{watchlist_id}/items",
+    dependencies=[Depends(require_api_key)],
+    status_code=201,
+)
+async def add_item(
+    watchlist_id: int, payload: WatchlistItemIn, owner: str = Depends(owner_key)
+) -> dict:
+    item = await queries.add_watchlist_item(
+        db.pool(), watchlist_id, owner, payload.kind, payload.value
+    )
+    if item is None:
+        raise HTTPException(status_code=404, detail="watchlist not found")
+    return {"ok": True, "item": item}
+
+
+@router.delete(
+    "/api/watchlists/{watchlist_id}/items/{item_id}",
+    dependencies=[Depends(require_api_key)],
+)
+async def remove_item(
+    watchlist_id: int, item_id: int, owner: str = Depends(owner_key)
+) -> dict:
+    removed = await queries.remove_watchlist_item(
+        db.pool(), watchlist_id, owner, item_id
+    )
+    if not removed:
+        raise HTTPException(status_code=404, detail="item not found")
+    return {"ok": True, "id": item_id}
 
 
 @router.delete(

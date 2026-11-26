@@ -316,3 +316,46 @@ async def get_watchlist_feed(
         return None
     rows = await pool.fetch(_FEED_SQL.format(shown=_SHOWN), watchlist_id, limit)
     return [dict(row) for row in rows]
+
+
+async def add_watchlist_item(
+    pool: asyncpg.Pool, watchlist_id: int, owner_key: str, kind: str, value: str
+) -> dict | None:
+    """None when the list is not this owner's; the item row otherwise."""
+    owned = await pool.fetchval(
+        "SELECT 1 FROM watchlists WHERE id = $1 AND owner_key = $2",
+        watchlist_id,
+        owner_key,
+    )
+    if owned is None:
+        return None
+    row = await pool.fetchrow(
+        "INSERT INTO watchlist_items (watchlist_id, kind, value) VALUES ($1, $2, $3) "
+        "ON CONFLICT (watchlist_id, kind, value) DO NOTHING RETURNING id, kind, value",
+        watchlist_id,
+        kind,
+        value.strip(),
+    )
+    if row is None:  # already followed: same answer, no error
+        row = await pool.fetchrow(
+            "SELECT id, kind, value FROM watchlist_items "
+            "WHERE watchlist_id = $1 AND kind = $2 AND value = $3",
+            watchlist_id,
+            kind,
+            value.strip(),
+        )
+    return dict(row) if row else None
+
+
+async def remove_watchlist_item(
+    pool: asyncpg.Pool, watchlist_id: int, owner_key: str, item_id: int
+) -> bool:
+    status = await pool.execute(
+        "DELETE FROM watchlist_items wi USING watchlists w "
+        "WHERE wi.id = $1 AND wi.watchlist_id = $2 AND w.id = wi.watchlist_id "
+        "AND w.owner_key = $3",
+        item_id,
+        watchlist_id,
+        owner_key,
+    )
+    return status != "DELETE 0"

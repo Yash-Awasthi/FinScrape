@@ -17,6 +17,8 @@ from typing import Any
 
 from finscrape.analysis.sectors import normalize as normalize_sectors
 from finscrape.analysis.validator import clean_tickers
+from finscrape.signals.source_weights import hit_rates
+from finscrape.signals.source_weights import prior as _source_prior
 
 # How much one member steers its scenario. An event graded high-magnitude and
 # high-actionability moves the advice more than a footnote does, and low
@@ -59,6 +61,12 @@ def event_weight(event: dict[str, Any]) -> float:
 def _sectors_of(event: dict[str, Any]) -> list[str]:
     # "other" means no sector is moved; as a leg it produced "reduce other".
     return [s for s in normalize_sectors(event.get("sector_impact")) if s != "other"]
+
+
+def _source_of(event: dict[str, Any]) -> str:
+    """First source, normalised the way reliability tables key it."""
+    sources = event.get("sources") or []
+    return str(sources[0]).split("/")[0].strip() if sources else "unknown"
 
 
 def _tickers_of(event: dict[str, Any]) -> list[str]:
@@ -165,6 +173,7 @@ def score_scenario(
     cluster: dict[str, Any],
     outcomes: list[dict[str, Any]],
     predict_fn: Callable[..., dict[str, Any]],
+    source_priors: dict[str, float] | None = None,
 ) -> dict[str, Any] | None:
     """One cluster to one scenario. None when the cluster carries no members."""
     members = [m for m in cluster.get("members") or [] if isinstance(m, dict)]
@@ -178,10 +187,17 @@ def score_scenario(
     tiers: list[str] = []
     sample_size = 0
     divergent = 0
+    applied: dict[str, float] = {}
+    priors = source_priors or {}
+    # Raw member probabilities, for the spread that becomes the interval.
+    spread: list[tuple[float, float]] = []
 
     for member in members:
-        weight = event_weight(member)
         sources = member.get("sources") or []
+        source = _source_of(member)
+        weight = event_weight(member) * priors.get(source, 1.0)
+        if source in priors:
+            applied[source] = round(priors[source], 4)
         subject = str(member.get("subject") or "")
         reasoning = str(member.get("reasoning") or "")
         prediction = predict_fn(
@@ -198,6 +214,7 @@ def score_scenario(
         sample_size = max(sample_size, int(tables.get("sample_size") or 0))
         weighted_p += p_positive * weight
         total_weight += weight
+        spread.append((p_positive, weight))
         if member.get("divergence_flag"):
             divergent += 1
 
@@ -225,6 +242,18 @@ def score_scenario(
     # Probability the scenario's own call lands, on the axis predict() puts a
     # single verdict on: never a number below a coin flip.
     probability = p_positive if p_positive >= 0.5 else 1.0 - p_positive
+    # A scenario's probability is a weighted mean of its members, so the interval
+    # comes from how far those members sit from it: se = sqrt(weighted variance / n).
+    # One member has no spread to measure, so it gets no interval rather than a fake one.
+    ci95: list[float] | None = None
+    if len(spread) > 1 and total_weight > 0:
+        mean = sum(p * w for p, w in spread) / total_weight
+        var = sum(w * (p - mean) ** 2 for p, w in spread) / total_weight
+        se = (var / len(spread)) ** 0.5
+        ci95 = [
+            round(max(0.5, probability - 1.96 * se), 3),
+            round(min(1.0, probability + 1.96 * se), 3),
+        ]
 
     member_ids = [m.get("id") for m in members if m.get("id") is not None]
     # Cluster ids are ints; the cast only exists for `min`, which the stubs will not accept
@@ -239,6 +268,8 @@ def score_scenario(
         "size": len(members),
         "reports": int(cluster.get("reports") or len(members)),
         "probability": round(probability, 3),
+        "ci95": ci95,
+        "n_members": len(members),
         "direction": direction,
         "stance": stance,
         "tilt": round(tilt, 3),
@@ -253,6 +284,7 @@ def score_scenario(
         "advice": _advice(stance, sectors, exposure, bool(sector_tilt or ticker_tilt)),
         "member_ids": member_ids,
         "sources": cluster.get("sources") or [],
+        "source_priors": dict(sorted(applied.items())),
         "first_seen": cluster.get("first_seen"),
     }
 
@@ -287,8 +319,13 @@ def build_scenarios(
 
         predict_fn = _default_predict
 
+    # One pass over the outcomes per request; the rows are tiny and pure.
+    priors = {
+        source: _source_prior(cell) for source, cell in hit_rates(outcomes).items()
+    }
+
     def _score(pool: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        scored = [score_scenario(c, outcomes, predict_fn) for c in pool]
+        scored = [score_scenario(c, outcomes, predict_fn, priors) for c in pool]
         return [s for s in scored if s]
 
     def _corroboration(cluster: dict[str, Any]) -> int:

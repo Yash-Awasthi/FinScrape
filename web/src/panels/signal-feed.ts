@@ -5,9 +5,12 @@
 // from several sources within a 48h window) collapse under their top row as a
 // "+N sources" expander, so five syndicated copies stop becoming five rows.
 
-import { type EventOut, type Storyline, verdictColor } from "../api";
+import { type EventOut, type Storyline } from "../api";
 import { escapeHtml, timeAgo } from "../util";
+import { verdictChip } from "../verdict-chip";
 import { follow } from "../watchlist";
+import { citeLink } from "../components/citation";
+import { hasFilters, readFilters, writeFilters, type Filters } from "../app/url-filters";
 import { Panel } from "./panel";
 
 /** The chip that says who judged this row. Model rows stay clean: the badge exists so a
@@ -52,10 +55,12 @@ function followable(tickers: string[]): string {
 }
 
 export class SignalFeedPanel extends Panel {
-  private verdictFilter = "ALL";
-  private sectorFilter = "";
-  private sourceFilter = "";
-  private topicFilter = "";
+  // The address bar is the source of truth on load: a reload keeps the lens.
+  private filtersFromUrl = readFilters(typeof window === "undefined" ? "" : window.location.search);
+  private verdictFilter = this.filtersFromUrl.verdict;
+  private sectorFilter = this.filtersFromUrl.sector;
+  private sourceFilter = this.filtersFromUrl.source;
+  private topicFilter = this.filtersFromUrl.topic;
   // Survives re-renders: a live WS push must not silently drop your selection.
   private activeId: number | null = null;
   private lastEvents: EventOut[] = [];
@@ -69,6 +74,7 @@ export class SignalFeedPanel extends Panel {
       const sector = (e as CustomEvent<string>).detail;
       if (!sector) return;
       this.sectorFilter = this.sectorFilter === sector ? "" : sector;
+      this.syncUrl();
       this.update(this.lastEvents);
     });
     // Source Health rows do the same, so a failing or noisy feed can be isolated.
@@ -76,8 +82,24 @@ export class SignalFeedPanel extends Panel {
       const source = (e as CustomEvent<string>).detail;
       if (!source) return;
       this.sourceFilter = this.sourceFilter === source ? "" : source;
+      this.syncUrl();
       this.update(this.lastEvents);
     });
+  }
+
+  /** The four lens values as one object, for the URL. */
+  private filters(): Filters {
+    return {
+      verdict: this.verdictFilter,
+      sector: this.sectorFilter,
+      source: this.sourceFilter,
+      topic: this.topicFilter,
+    };
+  }
+
+  /** A filter change is a new address, not a new page. */
+  private syncUrl(): void {
+    writeFilters(this.filters());
   }
 
   /** Rows currently rendered and visible, in feed order — what j/k walks. */
@@ -145,17 +167,31 @@ export class SignalFeedPanel extends Panel {
             `<button class="ffilter topic${t === this.topicFilter ? " active" : ""}" data-topic="${escapeHtml(t)}" title="only signals driven by ${escapeHtml(t)} news">${escapeHtml(TOPIC_LABELS[t] ?? t)}</button>`,
         )
         .join("") +
+      (hasFilters(this.filters())
+        ? `<button class="ffilter clear-all" data-clear-all="true" title="clear every filter and the address bar">Clear all</button>`
+        : "") +
       `</div>`;
     wrap.addEventListener("click", (e) => {
+      if ((e.target as HTMLElement).closest("[data-clear-all]")) {
+        this.verdictFilter = "ALL";
+        this.sectorFilter = "";
+        this.sourceFilter = "";
+        this.topicFilter = "";
+        this.syncUrl();
+        this.update(this.lastEvents);
+        return;
+      }
       const sectorBtn = (e.target as HTMLElement).closest<HTMLElement>("[data-sector]");
       if (sectorBtn) {
         this.sectorFilter = "";
+        this.syncUrl();
         this.update(this.lastEvents);
         return;
       }
       const sourceBtn = (e.target as HTMLElement).closest<HTMLElement>("[data-source]");
       if (sourceBtn) {
         this.sourceFilter = "";
+        this.syncUrl();
         this.update(this.lastEvents);
         return;
       }
@@ -163,15 +199,25 @@ export class SignalFeedPanel extends Panel {
       if (topicBtn) {
         const topic = topicBtn.dataset.topic ?? "";
         this.topicFilter = this.topicFilter === topic ? "" : topic;
+        this.syncUrl();
         this.update(this.lastEvents);
         return;
       }
       const v = (e.target as HTMLElement).closest<HTMLElement>(".ffilter")?.dataset.v;
       if (v) {
         this.verdictFilter = v;
+        this.syncUrl();
         this.update(this.lastEvents);
       }
     });
+    // A citation is a navigation, not a row selection: catch it above the row handler.
+    wrap.addEventListener(
+      "click",
+      (e) => {
+        if ((e.target as HTMLElement).closest("a.cite")) e.stopPropagation();
+      },
+      true,
+    );
     wrap.append(this.buildTable(events));
     this.setContent(wrap);
   }
@@ -277,10 +323,10 @@ export class SignalFeedPanel extends Panel {
       ? `<span class="chain-badge" title="${nOrder} second-order effect${nOrder > 1 ? "s" : ""} — open the signal to see the chain">→${nOrder}</span>`
       : "";
     tr.innerHTML =
-      `<td><span class="dot" style="background:${verdictColor(e.verdict)}"></span>` +
-      `${e.verdict} <b>${e.signal_score >= 0 ? "+" : ""}${e.signal_score}</b>` +
+      `<td>${verdictChip(e.verdict)}` +
+      ` <b>${e.signal_score >= 0 ? "+" : ""}${e.signal_score}</b>` +
       `<span class="row-meta">${badge}${chainBadge}${sourceBadge(e.analysis_source)}${Math.round(e.confidence * 100)}% · ${followable(e.tickers)}` +
-      ` · ${timeAgo(e.timestamp)} · ${e.sources.length} src${e.divergence_flag ? ' · <span class="warn" title="the model and the text disagree on direction">divergent</span>' : ""}</span>` +
+      ` · ${timeAgo(e.timestamp)} · ${citeLink(e)}${e.divergence_flag ? ' · <span class="warn" title="the model and the text disagree on direction">divergent</span>' : ""}</span>` +
       `<div class="subj">${subject}</div>${reasoning}</td>`;
     for (const chip of tr.querySelectorAll<HTMLButtonElement>(".follow")) {
       chip.addEventListener("click", (ev) => {

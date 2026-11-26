@@ -24,6 +24,19 @@ from finscrape.settings import env
 logger = logging.getLogger(__name__)
 
 
+def _hhmm_minutes(value: Any) -> int | None:
+    """Minutes since midnight for "HH:MM", or None when the shape is wrong."""
+    if not isinstance(value, str) or len(value) != 5 or value[2] != ":":
+        return None
+    try:
+        hour, minute = int(value[:2]), int(value[3:])
+    except ValueError:
+        return None
+    if 0 <= hour < 24 and 0 <= minute < 60:
+        return hour * 60 + minute
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Data classes
 # ---------------------------------------------------------------------------
@@ -39,6 +52,7 @@ class Condition:
     VALID_FIELDS = frozenset({
         "verdict", "signal_score", "confidence", "tickers",
         "event_type", "sector_impact", "magnitude", "sources",
+        "sector", "topics",
     })
     VALID_OPERATORS = frozenset({
         "eq", "neq", "gt", "gte", "lt", "lte", "in", "contains", "not_in",
@@ -134,12 +148,38 @@ class AlertRule:
     created_at: str = field(
         default_factory=lambda: datetime.now(UTC).isoformat()
     )
+    quiet_hours: dict = field(default_factory=dict)
 
     def matches(self, event: dict) -> bool:
         """Return True if ALL conditions are satisfied (AND logic)."""
         if not self.conditions:
             return False
         return all(c.evaluate(event) for c in self.conditions)
+
+    def in_quiet_hours(self, now_utc: datetime) -> bool:
+        """True while now_utc falls inside this rule's quiet window.
+
+        quiet_hours is {"start": "HH:MM", "end": "HH:MM"} in UTC; the window is
+        half-open [start, end) and may cross midnight. start equal to end means
+        the whole day. An empty or malformed window is never quiet.
+        """
+        window = self.quiet_hours
+        if not isinstance(window, dict) or not window:
+            return False
+        start = _hhmm_minutes(window.get("start"))
+        end = _hhmm_minutes(window.get("end"))
+        if start is None or end is None:
+            return False
+        midnight = now_utc
+        if midnight.tzinfo is None:
+            midnight = midnight.replace(tzinfo=UTC)
+        midnight = midnight.astimezone(UTC)
+        minute = midnight.hour * 60 + midnight.minute
+        if start == end:
+            return True
+        if start < end:
+            return start <= minute < end
+        return minute >= start or minute < end
 
     def to_dict(self) -> dict:
         return {
@@ -149,6 +189,7 @@ class AlertRule:
             "actions": [a.to_dict() for a in self.actions],
             "enabled": self.enabled,
             "created_at": self.created_at,
+            "quiet_hours": self.quiet_hours,
         }
 
     @classmethod
@@ -160,6 +201,7 @@ class AlertRule:
             actions=[Action.from_dict(a) for a in data.get("actions", [])],
             enabled=data.get("enabled", True),
             created_at=data.get("created_at", ""),
+            quiet_hours=data.get("quiet_hours") or {},
         )
 
 
@@ -302,7 +344,9 @@ class AlertEngine:
         }
 
         try:
-            resp = requests.post(url, json=payload, headers=headers, timeout=10)
+            resp = requests.post(
+                url, json=payload, headers=headers, timeout=10, allow_redirects=False
+            )
             logger.info("Webhook POST to %s: HTTP %d", url, resp.status_code)
             return {"action_type": "webhook", "status": "ok", "http_status": resp.status_code}
         except RequestException as e:
@@ -458,7 +502,7 @@ class AlertEngine:
             payload["avatar_url"] = action.config["avatar_url"]
 
         try:
-            resp = requests.post(url, json=payload, timeout=10)
+            resp = requests.post(url, json=payload, timeout=10, allow_redirects=False)
             if resp.status_code in (200, 204):
                 logger.info("Discord alert sent successfully")
                 return {"action_type": "discord", "status": "ok"}
@@ -514,7 +558,7 @@ class AlertEngine:
             payload["icon_emoji"] = action.config["icon_emoji"]
 
         try:
-            resp = requests.post(url, json=payload, timeout=10)
+            resp = requests.post(url, json=payload, timeout=10, allow_redirects=False)
             if resp.status_code == 200:
                 logger.info("Slack alert sent successfully")
                 return {"action_type": "slack", "status": "ok"}
@@ -532,10 +576,13 @@ class AlertEngine:
 
         Rules:
         - Must use https:// scheme
-        - Must not point to private/loopback IPs
         - Must have a valid hostname
+        - Every address the hostname resolves to must be public; a name that
+          resolves to loopback, private, link-local, reserved or multicast space
+          is refused, so a DNS answer cannot point the fetch back inside.
         """
         import ipaddress
+        import socket
         from urllib.parse import urlparse
 
         try:
@@ -551,18 +598,29 @@ class AlertEngine:
         if not hostname:
             return False
 
-        # Block obvious private hostnames
-        blocked_hosts = {"localhost", "127.0.0.1", "0.0.0.0", "::1",
-                         "metadata.google.internal", "169.254.169.254"}
+        blocked_hosts = {"localhost", "metadata.google.internal"}
         if hostname.lower() in blocked_hosts:
             return False
 
-        # Try to check if it resolves to a private IP
         try:
-            addr = ipaddress.ip_address(hostname)
-            if addr.is_private or addr.is_loopback or addr.is_link_local:
+            infos = socket.getaddrinfo(
+                hostname, parsed.port or 443, type=socket.SOCK_STREAM
+            )
+        except OSError:
+            return False  # fail closed: an unresolvable name is not a webhook
+        if not infos:
+            return False
+
+        for info in infos:
+            addr = ipaddress.ip_address(info[4][0])
+            if (
+                addr.is_private
+                or addr.is_loopback
+                or addr.is_link_local
+                or addr.is_reserved
+                or addr.is_multicast
+                or addr.is_unspecified
+            ):
                 return False
-        except ValueError:
-            pass  # Not an IP literal — hostname is fine
 
         return True

@@ -1,0 +1,13 @@
+{
+  "label": "public sample, not production",
+  "source": "SEC EDGAR full-text search API",
+  "source_urls": [
+    "https://efts.sec.gov/LATEST/search-index?q=%22current+report%22&forms=8-K&dateRange=custom&startdt=2026-09-01&enddt=2026-09-30",
+    "https://efts.sec.gov/LATEST/search-index?q=%22current+report%22&forms=8-K&dateRange=custom&startdt=2026-10-01&enddt=2026-10-31"
+  ],
+  "licence": "US government work, public domain; SEC fair-access policy",
+  "retrieved_at": "2026-11-26T07:37:58Z",
+  "rows": 80,
+  "sha256": "129ef07a87bd20b5ba3ec45d06d7a7154f298b815d0003f3a331fbbd3e197186",
+  "label_rule": "SIC division table in scripts/gold_public_sample.py"
+}

@@ -1,5 +1,7 @@
 """Tests for the alert rules engine."""
 
+from datetime import UTC, datetime
+
 import pytest
 
 from finscrape.alerts import Action, AlertEngine, AlertRule, Condition
@@ -265,3 +267,56 @@ class TestEngineEvaluate:
         # Webhook skips without url
         assert results[1]["action_type"] == "webhook"
         assert results[1]["status"] == "skipped"
+
+
+# ---------------------------------------------------------------------------
+# Quiet hours
+# ---------------------------------------------------------------------------
+
+class TestQuietHours:
+
+    def _rule(self, start: str, end: str) -> AlertRule:
+        return AlertRule(name="quiet", quiet_hours={"start": start, "end": end})
+
+    def test_a_daytime_window_only_covers_its_hours(self):
+        rule = self._rule("09:00", "17:30")
+        assert rule.in_quiet_hours(datetime(2026, 5, 3, 9, 0, tzinfo=UTC)) is True
+        assert rule.in_quiet_hours(datetime(2026, 5, 3, 17, 29, tzinfo=UTC)) is True
+        assert rule.in_quiet_hours(datetime(2026, 5, 3, 17, 30, tzinfo=UTC)) is False
+        assert rule.in_quiet_hours(datetime(2026, 5, 3, 8, 59, tzinfo=UTC)) is False
+
+    def test_a_window_crossing_midnight_covers_both_sides(self):
+        rule = self._rule("22:00", "06:00")
+        assert rule.in_quiet_hours(datetime(2026, 5, 3, 23, 30, tzinfo=UTC)) is True
+        assert rule.in_quiet_hours(datetime(2026, 5, 3, 0, 15, tzinfo=UTC)) is True
+        assert rule.in_quiet_hours(datetime(2026, 5, 3, 5, 59, tzinfo=UTC)) is True
+        assert rule.in_quiet_hours(datetime(2026, 5, 3, 6, 0, tzinfo=UTC)) is False
+        assert rule.in_quiet_hours(datetime(2026, 5, 3, 12, 0, tzinfo=UTC)) is False
+
+    def test_start_equal_end_means_the_whole_day(self):
+        rule = self._rule("00:00", "00:00")
+        assert rule.in_quiet_hours(datetime(2026, 5, 3, 12, 0, tzinfo=UTC)) is True
+
+    def test_empty_or_malformed_is_never_quiet(self):
+        assert AlertRule(name="none").in_quiet_hours(datetime.now(UTC)) is False
+        assert AlertRule(name="bad", quiet_hours={"start": "x"}).in_quiet_hours(
+            datetime.now(UTC)
+        ) is False
+        assert (
+            AlertRule(name="bad", quiet_hours={"start": "24:00", "end": "06:00"})
+            .in_quiet_hours(datetime.now(UTC))
+            is False
+        )
+
+    def test_a_naive_clock_is_read_as_utc(self):
+        rule = self._rule("22:00", "06:00")
+        assert rule.in_quiet_hours(datetime(2026, 5, 3, 23, 0)) is True
+
+    def test_round_trip_carries_the_window(self):
+        rule = self._rule("22:00", "06:00")
+        assert rule.to_dict()["quiet_hours"] == {"start": "22:00", "end": "06:00"}
+        assert AlertRule.from_dict(rule.to_dict()).quiet_hours == {
+            "start": "22:00",
+            "end": "06:00",
+        }
+        assert AlertRule.from_dict({"id": "x"}).quiet_hours == {}

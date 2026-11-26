@@ -17,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from server import db, pubsub, queries
 from server.correlate import annotate_topics
+from server.getting_started import install_getting_started
 from server.middleware import configure_hardening
 from server.obs import install_observability
 from server.routes import accuracy as accuracy_routes
@@ -27,6 +28,7 @@ from server.routes import data as data_routes
 from server.routes import events as events_routes
 from server.routes import health as health_routes
 from server.routes import insight as insight_routes
+from server.routes import keys as keys_routes
 from server.routes import market as market_routes
 from server.routes import telegram as telegram_routes
 from server.routes import watchlists as watchlist_routes
@@ -95,7 +97,15 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     s = get_settings()
-    app = FastAPI(title="FinScrape API", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(
+        title="FinScrape API",
+        version="0.1.0",
+        description=(
+            "Read-only by design; every mutating route takes `X-API-Key`. "
+            "Every endpoint as a copy-paste curl: [getting started](/docs/getting-started)."
+        ),
+        lifespan=lifespan,
+    )
 
     app.add_middleware(
         CORSMiddleware,
@@ -152,6 +162,11 @@ def create_app() -> FastAPI:
     app.include_router(alerts_routes.router)
     app.include_router(telegram_routes.router)
     app.include_router(watchlist_routes.router)
+    app.include_router(keys_routes.router)
+
+    # Reading aid, not API surface: excluded from the schema, so the contract gate
+    # in tests/snapshots/openapi.json does not see it.
+    install_getting_started(app)
 
     @app.websocket("/api/ws")
     async def ws(websocket: WebSocket) -> None:

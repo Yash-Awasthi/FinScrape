@@ -7,9 +7,12 @@
 // Every figure carries role="img" + aria-label — a chart nobody can read is not
 // information, and these sit beside the numbers they summarise, never replacing them.
 
-const UP = "#16c784";
-const DOWN = "#ea3943";
-const MUTED = "#8a8f98";
+import { chart } from "../components/chart";
+import { cssVar } from "../tokens";
+
+const UP = cssVar("--up");
+const DOWN = cssVar("--down");
+const MUTED = cssVar("--muted");
 
 /** Colour for a signed value: green up, red down, grey flat. */
 export function signColor(n: number): string {
@@ -23,7 +26,7 @@ function esc(s: string): string {
 }
 
 /**
- * Line through `values`, scaled to its own range. Flat or single-point input draws nothing.
+ * Inline form of the shared chart: no axis gutter, no tick text, just the line.
  *
  * `fromZero` anchors the scale at the origin, which is what counts want. Prices do not:
  * a 200-dollar stock moving 2 dollars is a flat line against a zero baseline, so pass
@@ -31,22 +34,16 @@ function esc(s: string): string {
  */
 export function sparkline(values: number[], label = "trend", stroke = UP, fromZero = true): string {
   if (values.length < 2) return "";
-  const w = 240;
-  const h = 48;
-  const min = fromZero ? Math.min(...values, 0) : Math.min(...values);
-  const max = fromZero ? Math.max(...values, 0) : Math.max(...values);
-  const span = max - min || 1;
-  const pts = values
-    .map((y, i) => {
-      const x = (i / (values.length - 1)) * w;
-      return `${x.toFixed(1)},${(h - ((y - min) / span) * h).toFixed(1)}`;
-    })
-    .join(" ");
-  return (
-    `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" ` +
-    `role="img" aria-label="${esc(label)}: ${values.length} points, ${min} to ${max}">` +
-    `<polyline points="${pts}" fill="none" stroke="${stroke}" stroke-width="2"/></svg>`
-  );
+  return chart({
+    values,
+    label,
+    fromZero,
+    stroke,
+    axes: false,
+    width: 240,
+    height: 48,
+    decimals: 2,
+  });
 }
 
 export interface Bar {

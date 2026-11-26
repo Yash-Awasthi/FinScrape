@@ -1,7 +1,9 @@
 import "./landing.css";
 
 import { API_BASE } from "../api";
+import { cssVar, resolveColor } from "../tokens";
 import { hitLabel, hitValue, spyLabel, type AccuracyLike } from "./rates";
+import { verdictTitle } from "../verdict-chip";
 
 // ---- content ----------------------------------------------------------------
 const FEATURES: [string, string, string][] = [
@@ -90,7 +92,7 @@ function callRow(e: LiveEvent): string {
   const score = `${up ? "+" : e.signal_score < 0 ? "−" : ""}${Math.abs(e.signal_score)}`;
   const chip = e.verdict === "INVEST" ? "invest" : "pull";
   return (
-    `<div class="fc-row"><span class="chip ${chip}">${esc(e.verdict)}</span>` +
+    `<div class="fc-row"><span class="chip ${chip}" title="${esc(verdictTitle(e.verdict))}">${esc(e.verdict)}</span>` +
     `<b>${esc(e.tickers[0])}</b><span class="${up ? "up" : "down"}">${score}</span></div>`
   );
 }
@@ -184,18 +186,18 @@ async function globe(): Promise<void> {
   try {
     const { default: Globe } = await import("globe.gl");
     const pts = [
-      [26.5, 56.2, "#ef4444"],
-      [24.0, 121.0, "#f59e0b"],
-      [40.7, -74.0, "#16c784"],
-      [51.5, -0.1, "#3b82f6"],
-      [35.7, 139.7, "#16c784"],
-      [25.2, 55.3, "#ef4444"],
-      [1.35, 103.8, "#16c784"],
-      [-23.5, -46.6, "#f59e0b"],
-      [55.7, 37.6, "#ef4444"],
-      [37.6, -122.4, "#16c784"],
-      [19.4, -99.1, "#3b82f6"],
-      [-33.9, 151.2, "#16c784"],
+      [26.5, 56.2, resolveColor(cssVar("--down"))],
+      [24.0, 121.0, resolveColor(cssVar("--amber"))],
+      [40.7, -74.0, resolveColor(cssVar("--up"))],
+      [51.5, -0.1, resolveColor(cssVar("--blue"))],
+      [35.7, 139.7, resolveColor(cssVar("--up"))],
+      [25.2, 55.3, resolveColor(cssVar("--down"))],
+      [1.35, 103.8, resolveColor(cssVar("--up"))],
+      [-23.5, -46.6, resolveColor(cssVar("--amber"))],
+      [55.7, 37.6, resolveColor(cssVar("--down"))],
+      [37.6, -122.4, resolveColor(cssVar("--up"))],
+      [19.4, -99.1, resolveColor(cssVar("--blue"))],
+      [-33.9, 151.2, resolveColor(cssVar("--up"))],
     ].map(([lat, lng, color]) => ({ lat, lng, color }));
     const arcs = [
       [26.5, 56.2, 51.5, -0.1],
@@ -208,7 +210,7 @@ async function globe(): Promise<void> {
     const g = (Globe as any)()(host)
       .backgroundColor("rgba(0,0,0,0)")
       .globeImageUrl("https://unpkg.com/three-globe/example/img/earth-night.jpg")
-      .atmosphereColor("#16c784")
+      .atmosphereColor(resolveColor(cssVar("--up")))
       .atmosphereAltitude(0.18)
       .pointsData(pts)
       .pointLat("lat")
@@ -221,7 +223,7 @@ async function globe(): Promise<void> {
       .arcStartLng("sg")
       .arcEndLat("el")
       .arcEndLng("eg")
-      .arcColor(() => ["#16c784", "rgba(22,199,132,0)"])
+      .arcColor(() => [resolveColor(cssVar("--up")), "rgba(22,199,132,0)"])
       .arcDashLength(0.5)
       .arcDashGap(1)
       .arcDashAnimateTime(2200)

@@ -1,0 +1,97 @@
+/* Design tokens: the single source of spacing, type, radius, elevation and colour.
+   Both stylesheets import this file first; nothing else in web/src defines a raw
+   colour or a one-off spacing value. Chart colours are the Okabe-Ito palette,
+   distinguishable under deuteranopia and protanopia as well as normal vision. */
+:root {
+  /* spacing: 4 8 12 16 24 32 48 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* type: 12 14 16 20 24 32 */
+  --font-xs: 12px;
+  --font-sm: 14px;
+  --font-md: 16px;
+  --font-lg: 20px;
+  --font-xl: 24px;
+  --font-2xl: 32px;
+
+  /* radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+
+  /* elevation */
+  --elev-1: 0 1px 2px rgb(0 0 0 / 30%);
+  --elev-2: 0 4px 12px rgb(0 0 0 / 35%);
+  --elev-3: 0 12px 32px rgb(0 0 0 / 45%);
+
+  /* semantic colour */
+  --bg: #0b0e14;
+  --panel: #121621;
+  --panel-2: #0f131b;
+  --panel-head: #171c29;
+  --border: #222a3a;
+  --border-strong: #2e384c;
+  --text: #d8dce4;
+  --text-strong: #f1f3f7;
+  --muted: #8a909b;
+  --accent: #4b8ef7;
+  --accent-bg: #2563eb;
+  --accent-soft: #1b2740;
+  --up: #16c784;
+  --down: #f25b64;
+  --warn: #f5a623;
+
+  /* chart palette: Okabe-Ito, colour-blind safe */
+  --chart-1: #2b8fd1;
+  --chart-2: #e69f00;
+  --chart-3: #009e73;
+  --chart-4: #cc79a7;
+  --chart-5: #56b4e9;
+  --chart-6: #d55e00;
+  --chart-7: #f0e442;
+  --chart-grid: #2e384c;
+  --chart-axis: #8a909b;
+
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* extra app surfaces */
+  --panel-3: #161b27;
+  --border-soft: #232833;
+  --accent-strong: #4c9aff;
+  --down-soft: #2a1215;
+  --down-line: #5c1f25;
+  --bg-deep: #06090f;
+  --up-ink: #06120c;
+  --text-invert: #ffffff;
+
+  /* landing page aliases: same scale, the marketing palette names kept for that sheet */
+  --bg2: #0e1117;
+  --card: #131820;
+  --card2: #161c26;
+  --line: #1e2733;
+  --line2: #2a3543;
+  --txt: #e8eef6;
+  --mut: #8a98ab;
+  --mut2: #5e6b7d;
+  --green: #16c784;
+  --red: #ef4444;
+  --blue: #3b82f6;
+  --amber: #f59e0b;
+  --maxw: 1180px;
+  --landing-mint: #5eead4;
+  --landing-on-accent: #03130c;
+  --landing-dot-red: #ff5f57;
+  --landing-dot-amber: #febc2e;
+  --landing-dot-green: #28c840;
+
+  /* pwa offline banner */
+  --warn-surface: #2a2113;
+  --warn-text: #f1e9d2;
+}

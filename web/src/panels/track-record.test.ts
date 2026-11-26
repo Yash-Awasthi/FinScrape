@@ -26,20 +26,20 @@ it("shows next-day and vs-SPY rates side by side, with how many calls went unsco
     by_verdict: { PULL_OUT: { hits, total: scored, hit_rate: hits / scored } },
   });
   vi.spyOn(api, "accuracy").mockResolvedValue({
-    ...rate(6, 10),
-    total: 14,
+    ...rate(12, 20),
+    total: 24,
     equity_curve: [1, 0, 1],
     equity_metrics: { sharpe_ratio: 0, sortino_ratio: 0, max_drawdown: -0.05 },
-    vs_spy: { d2: rate(5, 10), d4: rate(7, 10) },
+    vs_spy: { d2: rate(10, 20), d4: rate(14, 20) },
   } as Accuracy);
   const panel = new AccuracyPanel();
   await panel.load();
   await painted();
   const text = panel.el.textContent ?? "";
-  expect(text).toContain("Next day60%6/10");
+  expect(text).toContain("Next day60%12/20");
   expect(text).toContain("+2 days vs SPY50%");
   expect(text).toContain("+4 days vs SPY70%");
-  expect(text).toContain("4 of 14 calls moved less than 1%");
+  expect(text).toContain("4 of 24 calls moved less than 1%");
   expect(text).toContain("-5.0%");
 });
 
@@ -101,6 +101,7 @@ it("flags a thin sample instead of showing a confident-looking rate", async () =
   await panel.load();
   await painted();
   const text = panel.el.textContent ?? "";
+  expect(text).toContain("insufficient sample");
   expect(text).toContain("wide interval");
   expect(text).toContain("n=3");
   expect(text).toContain("95% 21%–94%");

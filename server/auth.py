@@ -19,8 +19,13 @@ async def require_api_key(
         supplied = authorization[7:].strip()
     # Constant-time compare: a plain `!=` leaks the matching prefix length through
     # response timing. Encoded first so a non-ASCII key cannot raise out of compare.
-    expected = get_settings().api_key
-    if not supplied or not hmac.compare_digest(
-        supplied.encode("utf-8"), expected.encode("utf-8")
-    ):
+    # Every configured key is compared, so the previous key can overlap a rotation
+    # without a 401 gap (docs/KEY-ROTATION.md).
+    settings = get_settings()
+    supplied_bytes = supplied.encode("utf-8") if supplied else b""
+    matched = False
+    for key in (settings.api_key, settings.api_key_previous):
+        if key:
+            matched |= hmac.compare_digest(supplied_bytes, key.encode("utf-8"))
+    if not supplied or not matched:
         raise HTTPException(status_code=401, detail="Unauthorized")

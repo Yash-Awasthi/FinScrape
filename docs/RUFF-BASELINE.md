@@ -5,13 +5,13 @@ hand. This file is a ratchet: the totals below may only shrink, and each pull re
 burns down one rule group (plan m1.2.1). `tests/test_docs.py` fails when this file and
 the tree disagree, so a change to lint debt has to regenerate it.
 
-**154 errors in 61 files of 299 tracked Python files.** 24 rule codes; 2 of them have an autofix.
+**154 errors in 61 files of 341 tracked Python files.** 23 rule codes; 2 of them have an autofix.
 
 ## By rule
 
 | Count | Code | Rule | Autofix |
 |---|---|---|---|
-| 79 | `BLE001` | blind-except | no |
+| 80 | `BLE001` | blind-except | no |
 | 21 | `I001` | unsorted-imports | yes |
 | 12 | `RUF012` | mutable-class-default | no |
 | 8 | `UP035` | deprecated-import | unsafe only |
@@ -24,7 +24,6 @@ the tree disagree, so a change to lint debt has to regenerate it.
 | 2 | `F841` | unused-variable | no |
 | 2 | `S112` | try-except-continue | no |
 | 1 | `PLC0206` | dict-index-missing-items | no |
-| 1 | `RUF046` | unnecessary-cast-to-int | no |
 | 1 | `T100` | debugger | no |
 | 1 | `B019` | cached-instance-method | no |
 | 1 | `TRY004` | type-check-without-type-error | no |
@@ -42,16 +41,16 @@ the tree disagree, so a change to lint debt has to regenerate it.
 |---|---|
 | 55 | `finscrape/engine` |
 | 35 | `finscrape/fetchers` |
-| 12 | `finscrape/analysis` |
+| 11 | `finscrape/analysis` |
 | 11 | `finscrape/market_data.py` |
 | 4 | `finscrape/agents` |
 | 4 | `scripts/repo_facts.py` |
 | 3 | `scripts/laya_train` |
 | 3 | `server/app.py` |
 | 3 | `server/pubsub.py` |
+| 3 | `worker/main.py` |
 | 2 | `finscrape/alerts.py` |
 | 2 | `scripts/warm.py` |
-| 2 | `worker/main.py` |
 | 1 | `finscrape/ingestors` |
 | 1 | `finscrape/scrapers` |
 | 1 | `scripts/dead_files.py` |

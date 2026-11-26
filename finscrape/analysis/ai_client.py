@@ -26,6 +26,7 @@ from curl_cffi import requests
 from curl_cffi.requests.exceptions import RequestException
 from dotenv import load_dotenv
 
+from finscrape.analysis import budget as budget_guard
 from finscrape.analysis.constants import (
     VALID_ACTIONABILITIES,
     VALID_EVENT_TYPES,
@@ -68,6 +69,17 @@ CACHE_MAX_SIZE = env_int("FINSCRAPE_CACHE_MAX_SIZE", 500)
 # Every reply the model produced, so a repair attempt can quote what it said. Thread-local
 # because the pipeline judges articles on a pool.
 _last_reply = threading.local()
+_budget_blocked = threading.local()
+
+
+def begin_analysis() -> None:
+    """Reset the per-article budget flag before the analyser makes its first call."""
+    _budget_blocked.blocked = False
+
+
+def budget_blocked() -> bool:
+    """True when the last analysed article was refused by the daily token ceiling."""
+    return bool(getattr(_budget_blocked, "blocked", False))
 
 
 class _ResponseCache:
@@ -180,8 +192,26 @@ def _call_model(prompt: str, system_prompt: str, effective_model: str) -> dict |
         logger.debug("Cache hit (hits=%d, rate=%.0f%%)", _cache.hits, _cache.stats["hit_rate"] * 100)
         return cached
 
+    reserved = budget_guard.estimate_request_tokens(prompt, system_prompt)
+    if not budget_guard.reserve(reserved):
+        _budget_blocked.blocked = True
+        logger.warning(
+            "budget: daily token ceiling reached (used=%d ceiling=%d); "
+            "model=%s skipped",
+            budget_guard.used(),
+            budget_guard.ceiling(),
+            effective_model,
+        )
+        return None
+
     _last_reply.text = ""
     raw = _dispatch(prompt, system_prompt, effective_model)
+    budget_guard.settle(
+        reserved,
+        budget_guard.estimate_tokens(prompt)
+        + budget_guard.estimate_tokens(system_prompt)
+        + budget_guard.estimate_tokens(_recall()),
+    )
     source = "model"
 
     # A reply that does not parse leaves no dict to repair, only the text it sent. Both
@@ -202,10 +232,23 @@ def _call_model(prompt: str, system_prompt: str, effective_model: str) -> dict |
             logger.warning(
                 "json_invalid model=%s sample=%s", effective_model, redacted_sample(broken)
             )
-        repaired = _dispatch(
-            repair_prompt(prompt, redacted_sample(broken), errors),
-            system_prompt,
-            effective_model,
+        repair_text = repair_prompt(prompt, redacted_sample(broken), errors)
+        repair_reserved = budget_guard.estimate_request_tokens(
+            repair_text, system_prompt
+        )
+        if not budget_guard.reserve(repair_reserved):
+            _budget_blocked.blocked = True
+            logger.warning(
+                "budget: daily token ceiling reached during repair; model=%s skipped",
+                effective_model,
+            )
+            return None
+        repaired = _dispatch(repair_text, system_prompt, effective_model)
+        budget_guard.settle(
+            repair_reserved,
+            budget_guard.estimate_tokens(repair_text)
+            + budget_guard.estimate_tokens(system_prompt)
+            + budget_guard.estimate_tokens(_recall()),
         )
         if repaired is None:
             logger.error("repair_failed model=%s", effective_model)

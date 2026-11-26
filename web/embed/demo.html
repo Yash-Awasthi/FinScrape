@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>FinScrape embeds - parent page demo</title>
+    <style>
+      body {
+        margin: 0;
+        font:
+          15px/1.5 system-ui,
+          sans-serif;
+        background: #f6f8fa;
+        color: #1f2328;
+      }
+      main {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 32px 20px 60px;
+      }
+      h1 {
+        font-size: 22px;
+        margin: 0 0 4px;
+      }
+      h2 {
+        font-size: 16px;
+        margin: 28px 0 8px;
+      }
+      p {
+        margin: 8px 0;
+      }
+      code {
+        background: #eaeef2;
+        border-radius: 4px;
+        padding: 1px 5px;
+        font-size: 13px;
+      }
+      pre {
+        background: #eaeef2;
+        border-radius: 6px;
+        padding: 12px;
+        overflow-x: auto;
+      }
+      .frame {
+        width: 100%;
+        max-width: 420px;
+        height: 190px;
+        border: 0;
+        border-radius: 8px;
+        background: #0d1117;
+      }
+      .note {
+        color: #59636e;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Embedding a FinScrape widget</h1>
+      <p class="note">
+        Serve this page from the origin you want to allow. The widget only frames when the
+        <code>parent</code> query parameter names a bare origin: <code>https://example.com</code>,
+        or <code>http://localhost:3000</code> while developing. Everything else is a 400.
+      </p>
+
+      <h2>Scenario widget</h2>
+      <iframe
+        class="frame"
+        title="FinScrape scenario widget"
+        src="/embed/scenario?id=s1&amp;parent=http://localhost:3000"
+      ></iframe>
+
+      <h2>Track-record widget</h2>
+      <iframe
+        class="frame"
+        title="FinScrape track-record widget"
+        src="/embed/track-record?parent=http://localhost:3000"
+      ></iframe>
+
+      <h2>The parent allowlist</h2>
+      <p>
+        The widget answers with
+        <code>Content-Security-Policy: ... frame-ancestors &lt;parent&gt;; ...</code> and no
+        <code>X-Frame-Options</code>. The browser then refuses to render the iframe on any other
+        origin, and a wildcard is never emitted. To embed on a new site, add that site's origin to
+        the request; the site itself needs no allowlist entry.
+      </p>
+      <pre>
+&lt;iframe src="https://api.example.com/embed/scenario?id=s1&amp;parent=https://example.com"
+        width="420" height="190" title="FinScrape scenario"&gt;&lt;/iframe&gt;</pre>
+      <p class="note">
+        Change <code>localhost:3000</code> above to the origin this page is actually served from, or
+        the browser will block the frame by design.
+      </p>
+    </main>
+  </body>
+</html>

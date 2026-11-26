@@ -12,6 +12,8 @@ import {
   verdictColor,
 } from "../api";
 import { escapeHtml, fmtPct, sourceLabel, timeAgo } from "../util";
+import { verdictTitle } from "../verdict-chip";
+import { citeLink } from "./citation";
 
 // A backup analysis job takes 1-2 minutes; stop asking after 4.
 const PENDING_POLL_MS = 15_000;
@@ -66,7 +68,7 @@ export class Inspector {
     this.current = ev.id;
     this.body.replaceChildren(
       this.header(ev),
-      this.reasoning(ev),
+      ...this.reasoning(ev),
       ...this.entities(ev),
       ...this.chain(ev),
       ...this.coverage(ev),
@@ -83,6 +85,7 @@ export class Inspector {
     badge.className = "verdict-badge";
     badge.style.background = verdictColor(ev.verdict);
     badge.textContent = `${ev.verdict} ${ev.signal_score >= 0 ? "+" : ""}${ev.signal_score}`;
+    badge.title = verdictTitle(ev.verdict);
 
     const h = document.createElement("h2");
     const link = ev.articles?.[0];
@@ -100,11 +103,14 @@ export class Inspector {
     return wrap;
   }
 
-  private reasoning(ev: EventOut): HTMLElement {
+  private reasoning(ev: EventOut): HTMLElement[] {
     const p = document.createElement("p");
     p.className = "insp-reasoning";
     p.textContent = ev.reasoning || "";
-    return p;
+    const cite = document.createElement("p");
+    cite.className = "insp-cite";
+    cite.innerHTML = citeLink(ev, "reasoning");
+    return [p, cite];
   }
 
   private entities(ev: EventOut): HTMLElement[] {

@@ -6,9 +6,10 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
 
+from finscrape.analysis.validator import score_trace
 from server import db, queries
 from server.alert_rules import fire_alerts
 from server.auth import require_api_key
@@ -22,6 +23,7 @@ from server.schemas import (
     IngestBatch,
     IngestResponse,
 )
+from server.settings import get_settings
 from server.ws import hub
 
 log = logging.getLogger("worldfin.routes.events")
@@ -64,6 +66,24 @@ async def ingest(background: BackgroundTasks, payload: IngestBatch) -> IngestRes
     )
 
 
+@router.get("/api/events/{event_id}")
+async def get_event(event_id: int) -> dict:
+    """One row for the event page (plan m4.2.1), with the score rules it passed."""
+    row = await db.pool().fetchrow("SELECT * FROM events WHERE id = $1", event_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="event not found")
+    event = annotate_topics([dict(row)])[0]
+    # The trace is recomputed from the stored labels and score; a disagreement cap or
+    # a tape nudge can still have moved the stored number, so both are returned.
+    event["score_trace"] = score_trace(
+        event.get("signal_score", 0),
+        event.get("magnitude", "medium"),
+        event.get("actionability", "medium"),
+        event.get("novelty", "standard"),
+    )
+    return jsonable_encoder(event)
+
+
 @router.get("/api/events")
 async def list_events(
     limit: int = Query(100, ge=1, le=500),
@@ -99,7 +119,10 @@ async def list_events(
 
 @router.get("/api/stats", response_model=DashboardStats)
 async def stats() -> DashboardStats:
-    return DashboardStats(**await queries.get_stats(db.pool()))
+    return DashboardStats(
+        **await queries.get_stats(db.pool()),
+        ingest_interval_minutes=get_settings().worker_interval_minutes,
+    )
 
 
 @router.get("/api/dates", response_model=DatesResponse)
