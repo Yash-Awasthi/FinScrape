@@ -98,7 +98,10 @@ bench-analysis: ## Time a 6-article analysis cycle sequential vs the bounded poo
 	$(PY) python -m scripts.bench_analysis --articles $(or $(ARTICLES),6) --latency $(or $(LATENCY),0.5) --workers $(or $(WORKERS),6)
 
 stack-check: ## Fail when docs/STACK.md disagrees with a pin in the tree
-	$(PY) pytest -q tests/test_stack_doc.py tests/test_package_layout.py tests/test_settings_only.py \n	tests/test_ingest_doc.py tests/test_onboarding_doc.py tests/test_ports.py \n	tests/test_query_plans.py tests/test_seed_coverage.py tests/test_analysis_cost.py \n	tests/test_worker_parallel.py
+	$(PY) pytest -q tests/test_stack_doc.py tests/test_package_layout.py tests/test_settings_only.py \
+		tests/test_ingest_doc.py tests/test_onboarding_doc.py tests/test_ports.py \
+		tests/test_query_plans.py tests/test_seed_coverage.py tests/test_analysis_cost.py \
+		tests/test_worker_parallel.py
 
 server-group-check: ## Prove the `server` dependency group alone runs the API and worker
 	# A scratch environment, so the dev group cannot hide a missing server dependency.
