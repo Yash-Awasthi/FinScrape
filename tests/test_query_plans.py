@@ -15,6 +15,7 @@ import pytest
 asyncpg = pytest.importorskip("asyncpg")
 
 from scripts.explain import QUERIES, explain_all
+from server import db
 from tests.server import PG_DSN as DSN
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -43,10 +44,23 @@ def test_the_document_names_every_query() -> None:
     assert "published_at" in text and "tickers" in text
 
 
+def _ensure_schema() -> None:
+    """Apply server/migrations to the test database, as the app does on boot."""
+
+    async def _migrate() -> None:
+        await db.disconnect()
+        pool = await db.connect(DSN)
+        await db.run_migrations(pool)
+        await db.disconnect()
+
+    asyncio.run(_migrate())
+
+
 @pytest.mark.skipif(
     not _pg_reachable(), reason="no Postgres at WORLDFIN_TEST_DATABASE_URL"
 )
 def test_every_filtered_feed_read_uses_an_index() -> None:
+    _ensure_schema()
     results = asyncio.run(explain_all(DSN, seed_rows=5000))
 
     def cleanup() -> None:
