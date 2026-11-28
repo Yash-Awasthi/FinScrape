@@ -100,7 +100,9 @@ jobs:
           # the check would pass on pytest/uvicorn while a runtime import is missing.
           groups: --no-default-groups --group server
       - name: Server group alone imports the app
-        run: python -c "import server.app, worker.main, finscrape.scrapers; print('server group self-sufficient')"
+        # uv run keeps the check inside the synced environment; a bare `python`
+        # would be the runner's interpreter, which never sees the group.
+        run: uv run -p 3.14 --no-default-groups --group server python -c "import server.app, worker.main, finscrape.scrapers; print('server group self-sufficient')"
 
   eval-gate:
     # plan M2.1: any model or prompt change must hold its score on the frozen gold set

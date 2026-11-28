@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 PR 1 smoke test — run this after applying pr1_ai_client.py to verify
 that Ollama + Qwen 2.5 are working end-to-end.
