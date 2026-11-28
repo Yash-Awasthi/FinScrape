@@ -5,6 +5,9 @@ here rather than as a silently stale README count.
 """
 
 import json
+from pathlib import Path
+
+import pytest
 
 from scripts import repo_facts
 
@@ -189,6 +192,13 @@ def test_a_doc_without_markers_is_reported_as_stale(tmp_path, monkeypatch):
 
 def test_the_real_docs_are_in_sync():
     # This is the CI gate's assertion: a hand-edited count fails here first.
+    # Two of the counts come from the web CLIs, so the comparison needs `npm ci`
+    # in web/; the docs-drift job installs them, a plain pytest run does not.
+    web_bin = (
+        Path(repo_facts.__file__).resolve().parents[1] / "web" / "node_modules" / ".bin"
+    )
+    if not web_bin.is_dir():
+        pytest.skip("web dependencies are not installed")
     assert repo_facts.sync_docs(repo_facts.collect(), write=False) == []
 
 
